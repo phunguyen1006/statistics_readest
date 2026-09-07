@@ -1,227 +1,96 @@
-# Design System Master File
+# Readest Stats 1.1 — Design System
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
+This file is the implementation reference for every screen. It supersedes the former blue dashboard theme.
 
----
+## Product character
 
-**Project:** Readest Stats
-**Generated:** 2026-09-07 16:13:25
-**Category:** Analytics Dashboard
-**Design Dials:** Motion 2/10 (Subtle) | Density 7/10 (Standard)
+- Native Windows desktop analytics app: quiet, precise, private, and information-dense.
+- Fixed high-contrast dark monochrome appearance. No gradients, decorative shadows, glass, blue accents, or green goal bars.
+- Prefer native WPF controls, keyboard operation, vector icons, and stable layouts.
+- Density: 8/10. Motion: 1/10; state changes remain usable when motion is reduced.
 
----
+## Color tokens
 
-## Global Rules
+| Token | Value | Use |
+|---|---:|---|
+| AppBackground | `#0A0A0A` | window background |
+| Sidebar | `#0D0D0D` | persistent navigation |
+| Surface | `#111111` | cards |
+| SurfaceRaised | `#151515` | controls and nested regions |
+| SurfaceHover | `#1A1A1A` | hover state |
+| SurfacePressed | `#222222` | pressed/selected state |
+| Border | `#2B2B2B` | separators |
+| BorderStrong | `#4A4A4A` | focus and strong boundaries |
+| TextPrimary | `#F5F5F5` | headings and primary values |
+| TextSecondary | `#C4C4C4` | body and supporting data |
+| TextMuted | `#949494` | metadata |
+| TextDisabled | `#6B6B6B` | disabled state |
+| Primary | `#FFFFFF` | selected markers and key chart series |
 
-### Color Palette
+Status is never communicated by color alone. Use words and restrained arrows/check marks only in textual status values.
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#1E40AF` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#3B82F6` | `--color-secondary` |
-| Accent/CTA | `#D97706` | `--color-accent` |
-| Background | `#F8FAFC` | `--color-background` |
-| Foreground | `#1E3A8A` | `--color-foreground` |
-| Muted | `#E9EEF6` | `--color-muted` |
-| Border | `#DBEAFE` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| Ring | `#1E40AF` | `--color-ring` |
+## Typography
 
-**Color Notes:** Blue data + amber highlights [Accent adjusted from #F59E0B for WCAG 3:1]
+- Use installed Windows fonts only: Segoe UI for interface text; Cascadia Mono or Consolas for file paths and tabular technical values.
+- Scale: 11 metadata, 12 labels, 13 body, 15 navigation, 18 section values, 20 page title, 28–32 primary KPI.
+- Use semibold for hierarchy; avoid excessive uppercase except short eyebrow labels.
+- Use tabular figures in data tables where practical.
 
-### Typography
+## Layout and spacing
 
-- **Heading Font:** Fira Code
-- **Body Font:** Fira Sans
-- **Mood:** dashboard, data, analytics, code, technical, precise
-- **Google Fonts:** [Fira Code + Fira Sans](https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap)
+- Window minimum: 1100×650. Primary QA targets: 1366×768 and 1440×900.
+- Sidebar: 196px, fixed, icon plus label for every destination.
+- Top bar: 72px, page context left and global period controls right.
+- Main page gutter: 26px horizontal, 22px top, 28px bottom.
+- Use a 4/8px rhythm. Standard card padding 16px; section gap 16–18px.
+- Use scroll viewers for vertical overflow. Avoid horizontal scrolling and nested scroll regions.
+- Large lists use virtualizing WPF controls; charts aggregate before drawing.
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-```
+## Components
 
-### Spacing Variables
+- Cards: 1px border, 10px corner radius, no shadow. Nested sections use surface contrast and spacing.
+- Buttons: minimum 34px height, 8px radius, visible hover/pressed/focus states without moving layout.
+- Icon-only buttons must have a tooltip and `AutomationProperties.Name`.
+- Inputs: persistent labels, 1px border, 34px minimum height, white focus outline.
+- Navigation: 16px outline vector icons with consistent 1.6 stroke; active row uses white text and a surface fill.
+- App identity: a black rounded-square icon with a white open-book mark; use the same mark in the executable, title bar, taskbar, and sidebar header.
+- KPI cards: short uppercase label, prominent value, single supporting line.
+- Data tables: sortable/filterable where the view exposes controls; alternating rows and restrained separators.
+- Charts: grayscale, subtle grid lines, exact-value tooltips, explicit empty states, readable units, and a maximum bar width so sparse data never becomes a giant block.
+- Heatmaps: five quantile-derived grayscale levels plus a labeled legend; cells expose exact date/time details.
+- Goals: progress uses white/gray only and includes a textual status such as Ahead, On track, Behind, Complete, or Not enough data.
 
-*Density: 7/10 — Standard*
+## Accessibility and interaction
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
+- Logical tab order follows visual order. All primary controls are native keyboard-focusable WPF elements.
+- Normal text contrast must meet 4.5:1; chart marks and large glyphs at least 3:1.
+- Visible focus outline is mandatory. Hover is supplementary, never the only way to access information.
+- Loading is non-blocking; refresh is accompanied by progress feedback while work is active.
+- Errors appear as readable inline status with a Retry action; the last good dataset remains visible.
+- No emoji as structural icons. No layout-shifting hover animation.
 
-### Shadow Depths
+## Data integrity rules
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+- Time is canonical and stored/computed in seconds; formatting occurs only at the presentation boundary.
+- Date ranges and calendar grouping use the local timezone. Current calendar periods compare equal elapsed spans.
+- Consistency excludes days before the first available reading event.
+- Weekday/weekend averages divide by eligible calendar weekdays/weekend days, including inactive eligible days.
+- Sessions are reconstructed using the configured gap and overlapping active time is merged.
+- Page-derived progress, completion, and books-finished counts are omitted unless Readest provides a stable trustworthy signal. Experimental page metrics remain off by default.
+- The Readest database is read-only. App settings and goals are stored separately.
 
----
+## Screen map
 
-## Component Specs
+Overview → Activity → Sessions → Books → Goals → Insights → Year in Reading → Settings.
 
-### Buttons
+Every screen keeps the sidebar and top bar stable, uses the global date range where relevant, and provides a meaningful no-data state rather than an empty chart frame.
 
-```css
-/* Primary Button */
-.btn-primary {
-  background: #D97706;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
+## Release checklist
 
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #1E40AF;
-  border: 2px solid #1E40AF;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #F8FAFC;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #1E40AF;
-  outline: none;
-  box-shadow: 0 0 0 3px #1E40AF20;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
-
----
-
-## Style Guidelines
-
-**Style:** Data-Dense Dashboard
-
-**Keywords:** Multiple charts/widgets, data tables, KPI cards, minimal padding, grid layout, space-efficient, maximum data visibility
-
-**Best For:** Business intelligence dashboards, financial analytics, enterprise reporting, operational dashboards, data warehousing
-
-**Key Effects:** Hover tooltips, chart zoom on click, row highlighting on hover, smooth filter animations, data loading spinners
-
-### Page Pattern
-
-**Pattern Name:** Real-Time / Operations Landing
-
-- **Conversion Strategy:** For ops/security/iot products. Demo or sandbox link. Trust signals.
-- **CTA Placement:** Primary CTA in nav + After metrics
-- **Section Order:** 1. Hero (product + live preview or status), 2. Key metrics/indicators, 3. How it works, 4. CTA (Start trial / Contact)
-
----
-
-## Motion
-
-**Scroll Reveal** (Subtle) — Trigger: scroll (viewport enter) | Duration: 300-400ms | Easing: `power1.out`
-
-```js
-gsap.from(el, { opacity: 0, y: 12, duration: 0.35, ease: 'power1.out', scrollTrigger: { trigger: el, start: 'top 90%', toggleActions: 'play none none reverse' } });
-```
-
-**Framework notes:** Requires the ScrollTrigger plugin registered once via gsap.registerPlugin(ScrollTrigger)
-
-- ✅ Keep the y offset small (8-16px) so it reads as a fade, not a slide
-- ❌ Don't reveal below-the-fold content needed for SEO/crawlers as invisible-by-default without a no-JS fallback
-- ⚡ toggleActions 'play none none reverse' avoids re-triggering on every scroll direction change
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Ornate design
-- ❌ No filtering
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+- No legacy blue/green palette or gradients.
+- Vector icons are consistent; icon-only controls have accessible names.
+- Focus, hover, pressed, disabled, loading, error, and empty states exist.
+- Charts have units, restrained bars, tooltips, and no-data messaging.
+- Layout works at 1366×768 and 1440×900 without horizontal clipping.
+- Reduced-motion preference causes no loss of information.
+- Source database remains byte-for-byte unchanged in repository safety tests.

@@ -127,7 +127,7 @@ public sealed class StatisticsEngine
         {
             var list = g.ToList();
             var latest = list.MaxBy(e => e.StartTime)!;
-            return new BookSummary(b.Id, string.IsNullOrWhiteSpace(b.Title) ? "Untitled" : b.Title, b.Authors, list.Sum(e => e.DurationSeconds), list.Select(LocalDate).Distinct().Count(), list.Min(e => e.Start), list.Max(e => e.Start), list.Count, list.Select(e => e.Page).Distinct().Count(), latest.Page, latest.TotalPages, total <= 0 ? 0 : list.Sum(e => e.DurationSeconds) / total);
+            return new BookSummary(b.Id, string.IsNullOrWhiteSpace(b.Title) ? "Untitled" : b.Title, string.IsNullOrWhiteSpace(b.Authors) ? "Unknown author" : b.Authors, list.Sum(e => e.DurationSeconds), list.Select(LocalDate).Distinct().Count(), list.Min(e => e.Start), list.Max(e => e.Start), list.Count, list.Select(e => e.Page).Distinct().Count(), latest.Page, latest.TotalPages, total <= 0 ? 0 : list.Sum(e => e.DurationSeconds) / total);
         }).OrderByDescending(x => x.Seconds).ToArray();
     }
 

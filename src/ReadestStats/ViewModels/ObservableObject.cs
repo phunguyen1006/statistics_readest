@@ -27,3 +27,11 @@ public sealed class RelayCommand(Action action, Func<bool>? canExecute = null) :
     public event EventHandler? CanExecuteChanged;
     public void Refresh() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }
+
+public sealed class ParameterCommand<T>(Action<T?> action, Func<T?, bool>? canExecute = null) : ICommand
+{
+    public bool CanExecute(object? parameter) => canExecute?.Invoke((T?)parameter) ?? true;
+    public void Execute(object? parameter) => action((T?)parameter);
+    public event EventHandler? CanExecuteChanged;
+    public void Refresh() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+}

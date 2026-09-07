@@ -16,8 +16,9 @@ public partial class App : Application
         {
             var viewModel = new MainViewModel(
                 () => { var dialog = new OpenFileDialog { Title = "Select Readest statistics.db", Filter = "Readest statistics database|statistics.db|SQLite database|*.db" }; return dialog.ShowDialog() == true ? dialog.FileName : null; },
-                (extension, filter) => { var dialog = new SaveFileDialog { DefaultExt = extension, Filter = filter, FileName = $"readest-stats-{DateTime.Now:yyyy-MM-dd}.{extension}" }; return dialog.ShowDialog() == true ? dialog.FileName : null; });
-            ThemeManager.Apply("System");
+                (extension, filter) => { var dialog = new SaveFileDialog { DefaultExt = extension, Filter = filter, FileName = $"readest-stats-{DateTime.Now:yyyy-MM-dd}.{extension}" }; return dialog.ShowDialog() == true ? dialog.FileName : null; },
+                Log,
+                ThemeManager.Apply);
             var window = new MainWindow { DataContext = viewModel };
             MainWindow = window;
             window.Closed += (_, _) => viewModel.Dispose();
