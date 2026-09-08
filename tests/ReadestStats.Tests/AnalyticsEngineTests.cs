@@ -109,4 +109,14 @@ public sealed class AnalyticsEngineTests
         var item = _insights.Generate(events, [new(1, "Book", "Author")], range, 5).Single(x => x.Id == "reading-window-insufficient");
         Assert.Equal("Only 1 event", item.SampleStatus);
     }
+
+    [Fact] public void InsightClockLabelsRespectTwelveHourPreference()
+    {
+        var events = Enumerable.Range(0, 5).Select(i => E(At(2026, 9, 7, 14).AddMinutes(i), 60)).ToArray();
+        var range = _ranges.Resolve("7 days", At(2026, 9, 7, 18), events[0].Start);
+
+        var item = _insights.Generate(events, [new(1, "Book", "Author")], range, 5, use24HourTime: false).Single(x => x.Id == "reading-window");
+        Assert.Contains("PM", item.Description);
+        Assert.DoesNotContain("14:00", item.Description);
+    }
 }

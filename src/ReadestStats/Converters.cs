@@ -12,6 +12,25 @@ public sealed class DurationConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }
 
+public sealed class ClockConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length == 0 || values[0] is not DateTimeOffset value) return "—";
+        var use24HourTime = values.Length < 2 || values[1] is not bool setting || setting;
+        return parameter?.ToString() switch
+        {
+            "date-time" => value.ToString(use24HourTime ? "MMM d, yyyy · HH:mm" : "MMM d, yyyy · h:mm tt", culture),
+            "short-date-time" => value.ToString(use24HourTime ? "MMM d · HH:mm" : "MMM d · h:mm tt", culture),
+            "full-date-time" => value.ToString(use24HourTime ? "MMM d, yyyy HH:mm" : "MMM d, yyyy h:mm tt", culture),
+            "seconds" => value.ToString(use24HourTime ? "HH:mm:ss" : "h:mm:ss tt", culture),
+            _ => value.ToString(use24HourTime ? "HH:mm" : "h:mm tt", culture)
+        };
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) => targetTypes.Select(_ => Binding.DoNothing).ToArray();
+}
+
 public sealed class PageVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => string.Equals(value?.ToString(), parameter?.ToString(), StringComparison.Ordinal) ? Visibility.Visible : Visibility.Collapsed;

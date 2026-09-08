@@ -11,7 +11,7 @@ public sealed class InsightEngine
         _analytics = new(zone);
     }
 
-    public IReadOnlyList<InsightItem> Generate(IReadOnlyList<ReadingEvent> allEvents, IReadOnlyList<Book> books, ResolvedDateRange range, int gapMinutes, IReadOnlyList<GoalProgress>? goals = null)
+    public IReadOnlyList<InsightItem> Generate(IReadOnlyList<ReadingEvent> allEvents, IReadOnlyList<Book> books, ResolvedDateRange range, int gapMinutes, IReadOnlyList<GoalProgress>? goals = null, bool use24HourTime = true)
     {
         var events = _analytics.Filter(allEvents, range);
         var daily = _statistics.Daily(events, TimeSpan.FromMinutes(gapMinutes));
@@ -24,7 +24,7 @@ public sealed class InsightEngine
         {
             var window = _analytics.CommonWindow(allEvents, range);
             result.Add(new("reading-window", 100, "Reading rhythm", "Your strongest reading window",
-                $"{window.StartHour:00}:00–{(window.StartHour + window.Hours) % 24:00}:00 contains {window.Share * 100:0}% of reading time.",
+                $"{HourRange(window.StartHour, window.Hours, use24HourTime)} contains {window.Share * 100:0}% of reading time.",
                 $"Based on {Formatters.Count(events.Count, "event")}",
                 "Recorded active seconds were grouped into every rolling two-hour window. The window with the highest total is shown; all times use your local timezone."));
 
@@ -38,7 +38,7 @@ public sealed class InsightEngine
             result.Add(new("day-part", 90, "Reading rhythm", $"You read most in the {byPart.Name}",
                 $"{(metrics.TotalSeconds <= 0 ? 0 : byPart.Seconds / metrics.TotalSeconds * 100):0}% of selected-period reading happens then.",
                 $"Based on {Formatters.Count(events.Count, "event")}",
-                "Each activity event was assigned to morning (05–12), afternoon (12–17), evening (17–22), or night (22–05) in your local time. The period with the most active seconds is shown."));
+                $"Each activity event was assigned to morning ({HourRange(5, 7, use24HourTime)}), afternoon ({HourRange(12, 5, use24HourTime)}), evening ({HourRange(17, 5, use24HourTime)}), or night ({HourRange(22, 7, use24HourTime)}) in your local time. The period with the most active seconds is shown."));
         }
         else
         {
@@ -101,5 +101,11 @@ public sealed class InsightEngine
         }
 
         return result.OrderByDescending(i => i.Priority).ToArray();
+    }
+
+    private static string HourRange(int startHour, int hours, bool use24HourTime)
+    {
+        string Format(int hour) => DateTime.Today.AddHours(hour % 24).ToString(use24HourTime ? "HH:mm" : "h:mm tt");
+        return $"{Format(startHour)}–{Format(startHour + hours)}";
     }
 }
