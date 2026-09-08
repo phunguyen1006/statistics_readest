@@ -32,7 +32,7 @@ public sealed class GoalArchive
     public string Status => TargetBooks > 0 && BooksRead >= TargetBooks ? "Goal reached" : "Goal not reached";
 }
 public sealed record YearBookGoalSummary(int Year, int BooksRead, double TargetBooks, double ProgressPercent, string Status, string Detail);
-public sealed record BookRow(BookSummary Summary, int Sessions, double AverageSessionSeconds, string TypicalHour)
+public sealed record BookRow(BookSummary Summary, int Sessions, double AverageSessionSeconds, string TypicalHour, string? CoverPath = null, string Status = "Unspecified", bool IsPinned = false)
 {
     public long Id => Summary.Id;
     public string Title => Summary.Title;

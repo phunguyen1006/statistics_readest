@@ -102,7 +102,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _refreshTimer.Tick += async (_, _) => await RefreshAsync(incremental: true);
     }
 
-    public string[] Pages { get; } = ["Overview", "Activity", "Sessions", "Books", "Goals", "Insights", "Year in Reading", "Data Quality", "Settings"];
+    public string[] Pages { get; } = ["Overview", "Activity", "Sessions", "Books", "Goals", "Insights", "Year in Reading", "Settings"];
     public NavItem[] Navigation { get; } =
     [
         new("Overview", "M3,3 H17 V7 H3 Z M3,10 H9 V17 H3 Z M12,10 H17 V17 H12 Z"),
@@ -112,7 +112,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         new("Goals", "M10,2 A8,8 0 1 1 9.9,2 M10,6 A4,4 0 1 1 9.9,6 M10,9 A1,1 0 1 1 9.9,9"),
         new("Insights", "M10,2 A6,6 0 0 1 14,12 L13,15 H7 L6,12 A6,6 0 0 1 10,2 M8,18 H12"),
         new("Year in Reading", "M10,2 L12,7 L18,7 L13,11 L15,17 L10,13 L5,17 L7,11 L2,7 L8,7 Z"),
-        new("Data Quality", "M10,2 L17,5 V10 C17,14 14,17 10,19 C6,17 3,14 3,10 V5 Z M6,10 L9,13 L14,7"),
         new("Settings", "M10,6 A4,4 0 1 1 9.9,6 M10,1 V4 M10,16 V19 M1,10 H4 M16,10 H19 M3.6,3.6 L5.7,5.7 M14.3,14.3 L16.4,16.4 M16.4,3.6 L14.3,5.7 M5.7,14.3 L3.6,16.4")
     ];
     public string[] RangeOptions => DateRangePresets.All;
@@ -183,7 +182,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public RelayCommand NextYearCommand { get; }
 
     public string SelectedPage { get => _selectedPage; set { if (string.IsNullOrWhiteSpace(value) || value == _selectedPage) return; var previous = _selectedPage; if (Set(ref _selectedPage, value)) { if (!_isGoingBack) _navigationHistory.Push(previous); Raise(nameof(PageSubtitle)); Raise(nameof(Breadcrumb)); Raise(nameof(CanGoBack)); BackCommand.Refresh(); _applyTheme(Theme); _ = Application.Current.Dispatcher.InvokeAsync(() => _applyTheme(Theme), DispatcherPriority.Loaded); } } }
-    public string PageSubtitle => SelectedPage switch { "Overview" => "Your reading activity", "Activity" => "Calendar analytics", "Sessions" => "Continuous reading periods", "Books" => "Reading by title", "Goals" => "Targets, pace and history", "Insights" => "Patterns derived locally", "Year in Reading" => "Your annual reading story", "Data Quality" => "Source integrity and coverage", _ => "Data, refresh and privacy" };
+    public string PageSubtitle => SelectedPage switch { "Overview" => "Your reading activity", "Activity" => "Calendar analytics", "Sessions" => "Continuous reading periods", "Books" => "Your reading library", "Goals" => "Targets, pace and history", "Insights" => "Patterns derived locally", "Year in Reading" => "Your annual reading story", _ => "Data, quality and preferences" };
     public string Breadcrumb => $"Readest Stats  /  {SelectedPage}";
     public bool CanGoBack => _navigationHistory.Count > 0;
     public string SelectedRange { get => _selectedRange; set { if (Set(ref _selectedRange, value)) RecalculateAll(); } }
@@ -386,7 +385,44 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private void ApplyBookFilters()
     {
-        var isStatusFilter = BookFilter.StartsWith("Status: ", StringComparison.Ordinal); var sourceEvents = BookFilter == "All" || BookFilter == "Pinned" || isStatusFilter ? _events : _periodEvents; var summaries = _statistics.RankBooks(sourceEvents, _bookModels); var rows = summaries.Select(summary => { var sessions = _statistics.BuildSessions(sourceEvents.Where(e => e.BookId == summary.Id), TimeSpan.FromMinutes(SessionGapMinutes), summary.Id); var hour = sourceEvents.Where(e => e.BookId == summary.Id).GroupBy(e => _statistics.ToLocal(e.Start).Hour).MaxBy(g => g.Sum(e => e.DurationSeconds))?.Key; return new BookRow(summary, sessions.Count, sessions.Count == 0 ? 0 : sessions.Average(s => s.DurationSeconds), hour is null ? "—" : FormatHour(hour.Value)); }); if (BookFilter == "Recently read") rows = rows.Where(b => b.LastRead >= DateTimeOffset.Now.AddDays(-30)); if (BookFilter == "Pinned") rows = rows.Where(book => { var key = BookTrackingKey(book.Id); return key is not null && _settings.PinnedBookKeys.Contains(key); }); if (isStatusFilter) { var expected = BookFilter[8..]; rows = rows.Where(book => BookStatus(book.Id) == expected); } if (!string.IsNullOrWhiteSpace(BookSearch)) rows = rows.Where(b => b.Title.Contains(BookSearch, StringComparison.CurrentCultureIgnoreCase) || b.Authors.Contains(BookSearch, StringComparison.CurrentCultureIgnoreCase)); rows = BookSort switch { "Sessions" => rows.OrderByDescending(b => b.Sessions), "Active days" => rows.OrderByDescending(b => b.ActiveDays), "Recently read" => rows.OrderByDescending(b => b.LastRead), "Title" => rows.OrderBy(b => b.Title), _ => BookFilter == "Least read" ? rows.OrderBy(b => b.Seconds) : rows.OrderByDescending(b => b.Seconds) }; Replace(Books, rows); TopBookLabel = Books.FirstOrDefault()?.Title ?? "No active book"; Raise(nameof(TopBookLabel)); if (SelectedBook is null || !Books.Any(b => b.Id == SelectedBook.Id)) SelectedBook = Books.FirstOrDefault();
+        var isStatusFilter = BookFilter.StartsWith("Status: ", StringComparison.Ordinal);
+        var sourceEvents = BookFilter == "All" || BookFilter == "Pinned" || isStatusFilter ? _events : _periodEvents;
+        var summaries = _statistics.RankBooks(sourceEvents, _bookModels).ToList();
+        if (BookFilter == "All" || BookFilter == "Pinned" || isStatusFilter)
+        {
+            var activeIds = summaries.Select(summary => summary.Id).ToHashSet();
+            summaries.AddRange(_bookModels
+                .Where(book => !activeIds.Contains(book.Id))
+                .Select(book => new BookSummary(
+                    book.Id,
+                    string.IsNullOrWhiteSpace(book.Title) ? "Untitled" : book.Title,
+                    string.IsNullOrWhiteSpace(book.Authors) ? "Unknown author" : book.Authors,
+                    0, 0, null, null, 0, 0, null, null, 0)));
+        }
+        var rows = summaries.Select(summary =>
+        {
+            var sessions = _statistics.BuildSessions(sourceEvents.Where(e => e.BookId == summary.Id), TimeSpan.FromMinutes(SessionGapMinutes), summary.Id);
+            var hour = sourceEvents.Where(e => e.BookId == summary.Id).GroupBy(e => _statistics.ToLocal(e.Start).Hour).MaxBy(g => g.Sum(e => e.DurationSeconds))?.Key;
+            var model = _bookModels.FirstOrDefault(book => book.Id == summary.Id);
+            var key = BookTrackingKey(summary.Id);
+            return new BookRow(
+                summary,
+                sessions.Count,
+                sessions.Count == 0 ? 0 : sessions.Average(s => s.DurationSeconds),
+                hour is null ? "—" : FormatHour(hour.Value),
+                ReadestLibraryLocator.FindCoverFile(Diagnostics?.Path, model?.Hash),
+                BookStatus(summary.Id),
+                key is not null && _settings.PinnedBookKeys.Contains(key));
+        });
+        if (BookFilter == "Recently read") rows = rows.Where(b => b.LastRead >= DateTimeOffset.Now.AddDays(-30));
+        if (BookFilter == "Pinned") rows = rows.Where(book => book.IsPinned);
+        if (isStatusFilter) rows = rows.Where(book => book.Status == BookFilter[8..]);
+        if (!string.IsNullOrWhiteSpace(BookSearch)) rows = rows.Where(b => b.Title.Contains(BookSearch, StringComparison.CurrentCultureIgnoreCase) || b.Authors.Contains(BookSearch, StringComparison.CurrentCultureIgnoreCase));
+        rows = BookSort switch { "Sessions" => rows.OrderByDescending(b => b.Sessions), "Active days" => rows.OrderByDescending(b => b.ActiveDays), "Recently read" => rows.OrderByDescending(b => b.LastRead), "Title" => rows.OrderBy(b => b.Title), _ => BookFilter == "Least read" ? rows.OrderBy(b => b.Seconds) : rows.OrderByDescending(b => b.Seconds) };
+        Replace(Books, rows);
+        TopBookLabel = Books.FirstOrDefault()?.Title ?? "No active book";
+        Raise(nameof(TopBookLabel));
+        SelectedBook = SelectedBook is null ? Books.FirstOrDefault() : Books.FirstOrDefault(book => book.Id == SelectedBook.Id) ?? Books.FirstOrDefault();
     }
 
     private void BuildBookDetail()
@@ -470,7 +506,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             ? "Select a book to open it in Readest."
             : path is null
                 ? "This book file is not available in the local Readest library."
-                : $"Ready to open {Path.GetFileName(path)}";
+                : "";
         OpenBookInReadestCommand.Refresh();
     }
 
@@ -534,7 +570,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         await _store.SaveAsync(_settings);
         Raise(nameof(IsSelectedBookPinned)); Raise(nameof(PinBookLabel));
         Status = IsSelectedBookPinned ? "Book pinned" : "Book unpinned";
-        if (BookFilter == "Pinned") ApplyBookFilters();
+        ApplyBookFilters();
     }
 
     private string FormatTime(DateTimeOffset value, bool includeSeconds = false) => value.ToString(Use24HourTime ? includeSeconds ? "HH:mm:ss" : "HH:mm" : includeSeconds ? "h:mm:ss tt" : "h:mm tt");

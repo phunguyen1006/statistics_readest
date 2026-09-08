@@ -4,11 +4,11 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-555555)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-Readest Stats is an independent native Windows desktop viewer for the reading statistics stored locally by Readest. Version 1.1.0 includes a monochrome analytics workspace with complete dark, light, and system themes across Overview, Activity, Sessions, Books, Goals, Insights, Year in Reading, Data Quality, and Settings.
+Readest Stats is an independent native Windows desktop viewer for the reading statistics stored locally by Readest. Version 1.1.0 includes a monochrome analytics workspace with complete dark, light, and system themes across Overview, Activity, Sessions, a cover-first Books library, Goals, Insights, Year in Reading, and Settings. Data-quality checks are available in Settings.
 
 Highlights include global date ranges and fair elapsed-period comparisons, daily/weekly/monthly trend aggregation, a clickable 365-day heatmap, a full month calendar, active-versus-elapsed session analysis, book-level patterns, deterministic insights, a daily reading-time target, weekly/monthly/yearly book targets, yearly progress, and automatic archives for past years.
 
-Recent 1.1 updates add one-click opening of a selected local book in Readest, locally managed reading statuses and finished-book goals, pinned-book filtering, source-quality checks, monthly Markdown reports, GitHub update checks, daily rotating settings backups, persistent window placement, full-screen mode, and Ctrl+1–9 navigation shortcuts.
+Recent 1.1 updates add one-click opening of a selected local book in Readest, locally managed reading statuses and finished-book goals, pinned-book filtering, source-quality checks, monthly Markdown reports, GitHub update checks, daily rotating settings backups, persistent window placement, full-screen mode, and Ctrl+1–8 navigation shortcuts.
 
 ## Screenshots
 

@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.IO;
 using System.Windows.Data;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using ReadestStats.Core;
 
 namespace ReadestStats;
@@ -74,5 +76,27 @@ public sealed class FileSizeConverter : IValueConverter
 public sealed class PercentChangeConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value is double percent ? $"{percent:+0;-0;0}% vs previous period" : "No previous-period baseline";
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+public sealed class CoverImageConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not string path || string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+        try
+        {
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            if (int.TryParse(parameter?.ToString(), out var width)) image.DecodePixelWidth = width;
+            image.UriSource = new Uri(path, UriKind.Absolute);
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException) { return null; }
+    }
+
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }

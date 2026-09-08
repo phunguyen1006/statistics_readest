@@ -7,6 +7,11 @@ public static class ReadestLibraryLocator
         ".epub", ".pdf", ".mobi", ".azw", ".azw3", ".fb2", ".cbz", ".cbr", ".txt", ".md", ".html", ".htm", ".docx"
     };
 
+    private static readonly string[] CoverFileNames =
+    {
+        "cover.png", "cover.jpg", "cover.jpeg", "cover.webp", "cover.bmp"
+    };
+
     public static string? FindBookFile(string? databasePath, string? bookHash)
     {
         if (string.IsNullOrWhiteSpace(databasePath) || string.IsNullOrWhiteSpace(bookHash)) return null;
@@ -20,6 +25,25 @@ public static class ReadestLibraryLocator
                 .Where(path => SupportedExtensions.Contains(Path.GetExtension(path)))
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
+    }
+
+    public static string? FindCoverFile(string? databasePath, string? bookHash)
+    {
+        if (string.IsNullOrWhiteSpace(databasePath) || string.IsNullOrWhiteSpace(bookHash)) return null;
+        try
+        {
+            var root = Path.GetDirectoryName(Path.GetFullPath(databasePath));
+            if (root is null) return null;
+            var bookDirectory = Path.Combine(root, "Books", bookHash);
+            if (!Directory.Exists(bookDirectory)) return null;
+            foreach (var fileName in CoverFileNames)
+            {
+                var candidate = Path.Combine(bookDirectory, fileName);
+                if (File.Exists(candidate)) return candidate;
+            }
+            return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
     }
