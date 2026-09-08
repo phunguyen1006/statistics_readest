@@ -68,12 +68,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private YearInReading? _yearSummary;
     private YearBookGoalSummary? _yearBookGoal;
     private YearBookGoalSummary? _currentYearBookGoal;
+    private InsightItem? _selectedInsight;
     private int _allSessionCount;
 
     public MainViewModel(Func<string?> chooseDatabase, Func<string, string, string?> chooseExport, Action<string>? log = null, Action<string>? applyTheme = null)
     {
         _chooseDatabase = chooseDatabase; _chooseExport = chooseExport; _log = log ?? (_ => { }); _applyTheme = applyTheme ?? (_ => { }); _store = new(_locator.SettingsPath);
         NavigateCommand = new ParameterCommand<string>(page => { if (!string.IsNullOrWhiteSpace(page)) SelectedPage = page; });
+        OpenInsightCommand = new ParameterCommand<InsightItem>(insight => { if (insight is not null) { SelectedInsight = insight; SelectedPage = "Insights"; } });
         RefreshCommand = new AsyncCommand(() => RefreshAsync()); ChangeDatabaseCommand = new AsyncCommand(ChangeDatabaseAsync); RedetectCommand = new AsyncCommand(RedetectAsync);
         OpenFolderCommand = new RelayCommand(OpenFolder, () => Diagnostics is not null); ExportCsvCommand = new AsyncCommand(ExportCsvAsync, () => Period is not null); ExportJsonCommand = new AsyncCommand(ExportJsonAsync, () => Period is not null);
         SaveSettingsCommand = new AsyncCommand(SaveSettingsAsync); SaveGoalsCommand = new AsyncCommand(SaveGoalsAsync); BackupSettingsCommand = new AsyncCommand(BackupSettingsAsync); ResetSettingsCommand = new AsyncCommand(ResetSettingsAsync);
@@ -135,6 +137,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<BookSummary> YearTopBooks { get; } = [];
 
     public ParameterCommand<string> NavigateCommand { get; }
+    public ParameterCommand<InsightItem> OpenInsightCommand { get; }
     public ParameterCommand<CalendarDayItem> SelectDayCommand { get; }
     public ParameterCommand<ChartPoint> SelectHeatmapDayCommand { get; }
     public AsyncCommand RefreshCommand { get; }
@@ -196,6 +199,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public SessionDisplay? SelectedSession { get => _selectedSession; set { if (Set(ref _selectedSession, value)) BuildSessionDetail(); } }
     public BookRow? SelectedBook { get => _selectedBook; set { if (Set(ref _selectedBook, value)) BuildBookDetail(); } }
     public BookDetail? BookDetail { get => _bookDetail; private set => Set(ref _bookDetail, value); }
+    public InsightItem? SelectedInsight { get => _selectedInsight; set => Set(ref _selectedInsight, value); }
     public string SessionBook { get => _sessionBook; set { var normalized = string.IsNullOrWhiteSpace(value) ? "All books" : value; if (Set(ref _sessionBook, normalized)) ApplySessionFilters(); } }
     public string SessionDuration { get => _sessionDuration; set { if (Set(ref _sessionDuration, value)) ApplySessionFilters(); } }
     public string SessionSearch { get => _sessionSearch; set { if (Set(ref _sessionSearch, value)) ApplySessionFilters(); } }
@@ -285,7 +289,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private void BuildRecordsAndInsights()
     {
-        var span = _resolvedRange is null ? 30 : Math.Max(1, _resolvedRange.EndDate.DayNumber - _resolvedRange.StartDate.DayNumber + 1); var overview = _statistics.Overview(_periodEvents, _bookModels, span, TimeSpan.FromMinutes(SessionGapMinutes)); Replace(Records, overview.Records); Replace(SessionHistogram, SessionProfile?.Histogram ?? []); var goalProgress = Goals.Select(g => g.Progress).ToArray(); var insights = _resolvedRange is null ? [] : _insightEngine.Generate(_events, _bookModels, _resolvedRange, SessionGapMinutes, goalProgress); Replace(AllInsights, insights); Replace(QuickInsights, insights.Take(5));
+        var span = _resolvedRange is null ? 30 : Math.Max(1, _resolvedRange.EndDate.DayNumber - _resolvedRange.StartDate.DayNumber + 1); var overview = _statistics.Overview(_periodEvents, _bookModels, span, TimeSpan.FromMinutes(SessionGapMinutes)); Replace(Records, overview.Records); Replace(SessionHistogram, SessionProfile?.Histogram ?? []); var goalProgress = Goals.Select(g => g.Progress).ToArray(); var insights = _resolvedRange is null ? [] : _insightEngine.Generate(_events, _bookModels, _resolvedRange, SessionGapMinutes, goalProgress); var selectedId = SelectedInsight?.Id; Replace(AllInsights, insights); Replace(QuickInsights, insights.Take(5)); SelectedInsight = AllInsights.FirstOrDefault(i => i.Id == selectedId) ?? AllInsights.FirstOrDefault();
     }
 
     private IEnumerable<SessionDisplay> SessionRows(IEnumerable<ReadingSession> sessions)
@@ -368,7 +372,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _watcher = new FileSystemWatcher(Path.GetDirectoryName(_repository.DatabasePath)!) { Filter = "statistics.db*", NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName, EnableRaisingEvents = true }; _watcher.Changed += WatcherChanged; _watcher.Created += WatcherChanged; _watcher.Renamed += WatcherChanged; _watcher.Deleted += WatcherChanged;
     }
     private void WatcherChanged(object sender, FileSystemEventArgs e) { _refreshDebounce?.Cancel(); _refreshDebounce?.Dispose(); _refreshDebounce = new(); var token = _refreshDebounce.Token; _ = Application.Current.Dispatcher.InvokeAsync(async () => { try { await Task.Delay(1500, token); await RefreshAsync(incremental: true); } catch (OperationCanceledException) { } }); }
-    private void ClearAnalytics() { Period = null; Comparison = null; Trend.Clear(); Heatmap.Clear(); Hourly.Clear(); Weekdays.Clear(); Records.Clear(); QuickInsights.Clear(); AllInsights.Clear(); Sessions.Clear(); Books.Clear(); Goals.Clear(); CalendarDays.Clear(); ExportCsvCommand.Refresh(); ExportJsonCommand.Refresh(); Raise(nameof(NoPeriodData)); Raise(nameof(HasData)); }
+    private void ClearAnalytics() { Period = null; Comparison = null; SelectedInsight = null; Trend.Clear(); Heatmap.Clear(); Hourly.Clear(); Weekdays.Clear(); Records.Clear(); QuickInsights.Clear(); AllInsights.Clear(); Sessions.Clear(); Books.Clear(); Goals.Clear(); CalendarDays.Clear(); ExportCsvCommand.Refresh(); ExportJsonCommand.Refresh(); Raise(nameof(NoPeriodData)); Raise(nameof(HasData)); }
     private static string Friendly(Exception ex) => ex switch { UnauthorizedAccessException => "Permission denied while reading the database.", IOException => ex.Message, Microsoft.Data.Sqlite.SqliteException => "The database is locked, corrupted, or incompatible.", _ => ex.Message };
     private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> values) { target.Clear(); foreach (var value in values) target.Add(value); }
     private void RaiseConnectionState() { Raise(nameof(IsConnected)); Raise(nameof(NoPeriodData)); Raise(nameof(HasData)); OpenFolderCommand.Refresh(); }

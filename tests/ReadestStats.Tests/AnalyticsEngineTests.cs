@@ -7,6 +7,7 @@ public sealed class AnalyticsEngineTests
     private static readonly TimeZoneInfo Zone = TimeZoneInfo.CreateCustomTimeZone("UTC", TimeSpan.Zero, "UTC", "UTC");
     private readonly DateRangeService _ranges = new(Zone);
     private readonly AnalyticsEngine _analytics = new(Zone);
+    private readonly InsightEngine _insights = new(Zone);
     private static DateTimeOffset At(int y, int m, int d, int h = 12) => new(y, m, d, h, 0, 0, TimeSpan.Zero);
     private static ReadingEvent E(DateTimeOffset at, double seconds = 60, long book = 1) => new(book, 1, at.ToUnixTimeSeconds(), seconds, null);
 
@@ -86,5 +87,26 @@ public sealed class AnalyticsEngineTests
         var common = _analytics.Year([], [], 2025, 5);
         Assert.Equal(365, common.Heatmap.Count);
         Assert.Equal(0, common.TotalSeconds);
+    }
+
+    [Fact] public void InsightsExposeRealSampleCountsAndCalculationEvidence()
+    {
+        var events = Enumerable.Range(0, 5).Select(i => E(At(2026, 9, 7, 12).AddMinutes(i * 10), 60, 1)).ToArray();
+        var range = _ranges.Resolve("7 days", At(2026, 9, 7, 18), events[0].Start);
+        var items = _insights.Generate(events, [new(1, "Book", "Author")], range, 5);
+
+        var rhythm = items.Single(item => item.Id == "reading-window");
+        Assert.Equal("Based on 5 events", rhythm.SampleStatus);
+        Assert.Contains("rolling two-hour window", rhythm.Evidence);
+        Assert.All(items, item => Assert.False(string.IsNullOrWhiteSpace(item.Evidence)));
+    }
+
+    [Fact] public void LimitedInsightReportsTheActualEventCount()
+    {
+        var events = new[] { E(At(2026, 9, 7), 60) };
+        var range = _ranges.Resolve("7 days", At(2026, 9, 7, 18), events[0].Start);
+
+        var item = _insights.Generate(events, [new(1, "Book", "Author")], range, 5).Single(x => x.Id == "reading-window-insufficient");
+        Assert.Equal("Only 1 event", item.SampleStatus);
     }
 }

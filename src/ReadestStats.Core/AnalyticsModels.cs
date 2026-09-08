@@ -4,7 +4,7 @@ public sealed record PeriodMetrics(double TotalSeconds, int ActiveDays, int Avai
 public sealed record SessionProfile(double Average, double Median, double Longest, double Shortest, double P25, double P75, IReadOnlyList<ChartPoint> Histogram);
 public sealed record WeekdayWeekendStats(double WeekdaySeconds, double WeekendSeconds, double AverageWeekdaySeconds, double AverageWeekendSeconds, string Summary);
 public sealed record ReadingWindow(int StartHour, int Hours, double Seconds, double Share);
-public sealed record InsightItem(string Id, int Priority, string Category, string Title, string Description, string SampleStatus = "Strong sample");
+public sealed record InsightItem(string Id, int Priority, string Category, string Title, string Description, string SampleStatus, string Evidence);
 public sealed record CalendarDayItem(DateOnly Date, bool IsInMonth, double Seconds, int Sessions, int Books, string Intensity, string DurationLabel);
 public sealed record DayDetails(DateOnly Date, double Seconds, int Sessions, int Books, DateTimeOffset? FirstSession, DateTimeOffset? LastSession, IReadOnlyList<SessionDisplay> SessionItems, IReadOnlyList<ChartPoint> BookItems);
 public sealed record YearInReading(int Year, double TotalSeconds, int ActiveDays, int Sessions, int ActiveBooks, int LongestStreak, DailyStat? BestDay, ChartPoint? BestMonth, BookSummary? TopBook, ChartPoint? FavoriteHour, ChartPoint? FavoriteWeekday, IReadOnlyList<ChartPoint> Months, IReadOnlyList<ChartPoint> Heatmap, IReadOnlyList<BookSummary> TopBooks);
