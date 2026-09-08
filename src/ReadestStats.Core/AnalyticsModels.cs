@@ -42,3 +42,7 @@ public sealed record BookRow(BookSummary Summary, int Sessions, double AverageSe
     public DateTimeOffset? LastRead => Summary.LastRead;
     public double Share => Summary.Share;
 }
+
+public sealed record DataQualityCheck(string Name, string Status, string Detail, string Evidence, bool NeedsAttention);
+public sealed record DataQualityReport(int Score, string Status, int PassedChecks, int AttentionChecks, string Summary, IReadOnlyList<DataQualityCheck> Checks);
+public sealed record AppUpdateInfo(Version LatestVersion, string Tag, string DownloadUrl, bool IsNewer);

@@ -84,6 +84,15 @@ public sealed class GoalEngineTests
         Assert.Equal("2 books", progress.CurrentLabel);
     }
 
+    [Fact] public void BookGoalUsesManualCompletionDatesWhenProvided()
+    {
+        var goal = new GoalDefinition { Period = GoalPeriod.Monthly, Metric = GoalMetric.Books, TargetValue = 2 };
+        var completed = new[] { At(2026, 9, 2), At(2026, 8, 30) };
+        var progress = _goals.Progress(goal, [], 5, At(2026, 9, 7), completed);
+        Assert.Equal(1, progress.Current);
+        Assert.Equal("1 book", progress.CurrentLabel);
+    }
+
     [Fact] public void PastYearsAreArchivedOnceAndCurrentYearIsNot()
     {
         var settings = new AppSettings();

@@ -39,4 +39,17 @@ public sealed class SettingsStore
     {
         if (File.Exists(_path)) File.Copy(_path, destination, true);
     }
+
+    public bool CreateAutomaticBackup(DateTimeOffset? current = null, int retainedCopies = 7)
+    {
+        if (!File.Exists(_path)) return false;
+        var now = current ?? DateTimeOffset.Now;
+        var directory = Path.Combine(Path.GetDirectoryName(_path)!, "Backups");
+        Directory.CreateDirectory(directory);
+        var destination = Path.Combine(directory, $"settings-{now:yyyy-MM-dd}.json");
+        if (File.Exists(destination)) return false;
+        File.Copy(_path, destination);
+        foreach (var old in Directory.EnumerateFiles(directory, "settings-*.json").OrderByDescending(File.GetLastWriteTimeUtc).Skip(Math.Max(1, retainedCopies))) File.Delete(old);
+        return true;
+    }
 }

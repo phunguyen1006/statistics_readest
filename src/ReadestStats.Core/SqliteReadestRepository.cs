@@ -77,10 +77,17 @@ public sealed class SqliteReadestRepository : IReadestRepository
     public Task<IReadOnlyList<Book>> GetBooksAsync(CancellationToken cancellationToken = default) => WithRetryAsync<IReadOnlyList<Book>>(async connection =>
     {
         var result = new List<Book>();
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using (var schema = connection.CreateCommand())
+        {
+            schema.CommandText = "PRAGMA table_info(book)";
+            await using var schemaReader = await schema.ExecuteReaderAsync(cancellationToken);
+            while (await schemaReader.ReadAsync(cancellationToken)) columns.Add(schemaReader.GetString(1));
+        }
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT id, COALESCE(title,''), COALESCE(authors,''), last_open, pages, series, language FROM book ORDER BY title COLLATE NOCASE";
+        command.CommandText = $"SELECT id, COALESCE(title,''), COALESCE(authors,''), last_open, pages, series, language, {(columns.Contains("md5") ? "md5" : "NULL")} FROM book ORDER BY title COLLATE NOCASE";
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken)) result.Add(new(reader.GetInt64(0), reader.GetString(1), reader.GetString(2), reader.IsDBNull(3) ? null : reader.GetInt64(3), reader.IsDBNull(4) ? null : reader.GetInt32(4), reader.IsDBNull(5) ? null : reader.GetString(5), reader.IsDBNull(6) ? null : reader.GetString(6)));
+        while (await reader.ReadAsync(cancellationToken)) result.Add(new(reader.GetInt64(0), reader.GetString(1), reader.GetString(2), reader.IsDBNull(3) ? null : reader.GetInt64(3), reader.IsDBNull(4) ? null : reader.GetInt32(4), reader.IsDBNull(5) ? null : reader.GetString(5), reader.IsDBNull(6) ? null : reader.GetString(6), reader.IsDBNull(7) ? null : reader.GetString(7)));
         return result;
     }, cancellationToken);
 

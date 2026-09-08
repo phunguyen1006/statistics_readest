@@ -4,9 +4,11 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-555555)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-Readest Stats is an independent native Windows desktop viewer for the reading statistics stored locally by Readest. Version 1.1.0 adds a monochrome analytics workspace with complete dark, light, and system themes across Overview, Activity, Sessions, Books, Goals, Insights, Year in Reading, and Settings.
+Readest Stats is an independent native Windows desktop viewer for the reading statistics stored locally by Readest. Version 1.1.0 includes a monochrome analytics workspace with complete dark, light, and system themes across Overview, Activity, Sessions, Books, Goals, Insights, Year in Reading, Data Quality, and Settings.
 
 Highlights include global date ranges and fair elapsed-period comparisons, daily/weekly/monthly trend aggregation, a clickable 365-day heatmap, a full month calendar, active-versus-elapsed session analysis, book-level patterns, deterministic insights, a daily reading-time target, weekly/monthly/yearly book targets, yearly progress, and automatic archives for past years.
+
+Recent 1.1 updates add one-click opening of a selected local book in Readest, locally managed reading statuses and finished-book goals, pinned-book filtering, source-quality checks, monthly Markdown reports, GitHub update checks, daily rotating settings backups, persistent window placement, full-screen mode, and Ctrl+1–9 navigation shortcuts.
 
 ## Screenshots
 
@@ -38,7 +40,7 @@ The default data location is:
 
 Readest Stats also checks Readest's `customRootDir` setting and allows selecting `statistics.db` manually.
 
-Page numbers and total-page values can change with pagination, font size, layout, or reading-engine behavior. Therefore page-based progress, completion, and “books finished” are not used as trustworthy primary metrics. The experimental page-metrics option is off by default.
+Page numbers and total-page values can change with pagination, font size, layout, or reading-engine behavior. Therefore page-based progress and completion are not used as trustworthy primary metrics. Finished-book goals use the explicit status selected by the user on the Books page; that state is stored separately by Readest Stats. The experimental page-metrics option is off by default.
 
 ## Refresh and local state
 

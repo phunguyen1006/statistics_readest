@@ -1,6 +1,6 @@
 namespace ReadestStats.Core;
 
-public sealed record Book(long Id, string Title, string Authors, long? LastOpen = null, int? Pages = null, string? Series = null, string? Language = null);
+public sealed record Book(long Id, string Title, string Authors, long? LastOpen = null, int? Pages = null, string? Series = null, string? Language = null, string? Hash = null);
 public sealed record ReadingEvent(long BookId, int Page, long StartTime, double DurationSeconds, int? TotalPages)
 {
     public DateTimeOffset Start => DateTimeOffset.FromUnixTimeSeconds(StartTime);
@@ -49,6 +49,15 @@ public sealed class AppSettings
     public bool CompactMode { get; set; }
     public bool Use24HourTime { get; set; } = true;
     public bool ReduceMotion { get; set; }
+    public Dictionary<string, BookTrackingState> BookTracking { get; set; } = [];
+    public List<string> PinnedBookKeys { get; set; } = [];
+    public bool AutomaticBackups { get; set; } = true;
+}
+
+public sealed class BookTrackingState
+{
+    public string Status { get; set; } = "Unspecified";
+    public DateTimeOffset? CompletedAtUtc { get; set; }
 }
 
 public static class Formatters

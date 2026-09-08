@@ -10,7 +10,7 @@
       </Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
       <TextBlock Text="PREVIOUS YEARS" Style="{StaticResource Eyebrow}" Margin="0,8,0,8"/>
       <Border Style="{StaticResource Card}" Margin="0,0,0,14"><StackPanel><ItemsControl ItemsSource="{Binding GoalArchives}"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition/><ColumnDefinition Width="130"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Year}" FontSize="16" FontWeight="SemiBold"/><StackPanel Grid.Column="1" Margin="8,0,22,0"><TextBlock Text="{Binding ResultLabel}"/><ProgressBar Value="{Binding ProgressPercent}" Maximum="100" Margin="0,7,0,0"/></StackPanel><TextBlock Grid.Column="2" Text="{Binding Status}" TextAlignment="Right" Foreground="{DynamicResource TextSecondary}"/></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><TextBlock Text="Past years appear here automatically when reading activity exists." Style="{StaticResource Muted}" Margin="0,9,0,0"/></StackPanel></Border>
-      <Border Style="{StaticResource Card}"><TextBlock Text="Book goals count unique titles with at least one recorded reading event in the period. Readest's statistics database does not reliably identify completed books, so this app does not claim completion." Style="{StaticResource Muted}"/></Border>
+      <Border Style="{StaticResource Card}"><TextBlock Text="Book goals count titles you mark Finished on the Books page. Completion status and date are stored only by Readest Stats; Readest's database is never changed." Style="{StaticResource Muted}" TextWrapping="Wrap"/></Border>
     </StackPanel>
   </ScrollViewer>
 </UserControl>
