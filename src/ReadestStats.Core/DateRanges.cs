@@ -2,7 +2,7 @@ namespace ReadestStats.Core;
 
 public static class DateRangePresets
 {
-    public static readonly string[] All = ["7 days", "30 days", "90 days", "This week", "This month", "This year", "Last year", "All time", "Custom"];
+    public static readonly string[] All = ["Today", "7 days", "30 days", "90 days", "6 months", "1 year", "This week", "This month", "This year", "Last year", "All time", "Custom"];
 }
 
 public sealed record ResolvedDateRange(string Label, DateTimeOffset Start, DateTimeOffset End, DateTimeOffset PreviousStart, DateTimeOffset PreviousEnd, DateOnly StartDate, DateOnly EndDate, int AvailableDays);
@@ -20,11 +20,14 @@ public sealed class DateRangeService
         DateOnly endDate = today;
         DateOnly previousStart;
         DateOnly previousEnd;
-        var rolling = preset is "7 days" or "30 days" or "90 days";
+        var rolling = preset is "Today" or "7 days" or "30 days" or "90 days" or "6 months" or "1 year";
         switch (preset)
         {
+            case "Today": startDate = today; previousEnd = startDate.AddDays(-1); previousStart = previousEnd; break;
             case "7 days": startDate = today.AddDays(-6); previousEnd = startDate.AddDays(-1); previousStart = previousEnd.AddDays(-6); break;
             case "90 days": startDate = today.AddDays(-89); previousEnd = startDate.AddDays(-1); previousStart = previousEnd.AddDays(-89); break;
+            case "6 months": startDate = today.AddMonths(-6).AddDays(1); previousEnd = startDate.AddDays(-1); previousStart = previousEnd.AddMonths(-6).AddDays(1); break;
+            case "1 year": startDate = today.AddYears(-1).AddDays(1); previousEnd = startDate.AddDays(-1); previousStart = previousEnd.AddYears(-1).AddDays(1); break;
             case "This week":
                 var offset = weekStartsMonday ? ((int)today.DayOfWeek + 6) % 7 : (int)today.DayOfWeek;
                 startDate = today.AddDays(-offset); previousStart = startDate.AddDays(-7); previousEnd = previousStart.AddDays(offset); break;

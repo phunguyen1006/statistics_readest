@@ -22,6 +22,28 @@ public sealed class AnalyticsEngineTests
         Assert.Equal(range.End - range.Start, range.PreviousEnd - range.PreviousStart);
     }
 
+    [Theory]
+    [InlineData("6 months", 184)]
+    [InlineData("1 year", 365)]
+    public void LongRollingRangesEndTodayAndHaveEqualPreviousSpan(string preset, int expectedDays)
+    {
+        var range = _ranges.Resolve(preset, At(2026, 9, 7));
+        Assert.Equal(new DateOnly(2026, 9, 7), range.EndDate);
+        Assert.Equal(expectedDays, range.EndDate.DayNumber - range.StartDate.DayNumber + 1);
+        Assert.Equal(range.End - range.Start, range.PreviousEnd - range.PreviousStart);
+    }
+
+    [Fact]
+    public void TodayRangeUsesOnlyTheCurrentLocalCalendarDay()
+    {
+        var range = _ranges.Resolve("Today", At(2026, 9, 7));
+        Assert.Equal(new DateOnly(2026, 9, 7), range.StartDate);
+        Assert.Equal(range.StartDate, range.EndDate);
+        Assert.True(range.End - range.Start > TimeSpan.Zero);
+        Assert.True(range.End - range.Start <= TimeSpan.FromDays(1));
+        Assert.Equal(range.End - range.Start, range.PreviousEnd - range.PreviousStart);
+    }
+
     [Fact] public void CurrentMonthComparesTheSameElapsedDays()
     {
         var range = _ranges.Resolve("This month", At(2026, 9, 7));

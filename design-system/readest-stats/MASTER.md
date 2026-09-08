@@ -1,4 +1,4 @@
-# Readest Stats 1.1 — Design System
+# Readest Stats 1.2 — Design System
 
 This file is the implementation reference for every screen. It supersedes the former blue dashboard theme.
 
@@ -81,7 +81,7 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 
 ## Screen map
 
-Overview → Activity → Sessions → Books → Goals → Insights → Year in Reading → Settings.
+Overview → Activity → Sessions → Books → Goals → Statistics → Year in Reading → Settings.
 
 Every screen keeps the sidebar and top bar stable, uses the global date range where relevant, and provides a meaningful no-data state rather than an empty chart frame.
 
