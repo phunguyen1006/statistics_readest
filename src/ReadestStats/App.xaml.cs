@@ -16,13 +16,14 @@ public partial class App : Application
         DispatcherUnhandledException += (_, args) =>
         {
             Log("Unhandled UI error: " + args.Exception);
+            var fatal = args.Exception is OutOfMemoryException or AccessViolationException;
             var errorKey = $"{args.Exception.GetType().FullName}:{args.Exception.Message}";
             if (ReportedDispatcherErrors.Add(errorKey))
             {
-                MessageBox.Show(args.Exception.Message, "Readest Stats", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(fatal ? "Readest Stats encountered a fatal error and must restart. Your Readest library was not modified.\n\n" + args.Exception.Message : args.Exception.Message, "Readest Stats", MessageBoxButton.OK, fatal ? MessageBoxImage.Error : MessageBoxImage.Warning);
             }
-
-            args.Handled = true;
+            args.Handled = !fatal;
+            if (fatal) Shutdown(1);
         };
         try
         {
@@ -47,6 +48,16 @@ public partial class App : Application
 
     private static void Log(string message)
     {
-        try { var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ReadestStats", "logs"); Directory.CreateDirectory(directory); File.AppendAllText(Path.Combine(directory, "readest-stats.log"), $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}"); } catch { }
+        try
+        {
+            var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ReadestStats", "logs"); Directory.CreateDirectory(directory); var path = Path.Combine(directory, "readest-stats.log");
+            if (File.Exists(path) && new FileInfo(path).Length > 1_000_000)
+            {
+                for (var index = 2; index >= 1; index--) { var source = Path.Combine(directory, $"readest-stats.{index}.log"); var destination = Path.Combine(directory, $"readest-stats.{index + 1}.log"); if (File.Exists(source)) File.Move(source, destination, true); }
+                File.Move(path, Path.Combine(directory, "readest-stats.1.log"), true);
+            }
+            File.AppendAllText(path, $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}");
+        }
+        catch { }
     }
 }

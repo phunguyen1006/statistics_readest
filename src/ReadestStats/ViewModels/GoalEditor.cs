@@ -14,7 +14,7 @@ public sealed class GoalEditor : ObservableObject
     }
     public string Period => Definition.Period.ToString().ToUpperInvariant();
     public string MetricLabel => Definition.Metric switch { GoalMetric.Books => "Books finished", GoalMetric.ActiveDays => "Active days", GoalMetric.Sessions => "Sessions", _ => "Reading time" };
-    public string Unit => Definition.Metric == GoalMetric.ReadingTime ? "minutes per day" : "books";
+    public string Unit => Definition.Metric switch { GoalMetric.ReadingTime => "minutes per day", GoalMetric.ActiveDays => "active days", GoalMetric.Sessions => "sessions", _ => "books" };
     public bool Enabled { get => Definition.Enabled; set { Definition.Enabled = value; Raise(); } }
     public double TargetAmount { get => _targetAmount; set => Set(ref _targetAmount, Math.Max(0, value)); }
     public GoalProgress Progress { get => _progress; set => Set(ref _progress, value); }

@@ -27,22 +27,33 @@ public sealed class GoalEngine
         goals.Any(g => g.Period == GoalPeriod.Daily && g.Metric == GoalMetric.ReadingTime) &&
         new[] { GoalPeriod.Weekly, GoalPeriod.Monthly, GoalPeriod.Yearly }.All(period => goals.Any(g => g.Period == period && g.Metric == GoalMetric.Books));
 
-    public bool SyncYearArchives(AppSettings settings, IReadOnlyList<ReadingEvent> events, DateTimeOffset? current = null)
+    public bool SyncYearArchives(AppSettings settings, IReadOnlyList<ReadingEvent> events, DateTimeOffset? current = null, IReadOnlyList<DateTimeOffset>? completedBooks = null)
     {
         Migrate(settings);
         settings.GoalArchives ??= [];
         var currentYear = TimeZoneInfo.ConvertTime(current ?? DateTimeOffset.Now, _zone).Year;
         var target = settings.Goals.First(g => g.Period == GoalPeriod.Yearly && g.Metric == GoalMetric.Books).TargetValue;
-        var years = events.Select(e => _statistics.ToLocal(e.Start).Year).Where(year => year < currentYear).Distinct().OrderBy(year => year);
+        var eventYears = events.Select(e => _statistics.ToLocal(e.Start).Year);
+        var completionYears = completedBooks?.Select(date => _statistics.ToLocal(date).Year) ?? [];
+        var years = eventYears.Concat(completionYears).Where(year => year < currentYear).Distinct().OrderBy(year => year);
         var changed = false;
         foreach (var year in years)
         {
-            if (settings.GoalArchives.Any(a => a.Year == year)) continue;
+            var existing = settings.GoalArchives.FirstOrDefault(a => a.Year == year);
+            if (existing is not null)
+            {
+                if (completedBooks is null) continue;
+                var corrected = completedBooks.Count(date => _statistics.ToLocal(date).Year == year);
+                if (existing.BooksRead != corrected) { existing.BooksRead = corrected; changed = true; }
+                continue;
+            }
             settings.GoalArchives.Add(new GoalArchive
             {
                 Year = year,
                 TargetBooks = target,
-                BooksRead = events.Where(e => _statistics.ToLocal(e.Start).Year == year).Select(e => e.BookId).Distinct().Count(),
+                BooksRead = completedBooks is null
+                    ? events.Where(e => _statistics.ToLocal(e.Start).Year == year).Select(e => e.BookId).Distinct().Count()
+                    : completedBooks.Count(date => _statistics.ToLocal(date).Year == year),
                 ArchivedAtUtc = current ?? DateTimeOffset.UtcNow
             });
             changed = true;

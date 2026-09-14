@@ -23,7 +23,7 @@ public sealed class AnalyticsEngine
     {
         var values = source.Select(s => s.DurationSeconds).Where(x => x > 0).Order().ToArray();
         var buckets = new[] { ("<5m", 0d, 300d), ("5–10m", 300d, 600d), ("10–20m", 600d, 1200d), ("20–30m", 1200d, 1800d), ("30–60m", 1800d, 3600d), ("60m+", 3600d, double.MaxValue) };
-        var chart = buckets.Select(b => new ChartPoint(b.Item1, values.Count(x => x >= b.Item2 && x < b.Item3), $"{values.Count(x => x >= b.Item2 && x < b.Item3)} sessions")).ToArray();
+        var chart = buckets.Select(b => new ChartPoint(b.Item1, values.Count(x => x >= b.Item2 && x < b.Item3), $"{values.Count(x => x >= b.Item2 && x < b.Item3)} sessions", "sessions")).ToArray();
         return new(values.Length == 0 ? 0 : values.Average(), StatisticsEngine.Median(values), values.Length == 0 ? 0 : values[^1], values.Length == 0 ? 0 : values[0], Percentile(values, .25), Percentile(values, .75), chart);
     }
 
@@ -49,11 +49,27 @@ public sealed class AnalyticsEngine
 
     public IReadOnlyList<ChartPoint> AggregateTrend(IReadOnlyList<ReadingEvent> events, ResolvedDateRange range, string metric, string granularity, int gapMinutes)
     {
-        var filtered = Filter(events, range); var days = range.EndDate.DayNumber - range.StartDate.DayNumber + 1; var unit = granularity == "Auto" ? (days > 370 ? "Month" : days > 100 ? "Week" : "Day") : granularity; var sessions = _statistics.BuildSessions(filtered, TimeSpan.FromMinutes(gapMinutes));
+        var filtered = Filter(events, range); var days = range.EndDate.DayNumber - range.StartDate.DayNumber + 1; var unit = ResolveTrendGranularity(days, granularity); var sessions = _statistics.BuildSessions(filtered, TimeSpan.FromMinutes(gapMinutes));
         string Key(DateOnly date) => unit switch { "Month" => $"{date:yyyy-MM}", "Week" => $"{date.AddDays(-(((int)date.DayOfWeek + 6) % 7)):yyyy-MM-dd}", _ => date.ToString("yyyy-MM-dd") };
-        var dates = Enumerable.Range(0, Math.Max(1, days)).Select(i => range.StartDate.AddDays(i)).GroupBy(Key).Select(g => (Key: g.Key, Label: unit == "Month" ? DateOnly.ParseExact(g.Key + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture).ToString("MMM yyyy") : DateOnly.ParseExact(g.Key, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture).ToString("MMM d"))).ToArray();
-        return dates.Select(bucket => { var bucketEvents = filtered.Where(e => Key(DateOnly.FromDateTime(_statistics.ToLocal(e.Start).DateTime)) == bucket.Key).ToArray(); var value = metric switch { "Sessions" => sessions.Count(s => Key(DateOnly.FromDateTime(_statistics.ToLocal(s.Start).DateTime)) == bucket.Key), "Active books" => bucketEvents.Select(e => e.BookId).Distinct().Count(), _ => bucketEvents.Sum(e => e.DurationSeconds) / 60d }; return new ChartPoint(bucket.Label, value, metric == "Reading time" ? Formatters.Duration(value * 60) : $"{value:0} {metric.ToLowerInvariant()}"); }).ToArray();
+        var crossesYears = range.StartDate.Year != range.EndDate.Year;
+        var dates = Enumerable.Range(0, Math.Max(1, days)).Select(i => range.StartDate.AddDays(i)).GroupBy(Key).Select(g =>
+        {
+            var date = DateOnly.ParseExact(unit == "Month" ? g.Key + "-01" : g.Key, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            var label = unit == "Month" ? date.ToString(crossesYears ? "MMM yyyy" : "MMM") : date.ToString(crossesYears ? "MMM d, yy" : "MMM d");
+            return (Key: g.Key, Label: label);
+        }).ToArray();
+        var readingUnit = unit == "Month" ? "h" : "min";
+        return dates.Select(bucket =>
+        {
+            var bucketEvents = filtered.Where(e => Key(DateOnly.FromDateTime(_statistics.ToLocal(e.Start).DateTime)) == bucket.Key).ToArray();
+            var seconds = bucketEvents.Sum(e => e.DurationSeconds);
+            var value = metric switch { "Sessions" => sessions.Count(s => Key(DateOnly.FromDateTime(_statistics.ToLocal(s.Start).DateTime)) == bucket.Key), "Active books" => bucketEvents.Select(e => e.BookId).Distinct().Count(), _ => readingUnit == "h" ? seconds / 3600d : seconds / 60d };
+            var valueUnit = metric switch { "Sessions" => "sessions", "Active books" => "books", _ => readingUnit };
+            return new ChartPoint(bucket.Label, value, metric == "Reading time" ? Formatters.Duration(seconds) : $"{value:0} {valueUnit}", valueUnit);
+        }).ToArray();
     }
+
+    public static string ResolveTrendGranularity(int days, string requested) => requested == "Auto" ? days switch { <= 45 => "Day", <= 180 => "Week", _ => "Month" } : requested;
 
     private static double Percentile(double[] ordered, double p) { if (ordered.Length == 0) return 0; var position = (ordered.Length - 1) * p; var lower = (int)Math.Floor(position); var upper = (int)Math.Ceiling(position); return lower == upper ? ordered[lower] : ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower); }
 }

@@ -1,12 +1,84 @@
-<UserControl x:Class="ReadestStats.Views.NotesView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:charts="clr-namespace:ReadestStats.Controls" AutomationProperties.Name="Notes library page">
+<UserControl x:Class="ReadestStats.Views.NotesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:charts="clr-namespace:ReadestStats.Controls"
+             AutomationProperties.Name="Notes library page">
+  <UserControl.InputBindings>
+    <KeyBinding Key="N" Modifiers="Control" Command="{Binding RandomNoteCommand}"/>
+  </UserControl.InputBindings>
+  <UserControl.Resources>
+    <Style x:Key="NoteSpotlight" TargetType="Border">
+      <Setter Property="Background" Value="{DynamicResource SurfaceAlt}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="18,16"/>
+    </Style>
+
+    <Style x:Key="HeartButton" TargetType="Button">
+      <Setter Property="Width" Value="38"/>
+      <Setter Property="Height" Value="38"/>
+      <Setter Property="MinHeight" Value="38"/>
+      <Setter Property="Padding" Value="9"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="HeartBody"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="7"
+                    Padding="{TemplateBinding Padding}">
+              <Viewbox>
+                <Path x:Name="HeartGlyph"
+                      Data="M12,21.1 L10.55,19.78 C5.4,15.11 2,12.03 2,8.25 C2,5.17 4.42,2.75 7.5,2.75 C9.24,2.75 10.91,3.56 12,4.84 C13.09,3.56 14.76,2.75 16.5,2.75 C19.58,2.75 22,5.17 22,8.25 C22,12.03 18.6,15.11 13.45,19.78 Z"
+                      Fill="Transparent"
+                      Stroke="{DynamicResource TextPrimary}"
+                      StrokeThickness="1.7"
+                      StrokeLineJoin="Round"/>
+              </Viewbox>
+            </Border>
+            <ControlTemplate.Triggers>
+              <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                <Setter TargetName="HeartGlyph" Property="Fill" Value="{DynamicResource TextPrimary}"/>
+              </DataTrigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="HeartBody" Property="Background" Value="{DynamicResource SurfaceHover}"/>
+                <Setter TargetName="HeartBody" Property="BorderBrush" Value="{DynamicResource BorderStrong}"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="HeartBody" Property="Background" Value="{DynamicResource SurfaceActive}"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="HeartBody" Property="BorderBrush" Value="{DynamicResource Focus}"/>
+                <Setter TargetName="HeartBody" Property="BorderThickness" Value="2"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </UserControl.Resources>
+
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="26,22,26,30" MaxWidth="1380">
-      <DockPanel Margin="0,0,0,16">
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-          <Button Content="Random note" Command="{Binding RandomNoteCommand}" Margin="0,0,8,0" AutomationProperties.Name="Show a random note"/>
-          <Button Content="Daily note" Command="{Binding DailyNoteCommand}" Margin="0,0,8,0" AutomationProperties.Name="Show today's note"/>
-          <Button Content="Refresh" Command="{Binding RefreshNotesCommand}" AutomationProperties.Name="Refresh Readest notes"/>
-        </StackPanel>
+      <DockPanel Margin="0,0,0,18">
+        <Button DockPanel.Dock="Right"
+                Content="Refresh"
+                Command="{Binding RefreshNotesCommand}"
+                Padding="9,4"
+                MinHeight="30"
+                FontSize="12"
+                VerticalAlignment="Top"
+                AutomationProperties.Name="Refresh Readest notes"/>
         <StackPanel>
           <TextBlock Text="NOTES LIBRARY" Style="{StaticResource Eyebrow}"/>
           <TextBlock Text="Your reading, remembered" Style="{StaticResource PageTitle}" Margin="0,3,0,0"/>
@@ -14,90 +86,183 @@
         </StackPanel>
       </DockPanel>
 
-      <Border Style="{StaticResource EditorialSection}" Padding="0,0,0,16" Margin="0,0,0,18">
-        <StackPanel>
-          <Grid Margin="0,0,0,8">
-            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="170"/><ColumnDefinition Width="170"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
-            <TextBox Text="{Binding NoteSearch,UpdateSourceTrigger=PropertyChanged}" ToolTip="Search book, highlight, note, personal note, tags or collections" AutomationProperties.Name="Search notes"/>
-            <ComboBox Grid.Column="1" ItemsSource="{Binding NoteBookOptions}" SelectedItem="{Binding NoteBookFilter}" Margin="8,0,0,0" AutomationProperties.Name="Filter notes by book"/>
-            <ComboBox Grid.Column="2" ItemsSource="{Binding NoteReviewFilters}" SelectedItem="{Binding NoteReviewFilter}" Margin="8,0,0,0" AutomationProperties.Name="Filter notes by review status"/>
-            <ComboBox Grid.Column="3" ItemsSource="{Binding NoteSorts}" SelectedItem="{Binding NoteSort}" Margin="8,0,0,0" AutomationProperties.Name="Sort notes"/>
+      <Grid Margin="0,0,0,22" Height="176">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition/>
+          <ColumnDefinition Width="16"/>
+          <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+
+        <Border Style="{StaticResource NoteSpotlight}">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Right" Text="{Binding DailyNote.DisplayDate}" Style="{StaticResource Muted}"/>
+              <TextBlock Text="DAILY NOTE" Style="{StaticResource Eyebrow}"/>
+            </DockPanel>
+            <StackPanel Grid.Row="1" Margin="0,10,0,8">
+              <TextBlock Text="{Binding DailyNote.BookTitle}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Text="{Binding DailyNote.Text}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="42" Margin="0,6,0,0"/>
+              <TextBlock Text="{Binding DailyNote.PageLabel}" Style="{StaticResource Muted}" Margin="0,5,0,0"/>
+            </StackPanel>
+            <Button Grid.Row="2"
+                    Content="Show daily note"
+                    Command="{Binding DailyNoteCommand}"
+                    HorizontalAlignment="Left"
+                    Padding="10,5"
+                    MinHeight="30"
+                    FontSize="12"
+                    AutomationProperties.Name="Show today's note"/>
           </Grid>
-          <WrapPanel>
-            <ComboBox ItemsSource="{Binding NoteTypeOptions}" SelectedItem="{Binding NoteTypeFilter}" Width="130" Margin="0,0,8,0" AutomationProperties.Name="Filter notes by type"/>
-            <ComboBox ItemsSource="{Binding NoteColorOptions}" SelectedItem="{Binding NoteColorFilter}" Width="130" Margin="0,0,8,0" AutomationProperties.Name="Filter notes by color"/>
-            <ComboBox ItemsSource="{Binding NoteTagOptions}" SelectedItem="{Binding NoteTagFilter}" Width="130" Margin="0,0,8,0" AutomationProperties.Name="Filter notes by tag"/>
-            <ComboBox ItemsSource="{Binding NoteCollectionOptions}" SelectedItem="{Binding NoteCollectionFilter}" Width="150" Margin="0,0,8,0" AutomationProperties.Name="Filter notes by collection"/>
-            <ComboBox ItemsSource="{Binding NoteDateFilters}" SelectedItem="{Binding NoteDateFilter}" Width="118" Margin="0,0,8,0" ToolTip="Filter by note date" AutomationProperties.Name="Filter notes by date"/>
-            <ComboBox ItemsSource="{Binding NoteContentFilters}" SelectedItem="{Binding NoteContentFilter}" Width="148" Margin="0,0,8,0" ToolTip="Filter by note content" AutomationProperties.Name="Filter notes by content"/>
-            <ComboBox ItemsSource="{Binding NoteVisibilityFilters}" SelectedItem="{Binding NoteVisibilityFilter}" Width="130" AutomationProperties.Name="Filter note visibility"/>
-            <CheckBox Content="Favorites only" IsChecked="{Binding NotesFavoritesOnly}" VerticalAlignment="Center" Margin="12,0,0,0" AutomationProperties.Name="Show favorite notes only"/>
-            <ComboBox ItemsSource="{Binding NoteRandomModes}" SelectedItem="{Binding NoteRandomMode}" Width="132" Margin="12,0,0,0" ToolTip="Choose the pool used by Random note" AutomationProperties.Name="Random note mode"/>
-            <TextBlock Text="{Binding NotesCountLabel}" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
-          </WrapPanel>
-        </StackPanel>
-      </Border>
+        </Border>
 
-      <UniformGrid Columns="4" Margin="0,0,0,20">
-        <StackPanel><TextBlock Text="TOTAL NOTES" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding TotalNotes}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
-        <StackPanel><TextBlock Text="FAVORITES" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding FavoriteNotesCount}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
-        <StackPanel><TextBlock Text="DUE FOR REVIEW" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding ReviewQueueCount}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
-        <StackPanel><TextBlock Text="NOTES SEEN" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding NotesReadCount}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
-      </UniformGrid>
+        <Border Grid.Column="2" Style="{StaticResource NoteSpotlight}">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Right" Text="{Binding RandomNote.DisplayDate}" Style="{StaticResource Muted}"/>
+              <TextBlock Text="RANDOM NOTE" Style="{StaticResource Eyebrow}"/>
+            </DockPanel>
+            <StackPanel Grid.Row="1" Margin="0,10,0,8">
+              <TextBlock Text="{Binding RandomNote.BookTitle}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Text="{Binding RandomNote.Text}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="42" Margin="0,6,0,0"/>
+              <TextBlock Text="{Binding RandomNote.PageLabel}" Style="{StaticResource Muted}" Margin="0,5,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Orientation="Horizontal"><Button Content="Another random note" Command="{Binding RandomNoteCommand}" HorizontalAlignment="Left" Padding="10,5" MinHeight="30" FontSize="12" ToolTip="Another random note (Ctrl+N)" AutomationProperties.Name="Show another random note"/><Button Content="Back" Command="{Binding PreviousRandomNoteCommand}" Padding="10,5" MinHeight="30" FontSize="12" Margin="6,0,0,0" AutomationProperties.Name="Previous random note"/></StackPanel>
+          </Grid>
+        </Border>
+      </Grid>
 
-      <Grid Height="410" Margin="0,0,0,26">
-        <Grid.ColumnDefinitions><ColumnDefinition Width="1.35*"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
+      <Grid Margin="0,0,0,20">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition/>
+          <ColumnDefinition/>
+          <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0" Padding="0,2,22,4">
+          <StackPanel>
+            <TextBlock Text="TOTAL NOTES" Style="{StaticResource Eyebrow}"/>
+            <TextBlock Text="{Binding TotalNotes}" FontSize="22" FontWeight="SemiBold" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0" Padding="22,2,22,4">
+          <StackPanel>
+            <TextBlock Text="FAVORITES" Style="{StaticResource Eyebrow}"/>
+            <TextBlock Text="{Binding FavoriteNotesCount}" FontSize="22" FontWeight="SemiBold" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Padding="22,2,0,4">
+          <StackPanel>
+            <TextBlock Text="UNIQUE NOTES SEEN" Style="{StaticResource Eyebrow}"/>
+            <TextBlock Text="{Binding NotesReadCount}" FontSize="22" FontWeight="SemiBold" Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <Expander Header="Find notes" Margin="0,0,0,10" AutomationProperties.Name="Find notes"><TextBox Text="{Binding NoteSearch,UpdateSourceTrigger=PropertyChanged}" Margin="0,8,0,2" AutomationProperties.Name="Search note text, book, or author"/></Expander>
+      <Grid Height="430" Margin="0,0,0,26">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="1.35*"/>
+          <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+
         <Grid>
-        <ListBox ItemsSource="{Binding Notes}" SelectedItem="{Binding SelectedNote}" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.CanContentScroll="True" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" AutomationProperties.Name="Readest notes">
-          <ListBox.ItemContainerStyle>
-            <Style TargetType="ListBoxItem">
-              <Setter Property="Padding" Value="0,0,16,12"/>
-              <Setter Property="Margin" Value="0,0,0,12"/>
-              <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-              <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-              <Setter Property="Template">
-                <Setter.Value>
-                  <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Row" Background="Transparent" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="{TemplateBinding Padding}">
-                      <ContentPresenter/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                      <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource SurfaceHover}"/></Trigger>
-                      <Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource SurfaceActive}"/><Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource BorderStrong}"/></Trigger>
-                      <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource Focus}"/><Setter TargetName="Row" Property="BorderThickness" Value="0,0,0,2"/></Trigger>
-                    </ControlTemplate.Triggers>
-                  </ControlTemplate>
-                </Setter.Value>
-              </Setter>
-            </Style>
-          </ListBox.ItemContainerStyle>
-          <ListBox.ItemTemplate>
-            <DataTemplate>
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="56"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <StackPanel>
-                  <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource Eyebrow}"/>
-                  <TextBlock Text="{Binding PageLabel}" Style="{StaticResource Muted}" Margin="0,5,0,0"/>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Margin="14,0,12,0">
-                  <TextBlock Text="{Binding BookTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding BookTitle}"/>
-                  <TextBlock Text="{Binding Text}" TextWrapping="Wrap" MaxHeight="42" Margin="0,5,0,0" Foreground="{DynamicResource TextSecondary}" TextTrimming="WordEllipsis"/>
-                  <TextBlock Text="{Binding Note}" TextWrapping="Wrap" MaxHeight="38" Margin="0,4,0,0" Style="{StaticResource Muted}" TextTrimming="WordEllipsis" Visibility="{Binding HasComment,Converter={StaticResource BoolVis}}"/>
-                  <TextBlock Text="{Binding TagsText,StringFormat=Tags: {0}}" Style="{StaticResource Muted}" Margin="0,5,0,0" Visibility="{Binding HasTags,Converter={StaticResource BoolVis}}"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2" HorizontalAlignment="Right">
-                  <Button Content="Fav" Command="{Binding DataContext.ToggleFavoriteNoteCommand,RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}" ToolTip="{Binding FavoriteLabel}" AutomationProperties.Name="{Binding FavoriteLabel}" Padding="7,4" MinHeight="28"/>
-                  <TextBlock Text="{Binding ReviewLabel}" Style="{StaticResource Muted}" TextAlignment="Right" Margin="0,8,0,0"/>
-                  <TextBlock Text="{Binding DisplayDate}" Style="{StaticResource Muted}" TextAlignment="Right" Margin="0,2,0,0"/>
-                </StackPanel>
-              </Grid>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding HasNoVisibleNotes,Converter={StaticResource BoolVis}}" IsHitTestVisible="False">
-          <TextBlock Text="{Binding NotesEmptyMessage}" Style="{StaticResource SectionTitle}" HorizontalAlignment="Center"/>
-          <TextBlock Text="Try changing a filter or refresh the Readest library." Style="{StaticResource Muted}" Margin="0,6,0,0" HorizontalAlignment="Center"/>
-        </StackPanel>
+          <ListBox ItemsSource="{Binding Notes}"
+                   SelectedItem="{Binding SelectedNote}"
+                   Background="Transparent"
+                   BorderThickness="0"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   ScrollViewer.CanContentScroll="True"
+                   VirtualizingStackPanel.IsVirtualizing="True"
+                   VirtualizingStackPanel.VirtualizationMode="Recycling"
+                   AutomationProperties.Name="Readest notes">
+            <ListBox.ItemContainerStyle>
+              <Style TargetType="ListBoxItem">
+                <Setter Property="Padding" Value="12,12,10,13"/>
+                <Setter Property="Margin" Value="0,0,0,4"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                  <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                      <Border x:Name="Row"
+                              Background="Transparent"
+                              BorderBrush="{DynamicResource Border}"
+                              BorderThickness="0,0,0,1"
+                              CornerRadius="6"
+                              Padding="{TemplateBinding Padding}">
+                        <ContentPresenter/>
+                      </Border>
+                      <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                          <Setter TargetName="Row" Property="Background" Value="{DynamicResource SurfaceHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                          <Setter TargetName="Row" Property="Background" Value="{DynamicResource SurfaceActive}"/>
+                          <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource BorderStrong}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                          <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource Focus}"/>
+                          <Setter TargetName="Row" Property="BorderThickness" Value="1"/>
+                        </Trigger>
+                      </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                  </Setter.Value>
+                </Setter>
+              </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="72"/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="92"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel>
+                    <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource Eyebrow}"/>
+                    <TextBlock Text="{Binding PageLabel}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Margin="12,0,16,0">
+                    <TextBlock Text="{Binding BookTitle}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding BookTitle}"/>
+                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" MaxHeight="43" Margin="0,7,0,0" Foreground="{DynamicResource TextSecondary}" TextTrimming="WordEllipsis"/>
+                    <TextBlock Text="{Binding Note}" TextWrapping="Wrap" MaxHeight="36" Margin="0,5,0,0" Style="{StaticResource Muted}" TextTrimming="WordEllipsis" Visibility="{Binding HasComment,Converter={StaticResource BoolVis}}"/>
+                  </StackPanel>
+                  <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto"/>
+                      <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Button Style="{StaticResource HeartButton}"
+                            Command="{Binding DataContext.ToggleFavoriteNoteCommand,RelativeSource={RelativeSource AncestorType=ListBox}}"
+                            CommandParameter="{Binding}"
+                            ToolTip="{Binding FavoriteLabel}"
+                            AutomationProperties.Name="{Binding FavoriteLabel}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"/>
+                    <TextBlock Grid.Row="1" Text="{Binding DisplayDate}" Style="{StaticResource Muted}" TextAlignment="Right" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+                  </Grid>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Visibility="{Binding HasNoVisibleNotes,Converter={StaticResource BoolVis}}"
+                      IsHitTestVisible="False">
+            <TextBlock Text="{Binding NotesEmptyMessage}" Style="{StaticResource SectionTitle}" HorizontalAlignment="Center"/>
+            <TextBlock Text="Refresh the Readest library to look for notes." Style="{StaticResource Muted}" Margin="0,6,0,0" HorizontalAlignment="Center"/>
+          </StackPanel>
         </Grid>
 
         <Border Grid.Column="1" Style="{StaticResource EditorialAside}" Margin="20,0,0,0">
@@ -115,27 +280,22 @@
               </WrapPanel>
               <TextBlock Text="HIGHLIGHT" Style="{StaticResource Eyebrow}"/>
               <TextBlock Text="{Binding SelectedNote.Text}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" Margin="0,5,0,12"/>
-              <TextBlock Text="READest NOTE" Style="{StaticResource Eyebrow}" Visibility="{Binding SelectedNote.HasComment,Converter={StaticResource BoolVis}}"/>
+              <TextBlock Text="READEST NOTE" Style="{StaticResource Eyebrow}" Visibility="{Binding SelectedNote.HasComment,Converter={StaticResource BoolVis}}"/>
               <TextBlock Text="{Binding SelectedNote.Note}" TextWrapping="Wrap" Margin="0,5,0,14" Visibility="{Binding SelectedNote.HasComment,Converter={StaticResource BoolVis}}"/>
               <Separator Background="{DynamicResource Border}" Margin="0,0,0,14"/>
               <TextBlock Text="MY NOTE" Style="{StaticResource Eyebrow}"/>
-              <TextBox Text="{Binding SelectedNote.PersonalNote,UpdateSourceTrigger=LostFocus}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" Margin="0,5,0,12" AutomationProperties.Name="Personal note"/>
-              <Grid Margin="0,0,0,10">
-                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                <StackPanel Margin="0,0,8,0"><TextBlock Text="TAGS" Style="{StaticResource Eyebrow}"/><TextBox Text="{Binding SelectedNote.TagsText,UpdateSourceTrigger=LostFocus}" Margin="0,4,0,0" ToolTip="Comma-separated tags" AutomationProperties.Name="Note tags"/></StackPanel>
-                <StackPanel Grid.Column="1"><TextBlock Text="COLLECTIONS" Style="{StaticResource Eyebrow}"/><TextBox Text="{Binding SelectedNote.CollectionsText,UpdateSourceTrigger=LostFocus}" Margin="0,4,0,0" ToolTip="Comma-separated collections" AutomationProperties.Name="Note collections"/></StackPanel>
-              </Grid>
-              <TextBlock Text="{Binding SelectedNote.ReviewLabel}" Style="{StaticResource Muted}" Margin="0,0,0,10"/>
-              <WrapPanel Margin="0,0,0,12">
-                <Button Content="Remembered" Command="{Binding ReviewNoteCommand}" CommandParameter="Remembered" Margin="0,0,6,6" AutomationProperties.Name="Mark note remembered"/>
-                <Button Content="Review later" Command="{Binding ReviewNoteCommand}" CommandParameter="Needs review" Margin="0,0,6,6" AutomationProperties.Name="Schedule note for review"/>
-                <Button Content="Save" Command="{Binding SaveSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Save note settings"/>
-              </WrapPanel>
+              <TextBox Text="{Binding SelectedNote.PersonalNote,UpdateSourceTrigger=LostFocus}"
+                       AcceptsReturn="True"
+                       TextWrapping="Wrap"
+                       MinHeight="62"
+                       Margin="0,5,0,12"
+                       AutomationProperties.Name="Personal note"/>
               <WrapPanel>
                 <Button Content="Open in Readest" Command="{Binding OpenSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Open note book in Readest"/>
-                <Button Content="Hide note" Command="{Binding ToggleHiddenNoteCommand}" CommandParameter="{Binding SelectedNote}" Margin="0,0,6,6" AutomationProperties.Name="Hide selected note"/>
+                <Button Content="Copy" Command="{Binding CopySelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Copy selected note"/>
+                <Button Content="Save" Command="{Binding SaveSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Save personal note"/>
               </WrapPanel>
-              <TextBlock Text="{Binding NotesStatus}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+              <TextBlock Text="{Binding NotesStatus}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,5,0,0"/>
             </StackPanel>
           </ScrollViewer>
         </Border>
@@ -149,16 +309,29 @@
               <Button Content="JSON" Command="{Binding ExportNotesJsonCommand}" Margin="0,0,6,0" AutomationProperties.Name="Export notes as JSON"/>
               <Button Content="CSV" Command="{Binding ExportNotesCsvCommand}" AutomationProperties.Name="Export notes as CSV"/>
             </StackPanel>
-            <StackPanel><TextBlock Text="NOTE ANALYTICS" Style="{StaticResource Eyebrow}"/><TextBlock Text="What your saved reading is concentrating on" Style="{StaticResource SectionTitle}" Margin="0,3,0,0"/></StackPanel>
+            <StackPanel>
+              <TextBlock Text="NOTE ANALYTICS" Style="{StaticResource Eyebrow}"/>
+              <TextBlock Text="What your saved reading is concentrating on" Style="{StaticResource SectionTitle}" Margin="0,3,0,0"/>
+            </StackPanel>
           </DockPanel>
           <Grid>
-            <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="1.2*"/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <StackPanel Margin="0,0,22,0"><TextBlock Text="NOTES BY BOOK" Style="{StaticResource Eyebrow}"/><charts:BarChart ItemsSource="{Binding NotesByBook}" Height="150" MaxBarWidth="22" AutomationProperties.Name="Notes by book"/></StackPanel>
-            <StackPanel Grid.Column="1" Margin="0,0,22,0"><TextBlock Text="NOTES OVER TIME" Style="{StaticResource Eyebrow}"/><charts:LineChart ItemsSource="{Binding NotesByMonth}" Height="150" AutomationProperties.Name="Notes over time"/></StackPanel>
-            <StackPanel Grid.Column="2"><TextBlock Text="NOTE TYPES" Style="{StaticResource Eyebrow}"/><charts:BarChart ItemsSource="{Binding NotesByType}" Height="150" MaxBarWidth="18" AutomationProperties.Name="Notes by type"/></StackPanel>
-            <StackPanel Grid.Row="1" Margin="0,18,22,0"><TextBlock Text="TOP TAGS" Style="{StaticResource Eyebrow}"/><charts:BarChart ItemsSource="{Binding NotesByTag}" Height="140" MaxBarWidth="18" AutomationProperties.Name="Notes by tag"/></StackPanel>
-            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,18,22,0"><TextBlock Text="NOTE COLORS" Style="{StaticResource Eyebrow}"/><charts:BarChart ItemsSource="{Binding NotesByColor}" Height="140" MaxBarWidth="18" AutomationProperties.Name="Notes by color"/></StackPanel>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="1.2*"/>
+              <ColumnDefinition Width="1.2*"/>
+              <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,22,0">
+              <TextBlock Text="NOTES BY BOOK" Style="{StaticResource Eyebrow}"/>
+              <charts:BarChart ItemsSource="{Binding NotesByBook}" Height="150" MaxBarWidth="22" AutomationProperties.Name="Notes by book"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Margin="0,0,22,0">
+              <TextBlock Text="NOTES OVER TIME" Style="{StaticResource Eyebrow}"/>
+              <charts:LineChart ItemsSource="{Binding NotesByMonth}" Height="150" AutomationProperties.Name="Notes over time"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <TextBlock Text="NOTE TYPES" Style="{StaticResource Eyebrow}"/>
+              <charts:BarChart ItemsSource="{Binding NotesByType}" Height="150" MaxBarWidth="18" AutomationProperties.Name="Notes by type"/>
+            </StackPanel>
           </Grid>
         </StackPanel>
       </Border>

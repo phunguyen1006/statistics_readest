@@ -65,4 +65,16 @@ public sealed class StatisticsEngineTests
 
     [Fact] public void Median_IsTrueMedian() { Assert.Equal(2.5, StatisticsEngine.Median([1, 2, 3, 8])); Assert.Equal(3, StatisticsEngine.Median([1, 3, 9])); }
     [Fact] public void EmptyData_DoesNotCrash() { var result = _engine.Overview([], [], 30, TimeSpan.FromMinutes(5)); Assert.Equal(0, result.TotalSeconds); Assert.Empty(result.Records); }
+
+    [Fact] public void HistoricalRangeUsesItsOwnEndDateForRecords()
+    {
+        var ranges = new DateRangeService(Zone);
+        var now = new DateTimeOffset(2026, 9, 14, 12, 0, 0, TimeSpan.Zero);
+        var range = ranges.Resolve("Last year", now);
+        var events = new[] { E(Ts(2025, 4, 10, 3), 600) };
+        var result = _engine.OverviewForRange(events, [new(1, "Book", "A")], range, TimeSpan.FromMinutes(5));
+        Assert.Equal(600, result.TotalSeconds);
+        Assert.Equal(10, result.Hourly[10].Value);
+        Assert.NotEmpty(result.Records);
+    }
 }

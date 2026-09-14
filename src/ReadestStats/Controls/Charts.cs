@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Input;
 using System.Windows.Media;
 using ReadestStats.Core;
@@ -14,6 +15,8 @@ public sealed class BarChart : FrameworkElement
     public IEnumerable<ChartPoint>? ItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
     public double MaxBarWidth { get => (double)GetValue(MaxBarWidthProperty); set => SetValue(MaxBarWidthProperty, value); }
     private readonly List<(Rect Rect, ChartPoint Item)> _hits = [];
+    private int _selectedIndex;
+    public BarChart() => Focusable = true;
     private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not BarChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
     private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
 
@@ -22,17 +25,23 @@ public sealed class BarChart : FrameworkElement
         base.OnRender(dc); _hits.Clear(); var items = ItemsSource?.ToArray() ?? []; var textBrush = (Brush)FindResource("TextMuted"); var gridBrush = (Brush)FindResource("ChartGrid"); var primary = (Brush)FindResource("Primary"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         if (items.Length == 0 || items.All(x => x.Value <= 0)) { DrawText(dc, "No activity in this period", new Point(12, Math.Max(12, ActualHeight / 2 - 8)), 12, textBrush, dpi); return; }
         var plot = new Rect(43, 12, Math.Max(1, ActualWidth - 51), Math.Max(1, ActualHeight - 42)); var max = Math.Max(1, items.Max(x => x.Value));
-        for (var i = 0; i <= 3; i++) { var y = plot.Top + plot.Height * i / 3; dc.DrawLine(new Pen(gridBrush, 1), new(plot.Left, y), new(plot.Right, y)); DrawText(dc, Compact(max * (3 - i) / 3), new(1, y - 7), 10, textBrush, dpi); }
+        var unit = items.Select(item => item.Unit).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        for (var i = 0; i <= 3; i++) { var y = plot.Top + plot.Height * i / 3; dc.DrawLine(new Pen(gridBrush, 1), new(plot.Left, y), new(plot.Right, y)); DrawText(dc, FormatValue(max * (3 - i) / 3, unit), new(1, y - 7), 10, textBrush, dpi); }
         var slot = plot.Width / items.Length; var width = Math.Max(2, Math.Min(MaxBarWidth, slot * .62));
         for (var i = 0; i < items.Length; i++)
         {
-            var h = plot.Height * Math.Max(0, items[i].Value) / max; var rect = new Rect(plot.Left + slot * i + (slot - width) / 2, plot.Bottom - h, width, h); dc.DrawRoundedRectangle(primary, null, rect, Math.Min(2, width / 2), Math.Min(2, width / 2)); _hits.Add((new Rect(plot.Left + slot * i, plot.Top, slot, plot.Height), items[i]));
+            var h = plot.Height * Math.Max(0, items[i].Value) / max; var rect = new Rect(plot.Left + slot * i + (slot - width) / 2, plot.Bottom - h, width, h); dc.DrawRoundedRectangle(primary, IsKeyboardFocused && i == _selectedIndex ? new Pen((Brush)FindResource("Focus"), 2) : null, rect, Math.Min(2, width / 2), Math.Min(2, width / 2)); _hits.Add((new Rect(plot.Left + slot * i, plot.Top, slot, plot.Height), items[i]));
             var step = Math.Max(1, (int)Math.Ceiling(items.Length / 7d)); if (i == 0 || i == items.Length - 1 || i % step == 0) DrawText(dc, items[i].Label, new(plot.Left + slot * i, plot.Bottom + 7), 10, textBrush, dpi);
         }
     }
     protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(x => x.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : $"{hit.Item.Label}\n{hit.Item.Detail ?? Compact(hit.Item.Value)}"; }
+    protected override void OnKeyDown(KeyEventArgs e) { var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var old = _selectedIndex; _selectedIndex = e.Key switch { Key.Left => Math.Max(0, _selectedIndex - 1), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 1), Key.Home => 0, Key.End => items.Length - 1, _ => _selectedIndex }; if (old == _selectedIndex) return; Announce(items[_selectedIndex]); InvalidateVisual(); e.Handled = true; }
+    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) { _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); Announce(items[_selectedIndex]); } InvalidateVisual(); }
+    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); InvalidateVisual(); }
+    private void Announce(ChartPoint item) { var text = $"{item.Label}. {item.Detail ?? FormatValue(item.Value, item.Unit)}"; ToolTip = text; AutomationProperties.SetHelpText(this, text); }
     private static void DrawText(DrawingContext dc, string text, Point point, double size, Brush brush, double dpi) => dc.DrawText(new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size, brush, dpi), point);
     private static string Compact(double value) => value >= 1000 ? $"{value / 1000:0.#}k" : value >= 100 ? $"{value:0}" : $"{value:0.#}";
+    private static string FormatValue(double value, string? unit) => $"{Compact(value)}{(string.IsNullOrWhiteSpace(unit) ? "" : " " + unit)}";
 }
 
 public sealed class HeatmapChart : FrameworkElement
@@ -76,9 +85,13 @@ public sealed class HeatmapChart : FrameworkElement
 
 public sealed class LineChart : FrameworkElement
 {
-    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(LineChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(LineChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
     public IEnumerable<ChartPoint>? ItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
     private readonly List<(Rect Rect, ChartPoint Item)> _hits = [];
+    private int _selectedIndex;
+    public LineChart() => Focusable = true;
+    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not LineChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
+    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
 
     protected override void OnRender(DrawingContext dc)
     {
@@ -87,7 +100,8 @@ public sealed class LineChart : FrameworkElement
         var muted = (Brush)FindResource("TextMuted"); var grid = (Brush)FindResource("ChartGrid"); var primary = (Brush)FindResource("Primary"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         if (items.Length == 0 || items.All(item => item.Value <= 0)) { DrawText(dc, "Not enough reading history yet", new(8, Math.Max(8, ActualHeight / 2 - 8)), 12, muted, dpi); return; }
         var plot = new Rect(42, 13, Math.Max(1, ActualWidth - 54), Math.Max(1, ActualHeight - 44)); var max = Math.Max(1, items.Max(item => item.Value));
-        for (var i = 0; i <= 2; i++) { var y = plot.Top + plot.Height * i / 2; dc.DrawLine(new Pen(grid, 1), new(plot.Left, y), new(plot.Right, y)); DrawText(dc, Compact(max * (2 - i) / 2), new(1, y - 7), 10, muted, dpi); }
+        var unit = items.Select(item => item.Unit).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        for (var i = 0; i <= 2; i++) { var y = plot.Top + plot.Height * i / 2; dc.DrawLine(new Pen(grid, 1), new(plot.Left, y), new(plot.Right, y)); DrawText(dc, FormatValue(max * (2 - i) / 2, unit), new(1, y - 7), 10, muted, dpi); }
         var points = new List<Point>(); var slot = items.Length == 1 ? 0d : plot.Width / (items.Length - 1);
         for (var i = 0; i < items.Length; i++)
         {
@@ -96,22 +110,29 @@ public sealed class LineChart : FrameworkElement
         }
         if (points.Count > 1) dc.DrawGeometry(null, new Pen(primary, 2) { LineJoin = PenLineJoin.Round }, new StreamGeometryBuilder(points).Geometry);
         var bestIndex = Array.FindIndex(items, item => item == items.MaxBy(value => value.Value));
-        for (var i = 0; i < points.Count; i++) dc.DrawEllipse(i == bestIndex ? primary : (Brush)FindResource("Surface"), new Pen(primary, i == bestIndex ? 2 : 1), points[i], i == bestIndex ? 4 : 2.5, i == bestIndex ? 4 : 2.5);
+        for (var i = 0; i < points.Count; i++) dc.DrawEllipse(i == bestIndex ? primary : (Brush)FindResource("Surface"), new Pen(IsKeyboardFocused && i == _selectedIndex ? (Brush)FindResource("Focus") : primary, IsKeyboardFocused && i == _selectedIndex ? 3 : i == bestIndex ? 2 : 1), points[i], i == bestIndex || IsKeyboardFocused && i == _selectedIndex ? 4 : 2.5, i == bestIndex || IsKeyboardFocused && i == _selectedIndex ? 4 : 2.5);
         var labelStep = Math.Max(1, (int)Math.Ceiling(items.Length / 6d));
         for (var i = 0; i < items.Length; i++) if (i == 0 || i == items.Length - 1 || i % labelStep == 0) DrawText(dc, items[i].Label, new(points[i].X - 10, plot.Bottom + 8), 10, muted, dpi);
         if (bestIndex >= 0) DrawText(dc, $"Peak · {items[bestIndex].Label}", new(Math.Min(plot.Right - 70, points[bestIndex].X + 7), Math.Max(0, points[bestIndex].Y - 20)), 10, primary, dpi);
     }
 
     protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : $"{hit.Item.Label}\n{hit.Item.Detail ?? Compact(hit.Item.Value)}"; }
+    protected override void OnKeyDown(KeyEventArgs e) { var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var old = _selectedIndex; _selectedIndex = e.Key switch { Key.Left => Math.Max(0, _selectedIndex - 1), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 1), Key.Home => 0, Key.End => items.Length - 1, _ => _selectedIndex }; if (old == _selectedIndex) return; Announce(items[_selectedIndex]); InvalidateVisual(); e.Handled = true; }
+    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) { _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); Announce(items[_selectedIndex]); } InvalidateVisual(); }
+    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); InvalidateVisual(); }
+    private void Announce(ChartPoint item) { var text = $"{item.Label}. {item.Detail ?? FormatValue(item.Value, item.Unit)}"; ToolTip = text; AutomationProperties.SetHelpText(this, text); }
     private static void DrawText(DrawingContext dc, string text, Point point, double size, Brush brush, double dpi) => dc.DrawText(new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size, brush, dpi), point);
     private static string Compact(double value) => value >= 1000 ? $"{value / 1000:0.#}k" : value >= 100 ? $"{value:0}" : $"{value:0.#}";
+    private static string FormatValue(double value, string? unit) => $"{Compact(value)}{(string.IsNullOrWhiteSpace(unit) ? "" : " " + unit)}";
 }
 
 public sealed class RadialClockChart : FrameworkElement
 {
-    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(RadialClockChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(RadialClockChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
     public IEnumerable<ChartPoint>? ItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
     private readonly List<(Point Center, ChartPoint Item)> _hits = [];
+    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not RadialClockChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
+    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
 
     protected override void OnRender(DrawingContext dc)
     {
@@ -141,9 +162,11 @@ public sealed class RadialClockChart : FrameworkElement
 
 public sealed class StreakStripChart : FrameworkElement
 {
-    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(StreakStripChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(StreakStripChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
     public IEnumerable<ChartPoint>? ItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
     private readonly List<(Rect Rect, ChartPoint Item)> _hits = [];
+    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not StreakStripChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
+    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
 
     protected override void OnRender(DrawingContext dc)
     {
@@ -159,8 +182,10 @@ public sealed class StreakStripChart : FrameworkElement
 
 public sealed class ComparisonBarChart : FrameworkElement
 {
-    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(ComparisonBarChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(ComparisonBarChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
     public IEnumerable<ChartPoint>? ItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
+    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not ComparisonBarChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
+    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
     protected override void OnRender(DrawingContext dc)
     {
         base.OnRender(dc); var items = ItemsSource?.Take(2).ToArray() ?? []; var muted = (Brush)FindResource("TextMuted"); var primary = (Brush)FindResource("Primary"); var secondary = (Brush)FindResource("ChartTertiary"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;

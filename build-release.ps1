@@ -12,6 +12,11 @@ $version = [string]$projectXml.Project.PropertyGroup.Version
 if ([string]::IsNullOrWhiteSpace($version)) {
     throw 'The application version is missing from ReadestStats.csproj.'
 }
+$assemblyVersion = [string]$projectXml.Project.PropertyGroup.AssemblyVersion
+$fileVersion = [string]$projectXml.Project.PropertyGroup.FileVersion
+if ($assemblyVersion -ne "$version.0" -or $fileVersion -ne "$version.0") {
+    throw "Version mismatch: Version=$version AssemblyVersion=$assemblyVersion FileVersion=$fileVersion"
+}
 $versionOutput = Join-Path $projectRoot ("artifacts\v$version")
 $latestOutput = Join-Path $projectRoot 'artifacts\win-x64'
 & $dotnet test (Join-Path $projectRoot 'ReadestStats.sln') -c Release
@@ -22,5 +27,14 @@ New-Item -ItemType Directory -Force -Path $versionOutput | Out-Null
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 New-Item -ItemType Directory -Force -Path $latestOutput | Out-Null
 Copy-Item -LiteralPath (Join-Path $versionOutput 'ReadestStats.exe') -Destination (Join-Path $latestOutput 'ReadestStats.exe') -Force
-Write-Host "Published v$version to $versionOutput"
+$exe = Join-Path $versionOutput 'ReadestStats.exe'
+$namedExe = Join-Path $versionOutput "ReadestStats-v$version.exe"
+Copy-Item -LiteralPath $exe -Destination $namedExe -Force
+$zip = Join-Path $versionOutput "ReadestStats-v$version-win-x64.zip"
+Compress-Archive -LiteralPath $namedExe -DestinationPath $zip -CompressionLevel Optimal -Force
+$checksum = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+Set-Content -LiteralPath ($zip + '.sha256') -Value "$checksum  $(Split-Path -Leaf $zip)" -Encoding ascii
+$manifest = [ordered]@{ version = $version; runtime = 'win-x64'; selfContained = $true; executable = (Split-Path -Leaf $namedExe); archive = (Split-Path -Leaf $zip); sha256 = $checksum; builtAtUtc = [DateTimeOffset]::UtcNow.ToString('O') }
+$manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $versionOutput 'release-manifest.json') -Encoding utf8
+Write-Host "Published and packaged v$version to $versionOutput"
 exit 0

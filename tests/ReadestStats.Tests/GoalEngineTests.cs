@@ -106,6 +106,25 @@ public sealed class GoalEngineTests
         Assert.Equal(12, archive.TargetBooks);
     }
 
+    [Fact] public void PastYearArchiveUsesFinishedDatesInsteadOfEveryOpenedBook()
+    {
+        var settings = new AppSettings();
+        GoalEngine.Migrate(settings).Single(g => g.Period == GoalPeriod.Yearly).TargetValue = 12;
+        var events = new[] { E(At(2024, 2, 1), bookId: 1), E(At(2024, 5, 1), bookId: 2) };
+        Assert.True(_goals.SyncYearArchives(settings, events, At(2026, 9, 7), [At(2024, 8, 1)]));
+        Assert.Equal(1, Assert.Single(settings.GoalArchives).BooksRead);
+    }
+
+    [Fact] public void ExistingLegacyArchiveIsCorrectedButKeepsItsOriginalTarget()
+    {
+        var settings = new AppSettings { GoalArchives = [new() { Year = 2024, BooksRead = 9, TargetBooks = 10 }] };
+        GoalEngine.Migrate(settings);
+        Assert.True(_goals.SyncYearArchives(settings, [E(At(2024, 2, 1), bookId: 1)], At(2026, 9, 7), [At(2024, 8, 1)]));
+        var archive = Assert.Single(settings.GoalArchives);
+        Assert.Equal(1, archive.BooksRead);
+        Assert.Equal(10, archive.TargetBooks);
+    }
+
     [Theory]
     [InlineData(9, "9s")]
     [InlineData(75, "1m 15s")]

@@ -1,0 +1,28 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        run: dotnet restore ReadestStats.sln
+      - name: Test core analytics and source safety
+        run: dotnet test ReadestStats.sln -c Release --no-restore
+      - name: Compile WPF and XAML
+        run: dotnet build src/ReadestStats/ReadestStats.csproj -c Release --no-restore
+      - name: Publish smoke artifact
+        run: dotnet publish src/ReadestStats/ReadestStats.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -o artifacts/ci-win-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ReadestStats-win-x64
+          path: artifacts/ci-win-x64/ReadestStats.exe

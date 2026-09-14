@@ -113,6 +113,28 @@ public sealed class StatisticsEngine
         return new(events.Sum(e => e.DurationSeconds), daily.FirstOrDefault(d => d.Date == today)?.Seconds ?? 0, streaks.Current, streaks.Longest, daily.Count, events.Select(e => e.BookId).Distinct().Count(), comparison, daily.Where(d => d.Date >= today.AddDays(-(rangeDays - 1))).ToArray(), hourly, weekdays, records, insights);
     }
 
+    public OverviewStats OverviewForRange(IReadOnlyList<ReadingEvent> periodEvents, IReadOnlyList<Book> books, ResolvedDateRange range, TimeSpan sessionGap)
+    {
+        var daily = Daily(periodEvents, sessionGap);
+        var sessions = BuildSessions(periodEvents, sessionGap);
+        var streaks = Streaks(daily.Select(d => d.Date), range.EndDate);
+        var totalSeconds = periodEvents.Sum(e => e.DurationSeconds);
+        var hourly = Enumerable.Range(0, 24).Select(hour =>
+        {
+            var value = periodEvents.Where(e => ToLocal(e.Start).Hour == hour).Sum(e => e.DurationSeconds);
+            return new ChartPoint($"{hour:00}:00", value / 60d, $"{Formatters.Duration(value)} · {(totalSeconds <= 0 ? 0 : value / totalSeconds * 100):0.#}% of period", "min");
+        }).ToArray();
+        var weekdays = Enumerable.Range(1, 7)
+            .Select(index => (Day: (DayOfWeek)(index % 7), Name: ((DayOfWeek)(index % 7)).ToString()))
+            .Select(item => new ChartPoint(item.Name[..3], periodEvents.Where(e => ToLocal(e.Start).DayOfWeek == item.Day).Sum(e => e.DurationSeconds) / 60d, Unit: "min"))
+            .ToArray();
+        var comparison = new PeriodComparison(totalSeconds, 0, null);
+        return new(totalSeconds, daily.FirstOrDefault(d => d.Date == range.EndDate)?.Seconds ?? 0, streaks.Current, streaks.Longest,
+            daily.Count, periodEvents.Select(e => e.BookId).Distinct().Count(), comparison, daily, hourly, weekdays,
+            Records(periodEvents, books, daily, sessions, hourly, weekdays),
+            Insights(periodEvents, daily, sessions, hourly, weekdays, streaks.Current, range.End));
+    }
+
     private DateTimeOffset ToUtc(DateTime localUnspecified)
     {
         var unspecified = DateTime.SpecifyKind(localUnspecified, DateTimeKind.Unspecified);

@@ -141,4 +141,59 @@ public sealed class AnalyticsEngineTests
         Assert.Contains("PM", item.Description);
         Assert.DoesNotContain("14:00", item.Description);
     }
+
+    [Fact]
+    public void TrendGranularityChangesBucketCountAndTimeAxisLabels()
+    {
+        var range = _ranges.Resolve("30 days", At(2026, 9, 14, 18));
+        var events = new[] { E(At(2026, 8, 20), 120), E(At(2026, 9, 10), 180) };
+
+        var daily = _analytics.AggregateTrend(events, range, "Reading time", "Day", 5);
+        var weekly = _analytics.AggregateTrend(events, range, "Reading time", "Week", 5);
+        var monthly = _analytics.AggregateTrend(events, range, "Reading time", "Month", 5);
+
+        Assert.Equal(30, daily.Count);
+        Assert.InRange(weekly.Count, 4, 6);
+        Assert.Equal(new[] { "Aug", "Sep" }, monthly.Select(point => point.Label));
+        Assert.Equal(5d / 60, monthly.Sum(point => point.Value), 6);
+        Assert.All(monthly, point => Assert.Equal("h", point.Unit));
+    }
+
+    [Theory]
+    [InlineData(30, "Day")]
+    [InlineData(90, "Week")]
+    [InlineData(365, "Month")]
+    public void AutoTrendUsesReadableResolutionForSelectedRange(int days, string expected)
+    {
+        Assert.Equal(expected, AnalyticsEngine.ResolveTrendGranularity(days, "Auto"));
+    }
+
+    [Fact]
+    public void TrendCarriesAnExplicitAxisUnitForEveryMetric()
+    {
+        var range = _ranges.Resolve("7 days", At(2026, 9, 7, 18));
+        var events = new[] { E(At(2026, 9, 7, 10), 120, 1) };
+        Assert.All(_analytics.AggregateTrend(events, range, "Reading time", "Day", 5), point => Assert.Equal("min", point.Unit));
+        Assert.All(_analytics.AggregateTrend(events, range, "Sessions", "Day", 5), point => Assert.Equal("sessions", point.Unit));
+        Assert.All(_analytics.AggregateTrend(events, range, "Active books", "Day", 5), point => Assert.Equal("books", point.Unit));
+    }
+
+    [Fact]
+    public void TrendMetricChangesTheEncodedValues()
+    {
+        var range = _ranges.Resolve("7 days", At(2026, 9, 7, 18));
+        var events = new[]
+        {
+            E(At(2026, 9, 7, 10), 120, 1),
+            E(At(2026, 9, 7, 12), 180, 2)
+        };
+
+        var reading = _analytics.AggregateTrend(events, range, "Reading time", "Day", 5);
+        var sessions = _analytics.AggregateTrend(events, range, "Sessions", "Day", 5);
+        var books = _analytics.AggregateTrend(events, range, "Active books", "Day", 5);
+
+        Assert.Equal(5, reading[^1].Value);
+        Assert.Equal(2, sessions[^1].Value);
+        Assert.Equal(2, books[^1].Value);
+    }
 }

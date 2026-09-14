@@ -16,7 +16,7 @@ public abstract class InfographicElement : FrameworkElement
 
     public IEnumerable? ItemsSource { get => (IEnumerable?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
 
-    protected InfographicElement() => Focusable = true;
+    protected InfographicElement() => Focusable = false;
     protected T[] Items<T>() => ItemsSource?.Cast<T>().ToArray() ?? [];
 
     private static void SourceChanged(DependencyObject source, DependencyPropertyChangedEventArgs args)

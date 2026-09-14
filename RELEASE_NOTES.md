@@ -1,18 +1,77 @@
+# Readest Stats v1.6.0
+
+Version 1.6.0 is a correctness, accessibility, performance, and note-rediscovery release.
+
+## Statistical correctness
+
+- Keeps book membership/status filters independent from the selected time range, so book totals and detail charts no longer mix all-time and period data.
+- Calculates historical records against the selected range end instead of filtering them again against today.
+- Archives yearly book goals from explicit Finished dates and preserves each archived target as a snapshot.
+- Filters sessions by stable book ID, including libraries with duplicate titles.
+- Persists every calendar range preset, custom dates, trend metric, and chart granularity.
+
+## Charts and navigation
+
+- Adds explicit minutes, hours, sessions, books, and notes units to primary line/bar axes.
+- Monthly reading trends automatically use hours while daily and weekly trends use minutes.
+- Adds keyboard point navigation and accessible exact-value help to line and bar charts.
+- Adds expandable text data under the primary trend for non-visual access.
+- Shows the global range control only on pages it actually affects; Activity and Year keep their own month/year controls.
+- Activity now charts the selected month directly.
+
+## Books, Notes, and privacy
+
+- Adds editable Finished dates for trustworthy historical goal counts.
+- Replaces the non-virtualized cover grid with a recycling, compact library list.
+- Adds shuffle-bag random notes, Back history, cross-book variety, Ctrl+N, Copy, lightweight search, and lifetime unique-seen count.
+- Debounces local note-state saves and exposes note-file parse diagnostics in Data Quality.
+- Confirms that note exports contain private content and documents the local plain-JSON storage location.
+
+## Performance and reliability
+
+- Caches canonical daily/session analysis and lazily builds heavy page-specific collections.
+- Rotates diagnostic logs and treats fatal UI failures separately from recoverable errors.
+- Adds Windows CI for tests, WPF/XAML compilation, publish smoke validation, and artifact upload.
+- Release packaging now produces a versioned EXE, ZIP, SHA-256 sidecar, and JSON manifest.
+- 91 automated tests pass before final packaging.
+
+---
+
+# Readest Stats v1.5.1
+
+Version 1.5.1 streamlines the Notes Library around the two rediscovery experiences that matter most: Daily note and Random note.
+
+## Notes Library refinements
+
+- Replaces the filter toolbar with equal Daily note and Random note panels.
+- Moves each note-selection action into its corresponding panel and keeps a smaller Refresh action in the header.
+- Replaces the text favorite button with an accessible outline/filled heart control.
+- Removes tags, collections, and review controls from the Notes Library workflow.
+- Keeps random selection focused on the full note library while avoiding immediate repeats.
+- Fixes chart refresh so metric, date-range, and time-grouping controls redraw immediately across the app.
+- Uses daily, weekly, or monthly time buckets with matching horizontal-axis labels; Auto switches annual ranges to months.
+- Adds the selected-period trend to Statistics so its metric and grouping controls always affect a visible chart.
+
+## Safety and verification
+
+- Readest source files remain read-only.
+- Existing reading statistics, goals, books, and settings workflows remain unchanged.
+- 74 automated tests passing before packaging.
+
+---
+
 # Readest Stats v1.5.0
 
-Version 1.5.0 adds a local-first Notes Library connected to Readest's per-book note files. The source database and note files remain read-only; personal organization and review state live in Readest Stats settings.
+Version 1.5.0 adds a local-first Notes Library connected to Readest's per-book note files. The source database and note files remain read-only; favorites and private notes live in Readest Stats settings.
 
 ## Notes Library
 
 - Indexes highlights and annotations from Readest book configurations and maps them to the local book library.
-- Full-text search across book, author, highlight, note, tags, and collections.
-- Filters for book, type, color, tag, collection, visibility, date range, content type, and review state.
-- Newest, oldest, book, and most-seen sorting with deterministic empty and missing-book states.
-- Random note with repeat avoidance and selectable current-filter, unread, due, favorite, or all-note pools; deterministic daily note; and one-click opening of the book in Readest.
-- Favorite and hide actions, local tags, collections, and private notes that never modify Readest.
-- Review actions with due queue, remembered/review-later states, and expanding local review intervals.
-- Markdown, JSON, and CSV export of the active filtered note view.
-- Note analytics for books, months, types, colors, and top tags with accessible chart labels.
+- Two focused Daily note and Random note panels, with deterministic daily selection and repeat-resistant random selection.
+- A cleaner newest-first note list with an accessible outline/filled heart favorite control.
+- Private notes that never modify Readest and one-click opening of the source book.
+- Markdown, JSON, and CSV export of the note library.
+- Note analytics for books, months, and types with accessible chart labels.
 - Refreshes when Readest's statistics, library, or per-book configuration files change.
 
 ## Safety and verification

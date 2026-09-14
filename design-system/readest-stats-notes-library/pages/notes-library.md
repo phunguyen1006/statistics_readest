@@ -6,32 +6,31 @@ These page rules extend the Readest Stats v1.4 design system for the v1.5 Notes 
 
 - Content-first desktop knowledge library for local Readest highlights and annotations.
 - Keep the editorial report language: flat background, thin separators, restrained grayscale, no decorative cards.
-- Source note content is read-only; locally owned curation is visibly separated as “My note”, tags, collections, and review state.
+- Source note content is read-only; locally owned curation is limited to favorites and “My note”.
 
 ## Layout
 
 - Keep the fixed 196px sidebar and 72px top bar.
 - Use a 26px page gutter and an editorial section rhythm of 18–24px.
-- Top controls: page title, summary, Random note, Daily note, and Refresh.
-- Filters are one compact two-row toolbar; persistent labels/tooltips remain available for keyboard and screen-reader users.
+- Top controls: page title, summary, and a compact Refresh action.
+- Follow the header with two equal spotlight panels: deterministic Daily note on the left and Random note on the right. Each panel contains its own action.
 - Main content is a dense split view: virtualizable note list on the left, scrollable detail aside on the right.
 - Analytics follow the library with a small book ranking, monthly line, and type distribution; every chart keeps a text summary.
 
 ## Components
 
 - Note rows use 1px separators and hover/selected surface states rather than enclosing cards.
-- Primary action is Random note; secondary actions are Daily note, Refresh, Open in Readest, and Save.
-- Favorite, hide, review, and export actions must have text labels or accessible names; no emoji icons.
+- Primary action is Another random note inside the Random spotlight; secondary actions are Show daily note, Refresh, Open in Readest, and Save.
+- Favorite uses one consistent vector heart: outline by default, filled with the theme foreground when active, with tooltip and accessible name.
+- Export actions must have text labels or accessible names; no emoji icons.
 - Use native WPF ListBox, TextBox, ComboBox, Button, and ScrollViewer controls with visible keyboard focus.
 - List virtualization is required when the note library exceeds 50 items.
 
 ## Data and interaction
 
-- Search covers title, author, highlight, Readest note, personal note, tags, and collections.
-- Filter combinations must be deterministic and preserve the last good dataset when a Readest file is locked.
-- Random note respects the active filter and avoids the immediately previous result.
+- Preserve the last good dataset when a Readest file is locked.
+- Random note draws from the complete note library and avoids the immediately previous result.
 - Daily note is deterministic for the local calendar date.
-- Review state uses New, Needs review, and Remembered labels plus next-review dates; status is never conveyed by color alone.
 - Open in Readest must degrade gracefully to book-level opening when deep-linking to CFI/xpointer is unavailable.
 
 ## Visual and accessibility checks

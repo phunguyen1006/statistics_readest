@@ -8,7 +8,7 @@ public sealed record ReadingEvent(long BookId, int Page, long StartTime, double 
 }
 
 public sealed record DailyStat(DateOnly Date, double Seconds, int Books, int Sessions);
-public sealed record ChartPoint(string Label, double Value, string? Detail = null);
+public sealed record ChartPoint(string Label, double Value, string? Detail = null, string? Unit = null);
 public sealed record ReadingSession(DateTimeOffset Start, DateTimeOffset End, double DurationSeconds, IReadOnlyList<long> BookIds, int EventCount)
 {
     public TimeSpan Duration => TimeSpan.FromSeconds(DurationSeconds);
@@ -35,6 +35,11 @@ public sealed class AppSettings
     public int SessionGapMinutes { get; set; } = 5;
     public bool WeekStartsMonday { get; set; } = true;
     public int DefaultRangeDays { get; set; } = 30;
+    public string DefaultRangePreset { get; set; } = "30 days";
+    public DateOnly? CustomRangeStart { get; set; }
+    public DateOnly? CustomRangeEnd { get; set; }
+    public string TrendMetric { get; set; } = "Reading time";
+    public string TrendGranularity { get; set; } = "Auto";
     public bool AutoRefresh { get; set; } = true;
     public string Theme { get; set; } = "System";
     public double DailyGoalMinutes { get; set; } = 30;
@@ -54,6 +59,7 @@ public sealed class AppSettings
     public bool AutomaticBackups { get; set; } = true;
     /// <summary>Statistics-owned note curation. Readest source files remain read-only.</summary>
     public Dictionary<string, NoteUserState> NoteStates { get; set; } = [];
+    public int NoteStateSchemaVersion { get; set; } = 3;
 }
 
 public sealed class BookTrackingState

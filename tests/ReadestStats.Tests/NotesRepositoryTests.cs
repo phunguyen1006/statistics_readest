@@ -38,6 +38,21 @@ public sealed class NotesRepositoryTests : IDisposable
         Assert.Equal("A highlighted passage", note.Text);
         Assert.Equal("My thought", note.Note);
         Assert.EndsWith(Path.Combine("Books", "hash-a", "fixture.epub"), note.BookPath, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, repository.LastDiagnostics.FilesScanned);
+        Assert.Equal(1, repository.LastDiagnostics.NotesLoaded);
+        Assert.Equal(1, repository.LastDiagnostics.NotesSkipped);
+        Assert.Equal(0, repository.LastDiagnostics.FilesFailed);
+    }
+
+    [Fact]
+    public async Task ReportsMalformedNoteFilesWithoutFailingTheLibrary()
+    {
+        var broken = Path.Combine(_root, "Books", "hash-b"); Directory.CreateDirectory(broken); File.WriteAllText(Path.Combine(broken, "config.json"), "{broken", Encoding.UTF8);
+        var repository = new ReadestNotesRepository(Path.Combine(_root, "statistics.db")); var notes = await repository.LoadAsync();
+        Assert.Single(notes);
+        Assert.Equal(2, repository.LastDiagnostics.FilesScanned);
+        Assert.Equal(1, repository.LastDiagnostics.FilesFailed);
+        Assert.Equal(1, repository.LastDiagnostics.UnmappedBooks);
     }
 
     public void Dispose()

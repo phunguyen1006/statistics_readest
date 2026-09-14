@@ -54,25 +54,34 @@ public sealed record ReadestBookMetadata(
     string? BookPath,
     string? CoverPath);
 
+public sealed record NotesLoadDiagnostics(int FilesScanned, int FilesFailed, int NotesLoaded, int NotesSkipped, int UnmappedBooks)
+{
+    public string Summary => $"{FilesScanned} files scanned · {NotesLoaded} notes loaded · {FilesFailed} unreadable · {NotesSkipped} skipped · {UnmappedBooks} unmapped books";
+}
+
 public sealed class ReadestNotesRepository
 {
     private static readonly int[] RetryDelays = [0, 150, 400, 900];
     private readonly string _databasePath;
+    public NotesLoadDiagnostics LastDiagnostics { get; private set; } = new(0, 0, 0, 0, 0);
 
     public ReadestNotesRepository(string databasePath) => _databasePath = Path.GetFullPath(databasePath);
 
     public async Task<IReadOnlyList<ReadestNote>> LoadAsync(CancellationToken cancellationToken = default)
     {
         var root = Path.GetDirectoryName(_databasePath);
-        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(Path.Combine(root, "Books"))) return [];
+        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(Path.Combine(root, "Books"))) { LastDiagnostics = new(0, 0, 0, 0, 0); return []; }
 
         var books = await ReadLibraryAsync(root, cancellationToken);
         var result = new List<ReadestNote>();
+        var scanned = 0; var failed = 0; var skipped = 0; var unmapped = 0;
         foreach (var configPath in Directory.EnumerateFiles(Path.Combine(root, "Books"), "config.json", SearchOption.AllDirectories))
         {
+            scanned++;
             cancellationToken.ThrowIfCancellationRequested();
             var hash = Path.GetFileName(Path.GetDirectoryName(configPath) ?? "");
             if (string.IsNullOrWhiteSpace(hash)) continue;
+            if (!books.ContainsKey(hash)) unmapped++;
             var book = books.GetValueOrDefault(hash) ?? new ReadestBookMetadata(
                 hash,
                 "Untitled book",
@@ -80,14 +89,15 @@ public sealed class ReadestNotesRepository
                 ReadestLibraryLocator.FindBookFile(_databasePath, hash),
                 ReadestLibraryLocator.FindCoverFile(_databasePath, hash));
             var json = await ReadJsonWithRetryAsync(configPath, cancellationToken);
-            if (json is null || !json.RootElement.TryGetProperty("booknotes", out var notes) || notes.ValueKind != JsonValueKind.Array) continue;
+            if (json is null) { failed++; continue; }
+            if (!json.RootElement.TryGetProperty("booknotes", out var notes) || notes.ValueKind != JsonValueKind.Array) { skipped++; continue; }
             var index = 0;
             foreach (var item in notes.EnumerateArray())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (item.ValueKind != JsonValueKind.Object) { index++; continue; }
+                if (item.ValueKind != JsonValueKind.Object) { skipped++; index++; continue; }
                 var deletedAt = ReadDateTime(item, "deletedAt");
-                if (deletedAt is not null) { index++; continue; }
+                if (deletedAt is not null) { skipped++; index++; continue; }
                 var note = ReadString(item, "note");
                 var text = ReadString(item, "text");
                 var type = ReadString(item, "type");
@@ -96,7 +106,7 @@ public sealed class ReadestNotesRepository
                 var updated = ReadDateTime(item, "updatedAt");
                 var id = ReadString(item, "id");
                 if (string.IsNullOrWhiteSpace(id)) id = $"{hash}:{ReadString(item, "cfi")}:{ReadString(item, "xpointer0")}:{created?.UtcTicks ?? index}";
-                if (string.IsNullOrWhiteSpace(note) && string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(type)) { index++; continue; }
+                if (string.IsNullOrWhiteSpace(note) && string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(type)) { skipped++; index++; continue; }
                 result.Add(new ReadestNote(
                     id,
                     hash,
@@ -117,11 +127,13 @@ public sealed class ReadestNotesRepository
                 index++;
             }
         }
-        return result
+        var loaded = result
             .GroupBy(note => note.Id, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(note => note.UpdatedAt ?? note.CreatedAt).First())
             .OrderByDescending(note => note.CreatedAt ?? note.UpdatedAt ?? DateTimeOffset.MinValue)
             .ToArray();
+        LastDiagnostics = new(scanned, failed, loaded.Length, skipped, unmapped);
+        return loaded;
     }
 
     private static async Task<Dictionary<string, ReadestBookMetadata>> ReadLibraryAsync(string root, CancellationToken token)
