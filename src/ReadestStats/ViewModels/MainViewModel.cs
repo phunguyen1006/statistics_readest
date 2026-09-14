@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
 using ReadestStats.Core;
@@ -29,6 +31,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly Action<string> _log;
     private readonly Action<string> _applyTheme;
     private IReadestRepository? _repository;
+    private ReadestNotesRepository? _notesRepository;
     private FileSystemWatcher? _watcher;
     private CancellationTokenSource? _refreshDebounce;
     private CancellationTokenSource? _activeRefresh;
@@ -61,6 +64,26 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private DayDetails? _selectedDay;
     private SessionDisplay? _selectedSession;
     private BookRow? _selectedBook;
+    private IReadOnlyList<ReadestNote> _readestNotes = [];
+    private readonly List<NoteRow> _allNoteRows = [];
+    private NoteRow? _selectedNote;
+    private NoteRow? _dailyNote;
+    private string _noteSearch = "";
+    private string _noteBookFilter = "All books";
+    private string _noteColorFilter = "All colors";
+    private string _noteTypeFilter = "All types";
+    private string _noteTagFilter = "All tags";
+    private string _noteReviewFilter = "All notes";
+    private string _noteCollectionFilter = "All collections";
+    private string _noteVisibilityFilter = "Visible notes";
+    private string _noteDateFilter = "All dates";
+    private string _noteContentFilter = "All content";
+    private string _noteSort = "Newest";
+    private string _noteRandomMode = "Current filters";
+    private bool _notesFavoritesOnly;
+    private string? _lastRandomNoteId;
+    private int _notesReadCount;
+    private string _notesStatus = "Readest notes are stored locally and never modified.";
     private BookDetail? _bookDetail;
     private string _sessionBook = "All books";
     private string _sessionDuration = "All durations";
@@ -91,6 +114,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OpenInsightCommand = new ParameterCommand<InsightItem>(insight => { if (insight is not null) { SelectedInsight = insight; SelectedPage = "Statistics"; } });
         OpenSessionBookCommand = new ParameterCommand<SessionDisplay>(OpenSessionBook, session => session?.Source.BookIds.Count > 0);
         OpenBookInReadestCommand = new RelayCommand(OpenBookInReadest, CanOpenSelectedBook);
+        SelectNoteCommand = new ParameterCommand<NoteRow>(note => SelectedNote = note);
+        ToggleFavoriteNoteCommand = new ParameterCommand<NoteRow>(ToggleFavoriteNote, note => note is not null);
+        ToggleHiddenNoteCommand = new ParameterCommand<NoteRow>(ToggleHiddenNote, note => note is not null);
+        OpenSelectedNoteCommand = new RelayCommand(OpenSelectedNote, CanOpenSelectedNote);
+        RandomNoteCommand = new RelayCommand(SelectRandomNote, () => Notes.Count > 0);
+        DailyNoteCommand = new RelayCommand(SelectDailyNote, () => _allNoteRows.Count > 0);
+        ReviewNoteCommand = new ParameterCommand<string>(ReviewSelectedNote, status => SelectedNote is not null && !string.IsNullOrWhiteSpace(status));
+        SaveSelectedNoteCommand = new AsyncCommand(SaveSelectedNoteAsync, () => SelectedNote is not null);
+        RefreshNotesCommand = new AsyncCommand(RefreshNotesAsync, () => _notesRepository is not null);
+        ExportNotesMarkdownCommand = new AsyncCommand(() => ExportNotesAsync("md"), () => Notes.Count > 0);
+        ExportNotesJsonCommand = new AsyncCommand(() => ExportNotesAsync("json"), () => Notes.Count > 0);
+        ExportNotesCsvCommand = new AsyncCommand(() => ExportNotesAsync("csv"), () => Notes.Count > 0);
         TogglePinnedBookCommand = new AsyncCommand(TogglePinnedBookAsync, () => SelectedBook is not null);
         CheckForUpdatesCommand = new AsyncCommand(CheckForUpdatesAsync);
         OpenUpdateCommand = new RelayCommand(OpenUpdate, () => !string.IsNullOrWhiteSpace(_updateUrl));
@@ -105,13 +140,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _refreshTimer.Tick += async (_, _) => await RefreshAsync(incremental: true);
     }
 
-    public string[] Pages { get; } = ["Overview", "Activity", "Sessions", "Books", "Goals", "Statistics", "Year in Reading", "Settings"];
+    public string[] Pages { get; } = ["Overview", "Activity", "Sessions", "Books", "Notes", "Goals", "Statistics", "Year in Reading", "Settings"];
     public NavItem[] Navigation { get; } =
     [
         new("Overview", "M3,3 H17 V7 H3 Z M3,10 H9 V17 H3 Z M12,10 H17 V17 H12 Z"),
         new("Activity", "M3,4 H17 V17 H3 Z M3,8 H17 M7,2 V6 M13,2 V6"),
         new("Sessions", "M10,3 A7,7 0 1 1 9.9,3 M10,6 V10 L13,12"),
         new("Books", "M3,3 H9 A2,2 0 0 1 11,5 V17 A3,3 0 0 0 8,14 H3 Z M17,3 H11 A2,2 0 0 0 9,5 V17 A3,3 0 0 1 12,14 H17 Z"),
+        new("Notes", "M4,3 H16 A2,2 0 0 1 18,5 V15 A2,2 0 0 1 16,17 H4 A2,2 0 0 1 2,15 V5 A2,2 0 0 1 4,3 Z M5,7 H15 M5,10 H13 M5,13 H10"),
         new("Goals", "M10,2 A8,8 0 1 1 9.9,2 M10,6 A4,4 0 1 1 9.9,6 M10,9 A1,1 0 1 1 9.9,9"),
         new("Statistics", "M3,17 V10 H6 V17 Z M8,17 V5 H11 V17 Z M13,17 V8 H16 V17 Z"),
         new("Year in Reading", "M10,2 L12,7 L18,7 L13,11 L15,17 L10,13 L5,17 L7,11 L2,7 L8,7 Z"),
@@ -126,6 +162,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string[] BookSorts { get; } = ["Reading time", "Sessions", "Active days", "Recently read", "Title"];
     public string[] BookFilters { get; } = ["All", "Active in range", "Pinned", "Recently read", "Most read", "Least read", "Status: Want to read", "Status: Reading", "Status: Finished", "Status: Paused", "Status: Dropped"];
     public string[] BookStatusOptions { get; } = ["Unspecified", "Want to read", "Reading", "Finished", "Paused", "Dropped"];
+    public string[] NoteSorts { get; } = ["Newest", "Oldest", "Book", "Most seen"];
+    public string[] NoteReviewFilters { get; } = ["All notes", "Due now", "New", "Remembered", "Needs review"];
+    public string[] NoteVisibilityFilters { get; } = ["Visible notes", "All notes", "Hidden notes"];
+    public string[] NoteDateFilters { get; } = ["All dates", "Last 7 days", "Last 30 days", "This year"];
+    public string[] NoteContentFilters { get; } = ["All content", "Notes with comments", "Highlights only"];
+    public string[] NoteRandomModes { get; } = ["Current filters", "All notes", "Unread notes", "Due notes", "Favorites"];
     public string[] RefreshModes { get; } = ["Manual", "On Readest changes", "30 sec", "1 min", "5 min"];
     public string[] ThemeOptions { get; } = ["Dark", "Light", "System"];
 
@@ -176,11 +218,34 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<ChartPoint> SessionStaircase { get; } = [];
     public ObservableCollection<PaceDatum> GoalPace { get; } = [];
     public ObservableCollection<ChartPoint> BestReadingDays { get; } = [];
+    public ObservableCollection<NoteRow> Notes { get; } = [];
+    public ObservableCollection<string> NoteBookOptions { get; } = ["All books"];
+    public ObservableCollection<string> NoteColorOptions { get; } = ["All colors"];
+    public ObservableCollection<string> NoteTypeOptions { get; } = ["All types"];
+    public ObservableCollection<string> NoteTagOptions { get; } = ["All tags"];
+    public ObservableCollection<string> NoteCollectionOptions { get; } = ["All collections"];
+    public ObservableCollection<ChartPoint> NotesByBook { get; } = [];
+    public ObservableCollection<ChartPoint> NotesByMonth { get; } = [];
+    public ObservableCollection<ChartPoint> NotesByType { get; } = [];
+    public ObservableCollection<ChartPoint> NotesByColor { get; } = [];
+    public ObservableCollection<ChartPoint> NotesByTag { get; } = [];
 
     public ParameterCommand<string> NavigateCommand { get; }
     public ParameterCommand<InsightItem> OpenInsightCommand { get; }
     public ParameterCommand<SessionDisplay> OpenSessionBookCommand { get; }
     public RelayCommand OpenBookInReadestCommand { get; }
+    public ParameterCommand<NoteRow> SelectNoteCommand { get; }
+    public ParameterCommand<NoteRow> ToggleFavoriteNoteCommand { get; }
+    public ParameterCommand<NoteRow> ToggleHiddenNoteCommand { get; }
+    public RelayCommand OpenSelectedNoteCommand { get; }
+    public RelayCommand RandomNoteCommand { get; }
+    public RelayCommand DailyNoteCommand { get; }
+    public ParameterCommand<string> ReviewNoteCommand { get; }
+    public AsyncCommand SaveSelectedNoteCommand { get; }
+    public AsyncCommand RefreshNotesCommand { get; }
+    public AsyncCommand ExportNotesMarkdownCommand { get; }
+    public AsyncCommand ExportNotesJsonCommand { get; }
+    public AsyncCommand ExportNotesCsvCommand { get; }
     public AsyncCommand TogglePinnedBookCommand { get; }
     public AsyncCommand CheckForUpdatesCommand { get; }
     public RelayCommand OpenUpdateCommand { get; }
@@ -205,7 +270,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public RelayCommand NextYearCommand { get; }
 
     public string SelectedPage { get => _selectedPage; set { if (string.IsNullOrWhiteSpace(value) || value == _selectedPage) return; var previous = _selectedPage; if (Set(ref _selectedPage, value)) { if (!_isGoingBack) _navigationHistory.Push(previous); Raise(nameof(PageSubtitle)); Raise(nameof(Breadcrumb)); Raise(nameof(CanGoBack)); BackCommand.Refresh(); _applyTheme(Theme); _ = Application.Current.Dispatcher.InvokeAsync(() => _applyTheme(Theme), DispatcherPriority.Loaded); } } }
-    public string PageSubtitle => SelectedPage switch { "Overview" => "Your reading activity", "Activity" => "Calendar analytics", "Sessions" => "Continuous reading periods", "Books" => "Your reading library", "Goals" => "Targets, pace and history", "Statistics" => "Your personal reading story", "Year in Reading" => "Your annual reading story", _ => "Data, quality and preferences" };
+    public string PageSubtitle => SelectedPage switch { "Overview" => "Your reading activity", "Activity" => "Calendar analytics", "Sessions" => "Continuous reading periods", "Books" => "Your reading library", "Notes" => "Your personal knowledge library", "Goals" => "Targets, pace and history", "Statistics" => "Your personal reading story", "Year in Reading" => "Your annual reading story", _ => "Data, quality and preferences" };
     public string Breadcrumb => $"Readest Stats  /  {SelectedPage}";
     public bool CanGoBack => _navigationHistory.Count > 0;
     public string SelectedRange { get => _selectedRange; set { if (Set(ref _selectedRange, value)) RecalculateAll(); } }
@@ -251,6 +316,26 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public DayDetails? SelectedDay { get => _selectedDay; private set => Set(ref _selectedDay, value); }
     public SessionDisplay? SelectedSession { get => _selectedSession; set { if (Set(ref _selectedSession, value)) BuildSessionDetail(); } }
     public BookRow? SelectedBook { get => _selectedBook; set { if (Set(ref _selectedBook, value)) { BuildBookDetail(); UpdateOpenBookState(); Raise(nameof(IsSelectedBookPinned)); Raise(nameof(PinBookLabel)); TogglePinnedBookCommand.Refresh(); } } }
+    public NoteRow? SelectedNote
+    {
+        get => _selectedNote;
+        set
+        {
+            if (!Set(ref _selectedNote, value)) return;
+            if (value is not null)
+            {
+                value.MarkSeen();
+                _notesReadCount++;
+                Raise(nameof(NotesReadCount));
+                Raise(nameof(ReviewQueueCount));
+                _ = SaveNoteStateAsync(value);
+            }
+            SaveSelectedNoteCommand.Refresh();
+            OpenSelectedNoteCommand.Refresh();
+            ReviewNoteCommand.Refresh();
+        }
+    }
+    public NoteRow? DailyNote { get => _dailyNote; private set => Set(ref _dailyNote, value); }
     public BookDetail? BookDetail { get => _bookDetail; private set => Set(ref _bookDetail, value); }
     public InsightItem? SelectedInsight { get => _selectedInsight; set => Set(ref _selectedInsight, value); }
     public string SessionBook { get => _sessionBook; set { var normalized = string.IsNullOrWhiteSpace(value) ? "All books" : value; if (Set(ref _sessionBook, normalized)) ApplySessionFilters(); } }
@@ -260,6 +345,19 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string BookSearch { get => _bookSearch; set { if (Set(ref _bookSearch, value)) ApplyBookFilters(); } }
     public string BookSort { get => _bookSort; set { if (Set(ref _bookSort, value)) ApplyBookFilters(); } }
     public string BookFilter { get => _bookFilter; set { if (Set(ref _bookFilter, value)) ApplyBookFilters(); } }
+    public string NoteSearch { get => _noteSearch; set { if (Set(ref _noteSearch, value)) ApplyNoteFilters(); } }
+    public string NoteBookFilter { get => _noteBookFilter; set { if (Set(ref _noteBookFilter, value)) ApplyNoteFilters(); } }
+    public string NoteColorFilter { get => _noteColorFilter; set { if (Set(ref _noteColorFilter, value)) ApplyNoteFilters(); } }
+    public string NoteTypeFilter { get => _noteTypeFilter; set { if (Set(ref _noteTypeFilter, value)) ApplyNoteFilters(); } }
+    public string NoteTagFilter { get => _noteTagFilter; set { if (Set(ref _noteTagFilter, value)) ApplyNoteFilters(); } }
+    public string NoteReviewFilter { get => _noteReviewFilter; set { if (Set(ref _noteReviewFilter, value)) ApplyNoteFilters(); } }
+    public string NoteCollectionFilter { get => _noteCollectionFilter; set { if (Set(ref _noteCollectionFilter, value)) ApplyNoteFilters(); } }
+    public string NoteVisibilityFilter { get => _noteVisibilityFilter; set { if (Set(ref _noteVisibilityFilter, value)) ApplyNoteFilters(); } }
+    public string NoteDateFilter { get => _noteDateFilter; set { if (Set(ref _noteDateFilter, value)) ApplyNoteFilters(); } }
+    public string NoteContentFilter { get => _noteContentFilter; set { if (Set(ref _noteContentFilter, value)) ApplyNoteFilters(); } }
+    public string NoteSort { get => _noteSort; set { if (Set(ref _noteSort, value)) ApplyNoteFilters(); } }
+    public string NoteRandomMode { get => _noteRandomMode; set => Set(ref _noteRandomMode, value); }
+    public bool NotesFavoritesOnly { get => _notesFavoritesOnly; set { if (Set(ref _notesFavoritesOnly, value)) ApplyNoteFilters(); } }
     public int Year { get => _year; set { if (Set(ref _year, value)) BuildYear(); } }
     public YearInReading? YearSummary { get => _yearSummary; private set => Set(ref _yearSummary, value); }
     public YearBookGoalSummary? YearBookGoal { get => _yearBookGoal; private set => Set(ref _yearBookGoal, value); }
@@ -273,6 +371,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public DataQualityReport? DataQuality { get => _dataQuality; private set => Set(ref _dataQuality, value); }
     public ReadingStory? Story { get => _story; private set => Set(ref _story, value); }
     public string OpenBookStatus { get => _openBookStatus; private set => Set(ref _openBookStatus, value); }
+    public string NotesStatus { get => _notesStatus; private set => Set(ref _notesStatus, value); }
+    public string NotesCountLabel => $"{Notes.Count} of {_readestNotes.Count} notes shown";
+    public bool HasNoVisibleNotes => Notes.Count == 0;
+    public string NotesEmptyMessage => _readestNotes.Count == 0 ? "No local Readest notes found." : "No notes match these filters.";
+    public int TotalNotes => _readestNotes.Count;
+    public int FavoriteNotesCount => _allNoteRows.Count(note => note.IsFavorite);
+    public int ReviewQueueCount => _allNoteRows.Count(IsDue);
+    public int NotesReadCount => _notesReadCount;
+    public string NotesSummary => _readestNotes.Count == 0 ? "No notes found in the local Readest library." : $"{Formatters.Count(_readestNotes.Count, "note")} across {Formatters.Count(_readestNotes.Select(note => note.BookHash).Distinct(StringComparer.OrdinalIgnoreCase).Count(), "book")}";
     public string UpdateStatus { get => _updateStatus; private set => Set(ref _updateStatus, value); }
     public string SelectedBookStatus
     {
@@ -331,7 +438,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync()
     {
-        _settings = await _store.LoadAsync(); _settings.BookTracking ??= []; _settings.PinnedBookKeys ??= []; if (_settings.AutomaticBackups) { try { _store.CreateAutomaticBackup(); } catch (Exception ex) { _log("Automatic backup error: " + ex); } } GoalEngine.Migrate(_settings); _settings.Theme = ThemeManager.Normalize(_settings.Theme); _applyTheme(_settings.Theme); _selectedRange = _settings.DefaultRangeDays switch { 1 => "Today", 7 => "7 days", 90 => "90 days", 183 => "6 months", 366 => "1 year", 365 => "This year", -1 => "All time", _ => "30 days" }; RaiseSettings();
+        _settings = await _store.LoadAsync(); _settings.BookTracking ??= []; _settings.PinnedBookKeys ??= []; _settings.NoteStates ??= []; if (_settings.AutomaticBackups) { try { _store.CreateAutomaticBackup(); } catch (Exception ex) { _log("Automatic backup error: " + ex); } } GoalEngine.Migrate(_settings); _settings.Theme = ThemeManager.Normalize(_settings.Theme); _applyTheme(_settings.Theme); _selectedRange = _settings.DefaultRangeDays switch { 1 => "Today", 7 => "7 days", 90 => "90 days", 183 => "6 months", 366 => "1 year", 365 => "This year", -1 => "All time", _ => "30 days" }; RaiseSettings();
         var path = await _locator.LocateAsync(_settings.DatabasePath);
         if (path is null) { Status = "No Readest data found"; Error = "Readest data was not found. Choose statistics.db to connect."; RaiseConnectionState(); return; }
         await ConnectAsync(path);
@@ -343,10 +450,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         try
         {
             var repository = new SqliteReadestRepository(path); var validation = await repository.ValidateAsync();
-            if (!validation.IsValid) { _repository = null; Diagnostics = null; Error = validation.Message; Status = "Incompatible database"; return; }
-            _repository = repository; Diagnostics = validation.Diagnostics; _settings.DatabasePath = path; await _store.SaveAsync(_settings); Status = "Loading Readest activity…"; await RefreshAsync(force: true); ConfigureRefresh();
+            if (!validation.IsValid) { _repository = null; _notesRepository = null; Diagnostics = null; Error = validation.Message; Status = "Incompatible database"; return; }
+            _repository = repository; _notesRepository = new ReadestNotesRepository(path); Diagnostics = validation.Diagnostics; _settings.DatabasePath = path; await _store.SaveAsync(_settings); Status = "Loading Readest activity…"; await RefreshAsync(force: true); ConfigureRefresh();
         }
-        catch (Exception ex) { _repository = null; Error = Friendly(ex); Status = "Connection failed"; }
+        catch (Exception ex) { _repository = null; _notesRepository = null; Error = Friendly(ex); Status = "Connection failed"; }
         finally { IsBusy = false; RaiseConnectionState(); }
     }
 
@@ -355,7 +462,22 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (_repository is null || (IsBusy && !force)) return; _activeRefresh?.Cancel(); _activeRefresh?.Dispose(); _activeRefresh = new CancellationTokenSource(TimeSpan.FromSeconds(30)); var token = _activeRefresh.Token; IsBusy = true; Error = null;
         try
         {
-            var booksTask = _repository.GetBooksAsync(token); var since = incremental && _events.Count > 0 ? DateTimeOffset.FromUnixTimeSeconds(_events.Max(e => e.StartTime)) : (DateTimeOffset?)null; var eventsTask = _repository.GetEventsAsync(since, cancellationToken: token); await Task.WhenAll(booksTask, eventsTask); _bookModels = await booksTask; var fresh = await eventsTask; _events = since is null ? fresh : _events.Concat(fresh).GroupBy(e => (e.BookId, e.Page, e.StartTime)).Select(g => g.Last()).OrderBy(e => e.StartTime).ToArray(); Diagnostics = (await _repository.ValidateAsync(token)).Diagnostics; if (_goalEngine.SyncYearArchives(_settings, _events)) await _store.SaveAsync(_settings, token); RecalculateAll(); LastSync = DateTimeOffset.Now; Status = "Readest connected"; _log($"Refresh complete · {_events.Count} events · {_bookModels.Count} books · {_repository.DatabasePath}");
+            var booksTask = _repository.GetBooksAsync(token);
+            var since = incremental && _events.Count > 0 ? DateTimeOffset.FromUnixTimeSeconds(_events.Max(e => e.StartTime)) : (DateTimeOffset?)null;
+            var eventsTask = _repository.GetEventsAsync(since, cancellationToken: token);
+            var notesTask = _notesRepository?.LoadAsync(token) ?? Task.FromResult<IReadOnlyList<ReadestNote>>([]);
+            await Task.WhenAll(booksTask, eventsTask, notesTask);
+            _bookModels = await booksTask;
+            var fresh = await eventsTask;
+            _readestNotes = await notesTask;
+            _events = since is null ? fresh : _events.Concat(fresh).GroupBy(e => (e.BookId, e.Page, e.StartTime)).Select(g => g.Last()).OrderBy(e => e.StartTime).ToArray();
+            Diagnostics = (await _repository.ValidateAsync(token)).Diagnostics;
+            if (_goalEngine.SyncYearArchives(_settings, _events)) await _store.SaveAsync(_settings, token);
+            BuildNotes();
+            RecalculateAll();
+            LastSync = DateTimeOffset.Now;
+            Status = "Readest connected";
+            _log($"Refresh complete · {_events.Count} events · {_bookModels.Count} books · {_readestNotes.Count} notes · {_repository.DatabasePath}");
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { Error = "Could not refresh Readest data. " + Friendly(ex); Status = "Last good data retained"; _log("Refresh error: " + ex); }
@@ -540,6 +662,400 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Replace(DataQualityChecks, DataQuality.Checks);
     }
 
+    private void BuildNotes()
+    {
+        _allNoteRows.Clear();
+        foreach (var source in _readestNotes)
+        {
+            if (!_settings.NoteStates.TryGetValue(source.Id, out var state))
+            {
+                state = new();
+                _settings.NoteStates[source.Id] = state;
+            }
+            var row = new NoteRow(source, state);
+            row.PropertyChanged += NoteRowChanged;
+            _allNoteRows.Add(row);
+        }
+
+        SyncNoteOptions(NoteBookOptions, new[] { "All books" }.Concat(_allNoteRows.Select(note => note.BookTitle).Where(title => !string.IsNullOrWhiteSpace(title)).Distinct(StringComparer.CurrentCultureIgnoreCase).Order()));
+        SyncNoteOptions(NoteColorOptions, new[] { "All colors" }.Concat(_allNoteRows.Select(note => note.ColorLabel).Distinct(StringComparer.CurrentCultureIgnoreCase).Order()));
+        SyncNoteOptions(NoteTypeOptions, new[] { "All types" }.Concat(_allNoteRows.Select(note => note.TypeLabel).Distinct(StringComparer.CurrentCultureIgnoreCase).Order()));
+        SyncNoteOptions(NoteTagOptions, new[] { "All tags" }.Concat(_allNoteRows.SelectMany(note => note.State.Tags).Distinct(StringComparer.CurrentCultureIgnoreCase).Order()));
+        SyncNoteOptions(NoteCollectionOptions, new[] { "All collections" }.Concat(_allNoteRows.SelectMany(note => note.State.Collections).Distinct(StringComparer.CurrentCultureIgnoreCase).Order()));
+
+        if (!NoteBookOptions.Contains(NoteBookFilter)) NoteBookFilter = "All books";
+        if (!NoteColorOptions.Contains(NoteColorFilter)) NoteColorFilter = "All colors";
+        if (!NoteTypeOptions.Contains(NoteTypeFilter)) NoteTypeFilter = "All types";
+        if (!NoteTagOptions.Contains(NoteTagFilter)) NoteTagFilter = "All tags";
+        if (!NoteCollectionOptions.Contains(NoteCollectionFilter)) NoteCollectionFilter = "All collections";
+        if (!NoteDateFilters.Contains(NoteDateFilter)) NoteDateFilter = "All dates";
+        if (!NoteContentFilters.Contains(NoteContentFilter)) NoteContentFilter = "All content";
+        ApplyNoteFilters();
+        BuildNoteAnalytics();
+        DailyNote = ChooseDailyNote();
+
+        if (_selectedNote is not null)
+        {
+            var replacement = _allNoteRows.FirstOrDefault(note => note.Id.Equals(_selectedNote.Id, StringComparison.OrdinalIgnoreCase));
+            _selectedNote = replacement;
+            Raise(nameof(SelectedNote));
+        }
+        else
+        {
+            _selectedNote = Notes.FirstOrDefault();
+            Raise(nameof(SelectedNote));
+        }
+
+        NotesStatus = _readestNotes.Count == 0
+            ? "No local Readest notes found."
+            : $"{Formatters.Count(_readestNotes.Count, "note")} indexed · source remains read-only.";
+        Raise(nameof(NotesCountLabel));
+        Raise(nameof(HasNoVisibleNotes));
+        Raise(nameof(NotesEmptyMessage));
+        Raise(nameof(TotalNotes));
+        Raise(nameof(FavoriteNotesCount));
+        Raise(nameof(ReviewQueueCount));
+        RandomNoteCommand.Refresh();
+        DailyNoteCommand.Refresh();
+        RefreshNotesCommand.Refresh();
+        OpenSelectedNoteCommand.Refresh();
+        SaveSelectedNoteCommand.Refresh();
+        ReviewNoteCommand.Refresh();
+        ExportNotesMarkdownCommand.Refresh();
+        ExportNotesJsonCommand.Refresh();
+        ExportNotesCsvCommand.Refresh();
+    }
+
+    private void ApplyNoteFilters()
+    {
+        IEnumerable<NoteRow> query = _allNoteRows;
+        if (NoteVisibilityFilter == "Visible notes") query = query.Where(note => !note.IsHidden);
+        else if (NoteVisibilityFilter == "Hidden notes") query = query.Where(note => note.IsHidden);
+        if (NotesFavoritesOnly) query = query.Where(note => note.IsFavorite);
+        if (NoteBookFilter != "All books") query = query.Where(note => note.BookTitle.Equals(NoteBookFilter, StringComparison.CurrentCultureIgnoreCase));
+        if (NoteColorFilter != "All colors") query = query.Where(note => note.ColorLabel.Equals(NoteColorFilter, StringComparison.CurrentCultureIgnoreCase));
+        if (NoteTypeFilter != "All types") query = query.Where(note => note.TypeLabel.Equals(NoteTypeFilter, StringComparison.CurrentCultureIgnoreCase));
+        if (NoteTagFilter != "All tags") query = query.Where(note => note.State.Tags.Contains(NoteTagFilter, StringComparer.CurrentCultureIgnoreCase));
+        if (NoteCollectionFilter != "All collections") query = query.Where(note => note.State.Collections.Contains(NoteCollectionFilter, StringComparer.CurrentCultureIgnoreCase));
+        var today = DateTime.Today;
+        query = NoteDateFilter switch
+        {
+            "Last 7 days" => query.Where(note => note.SortDate.ToLocalTime().Date >= today.AddDays(-6)),
+            "Last 30 days" => query.Where(note => note.SortDate.ToLocalTime().Date >= today.AddDays(-29)),
+            "This year" => query.Where(note => note.SortDate.ToLocalTime().Year == today.Year),
+            _ => query
+        };
+        query = NoteContentFilter switch
+        {
+            "Notes with comments" => query.Where(note => note.HasComment),
+            "Highlights only" => query.Where(note => note.HasHighlight),
+            _ => query
+        };
+        query = NoteReviewFilter switch
+        {
+            "Due now" => query.Where(IsDue),
+            "New" => query.Where(note => note.ReviewStatus.Equals("New", StringComparison.OrdinalIgnoreCase)),
+            "Remembered" => query.Where(note => note.ReviewStatus.Equals("Remembered", StringComparison.OrdinalIgnoreCase)),
+            "Needs review" => query.Where(note => note.ReviewStatus.Equals("Needs review", StringComparison.OrdinalIgnoreCase)),
+            _ => query
+        };
+        if (!string.IsNullOrWhiteSpace(NoteSearch))
+        {
+            var search = NoteSearch.Trim();
+            query = query.Where(note =>
+                note.BookTitle.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                note.Authors.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                note.Text.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                note.Note.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                note.PersonalNote.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                note.TagsText.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                note.CollectionsText.Contains(search, StringComparison.CurrentCultureIgnoreCase));
+        }
+
+        query = NoteSort switch
+        {
+            "Oldest" => query.OrderBy(note => note.SortDate),
+            "Book" => query.OrderBy(note => note.BookTitle).ThenByDescending(note => note.SortDate),
+            "Most seen" => query.OrderByDescending(note => note.TimesSeen).ThenByDescending(note => note.SortDate),
+            _ => query.OrderByDescending(note => note.SortDate)
+        };
+        Replace(Notes, query);
+        if (_selectedNote is not null && !Notes.Contains(_selectedNote))
+        {
+            _selectedNote = Notes.FirstOrDefault();
+            Raise(nameof(SelectedNote));
+        }
+        Raise(nameof(NotesCountLabel));
+        Raise(nameof(HasNoVisibleNotes));
+        Raise(nameof(NotesEmptyMessage));
+        Raise(nameof(FavoriteNotesCount));
+        Raise(nameof(ReviewQueueCount));
+        RandomNoteCommand.Refresh();
+        ExportNotesMarkdownCommand.Refresh();
+        ExportNotesJsonCommand.Refresh();
+        ExportNotesCsvCommand.Refresh();
+    }
+
+    private void BuildNoteAnalytics()
+    {
+        Replace(NotesByBook, _allNoteRows
+            .GroupBy(note => note.BookTitle)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key)
+            .Take(8)
+            .Select(group => new ChartPoint(group.Key, group.Count(), $"{Formatters.Count(group.Count(), "note")}")));
+        var now = DateTimeOffset.Now;
+        Replace(NotesByMonth, Enumerable.Range(0, 12).Select(offset =>
+        {
+            var month = new DateTime(now.Year, now.Month, 1).AddMonths(offset - 11);
+            var count = _allNoteRows.Count(note =>
+            {
+                var date = note.SortDate.ToLocalTime();
+                return date.Year == month.Year && date.Month == month.Month;
+            });
+            return new ChartPoint(month.ToString("MMM yy"), count, Formatters.Count(count, "note"));
+        }));
+        Replace(NotesByType, _allNoteRows.GroupBy(note => note.TypeLabel).OrderByDescending(group => group.Count()).Select(group => new ChartPoint(group.Key, group.Count(), Formatters.Count(group.Count(), "note"))));
+        Replace(NotesByColor, _allNoteRows.GroupBy(note => note.ColorLabel).OrderByDescending(group => group.Count()).Select(group => new ChartPoint(group.Key, group.Count(), Formatters.Count(group.Count(), "note"))));
+        Replace(NotesByTag, _allNoteRows
+            .SelectMany(note => note.State.Tags)
+            .GroupBy(tag => tag, StringComparer.CurrentCultureIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key)
+            .Take(8)
+            .Select(group => new ChartPoint(group.Key, group.Count(), Formatters.Count(group.Count(), "note"))));
+    }
+
+    private static bool IsDue(NoteRow note) => note.IsDue;
+
+    private void NoteRowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        if (sender is not NoteRow note) return;
+        Raise(nameof(FavoriteNotesCount));
+        Raise(nameof(ReviewQueueCount));
+        if (args.PropertyName is nameof(NoteRow.TagsText) or nameof(NoteRow.CollectionsText))
+        {
+            SyncNoteOptions(NoteTagOptions, new[] { "All tags" }.Concat(_allNoteRows.SelectMany(item => item.State.Tags).Distinct(StringComparer.CurrentCultureIgnoreCase).Order()));
+            SyncNoteOptions(NoteCollectionOptions, new[] { "All collections" }.Concat(_allNoteRows.SelectMany(item => item.State.Collections).Distinct(StringComparer.CurrentCultureIgnoreCase).Order()));
+            BuildNoteAnalytics();
+            ApplyNoteFilters();
+        }
+        _ = SaveNoteStateAsync(note);
+    }
+
+    private static void SyncNoteOptions(ObservableCollection<string> target, IEnumerable<string> desired)
+    {
+        var values = desired.Distinct(StringComparer.CurrentCultureIgnoreCase).ToArray();
+        target.Clear();
+        foreach (var value in values) target.Add(value);
+    }
+
+    private NoteRow? ChooseDailyNote()
+    {
+        var candidates = _allNoteRows.Where(note => !note.IsHidden).OrderBy(note => note.Id, StringComparer.OrdinalIgnoreCase).ToArray();
+        if (candidates.Length == 0) return null;
+        var index = Math.Abs(DateTime.Today.DayOfYear * 31 + DateTime.Today.Year) % candidates.Length;
+        return candidates[index];
+    }
+
+    private void SelectDailyNote()
+    {
+        DailyNote = ChooseDailyNote();
+        if (DailyNote is not null) SelectedNote = DailyNote;
+    }
+
+    private void SelectRandomNote()
+    {
+        IEnumerable<NoteRow> source = NoteRandomMode switch
+        {
+            "All notes" => _allNoteRows,
+            "Unread notes" => _allNoteRows.Where(note => note.TimesSeen == 0 && !note.IsHidden),
+            "Due notes" => _allNoteRows.Where(note => note.IsDue && !note.IsHidden),
+            "Favorites" => _allNoteRows.Where(note => note.IsFavorite && !note.IsHidden),
+            _ => Notes
+        };
+        var candidates = source.Where(note => !note.Id.Equals(_lastRandomNoteId, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (candidates.Length == 0 && !ReferenceEquals(source, Notes))
+        {
+            candidates = Notes.Where(note => !note.Id.Equals(_lastRandomNoteId, StringComparison.OrdinalIgnoreCase)).ToArray();
+        }
+        if (candidates.Length == 0) candidates = Notes.ToArray();
+        if (candidates.Length == 0) return;
+        var selected = candidates[Random.Shared.Next(candidates.Length)];
+        _lastRandomNoteId = selected.Id;
+        SelectedNote = selected;
+    }
+
+    private void ToggleFavoriteNote(NoteRow? note)
+    {
+        if (note is null) return;
+        note.IsFavorite = !note.IsFavorite;
+        Raise(nameof(FavoriteNotesCount));
+        _ = SaveNoteStateAsync(note);
+    }
+
+    private void ToggleHiddenNote(NoteRow? note)
+    {
+        if (note is null) return;
+        note.IsHidden = !note.IsHidden;
+        ApplyNoteFilters();
+        _ = SaveNoteStateAsync(note);
+    }
+
+    private void ReviewSelectedNote(string? status)
+    {
+        if (SelectedNote is null || string.IsNullOrWhiteSpace(status)) return;
+        var interval = status switch
+        {
+            "Remembered" => Math.Clamp(SelectedNote.State.ReviewIntervalDays * 2, 1, 30),
+            "Needs review" => 1,
+            _ => 1
+        };
+        SelectedNote.SetReview(status, interval);
+        Raise(nameof(ReviewQueueCount));
+        ApplyNoteFilters();
+        _ = SaveNoteStateAsync(SelectedNote);
+    }
+
+    private async Task SaveSelectedNoteAsync()
+    {
+        if (SelectedNote is null) return;
+        await SaveNoteStateAsync(SelectedNote);
+        NotesStatus = "Personal note settings saved locally.";
+    }
+
+    private async Task SaveNoteStateAsync(NoteRow note)
+    {
+        try
+        {
+            _settings.NoteStates[note.Id] = note.State;
+            await _store.SaveAsync(_settings);
+        }
+        catch (Exception ex)
+        {
+            NotesStatus = "Could not save note settings. " + Friendly(ex);
+            _log("Note state save error: " + ex);
+        }
+    }
+
+    private async Task RefreshNotesAsync()
+    {
+        if (_notesRepository is null) return;
+        try
+        {
+            NotesStatus = "Refreshing local Readest notes…";
+            _readestNotes = await _notesRepository.LoadAsync();
+            BuildNotes();
+        }
+        catch (Exception ex)
+        {
+            NotesStatus = "Could not refresh notes. " + Friendly(ex);
+            _log("Note refresh error: " + ex);
+        }
+    }
+
+    private bool CanOpenSelectedNote() => SelectedNote?.BookPath is { } path && File.Exists(path);
+
+    private void OpenSelectedNote()
+    {
+        if (SelectedNote?.BookPath is not { } bookPath || !File.Exists(bookPath))
+        {
+            NotesStatus = "The original book file is not available in the Readest library.";
+            return;
+        }
+        try
+        {
+            var executable = ReadestLibraryLocator.FindReadestExecutable();
+            var startInfo = executable is null ? new ProcessStartInfo(bookPath) { UseShellExecute = true } : new ProcessStartInfo(executable) { UseShellExecute = true };
+            if (executable is not null) startInfo.ArgumentList.Add(bookPath);
+            Process.Start(startInfo);
+            NotesStatus = $"Opening {SelectedNote.BookTitle} in Readest…";
+        }
+        catch (Exception ex)
+        {
+            NotesStatus = "Readest could not be opened. " + ex.Message;
+            _log("Open note in Readest error: " + ex);
+        }
+    }
+
+    private async Task ExportNotesAsync(string format)
+    {
+        var rows = Notes.ToArray();
+        if (rows.Length == 0) return;
+        var extension = format switch { "json" => "json", "csv" => "csv", _ => "md" };
+        var filter = extension switch { "json" => "JSON file|*.json", "csv" => "CSV file|*.csv", _ => "Markdown file|*.md" };
+        var path = _chooseExport(extension, filter);
+        if (path is null) return;
+        var content = format switch
+        {
+            "json" => JsonSerializer.Serialize(rows.Select(ToExportObject), new JsonSerializerOptions { WriteIndented = true }),
+            "csv" => BuildNotesCsv(rows),
+            _ => BuildNotesMarkdown(rows)
+        };
+        await File.WriteAllTextAsync(path, content, Encoding.UTF8);
+        NotesStatus = $"{Formatters.Count(rows.Length, "note")} exported.";
+    }
+
+    private object ToExportObject(NoteRow note) => new
+    {
+        id = note.Id,
+        book = note.BookTitle,
+        authors = note.Authors,
+        page = note.Page,
+        type = note.TypeLabel,
+        color = note.ColorLabel,
+        highlight = note.Text,
+        note = note.Note,
+        personalNote = note.PersonalNote,
+        tags = note.State.Tags,
+        collections = note.State.Collections,
+        favorite = note.IsFavorite,
+        reviewStatus = note.ReviewStatus,
+        createdAt = note.Source.CreatedAt,
+        updatedAt = note.Source.UpdatedAt
+    };
+
+    private static string BuildNotesMarkdown(IEnumerable<NoteRow> rows)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("# Readest Notes");
+        builder.AppendLine();
+        foreach (var note in rows)
+        {
+            builder.AppendLine($"## {note.BookTitle}");
+            builder.AppendLine();
+            if (!string.IsNullOrWhiteSpace(note.Text))
+            {
+                var quotedText = note.Text.Replace(Environment.NewLine, Environment.NewLine + "> ");
+                builder.AppendLine($"> {quotedText}");
+            }
+            if (!string.IsNullOrWhiteSpace(note.Note)) { builder.AppendLine(); builder.AppendLine(note.Note); }
+            if (!string.IsNullOrWhiteSpace(note.PersonalNote)) { builder.AppendLine(); builder.AppendLine($"**My note:** {note.PersonalNote}"); }
+            builder.AppendLine();
+            builder.AppendLine($"- {note.PageLabel} · {note.TypeLabel} · {note.ColorLabel}");
+            if (note.HasTags) builder.AppendLine($"- Tags: {note.TagsText}");
+            if (note.HasCollections) builder.AppendLine($"- Collections: {note.CollectionsText}");
+            builder.AppendLine();
+        }
+        return builder.ToString();
+    }
+
+    private static string BuildNotesCsv(IEnumerable<NoteRow> rows)
+    {
+        static string Csv(string? value)
+        {
+            var normalized = (value ?? string.Empty).Replace("\"", "\"\"").Replace(Environment.NewLine, " ");
+            return "\"" + normalized + "\"";
+        }
+        var builder = new StringBuilder();
+        builder.AppendLine("Book,Authors,Page,Type,Color,Highlight,Note,Personal note,Tags,Collections,Favorite,Review status,Created");
+        foreach (var note in rows)
+        {
+            builder.AppendLine(string.Join(",", Csv(note.BookTitle), Csv(note.Authors), Csv(note.Page?.ToString()), Csv(note.TypeLabel), Csv(note.ColorLabel), Csv(note.Text), Csv(note.Note), Csv(note.PersonalNote), Csv(note.TagsText), Csv(note.CollectionsText), Csv(note.IsFavorite.ToString()), Csv(note.ReviewStatus), Csv(note.Source.CreatedAt?.ToString("O"))));
+        }
+        return builder.ToString();
+    }
+
     private YearBookGoalSummary CreateYearBookGoal(int year)
     {
         var books = CompletedBookDates().Count(date => date.ToLocalTime().Year == year);
@@ -694,9 +1210,17 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         _watcher?.Dispose(); _watcher = null; _refreshTimer.Stop(); if (!_settings.AutoRefresh || _repository is null) return;
         if (_settings.RefreshIntervalSeconds > 0) { _refreshTimer.Interval = TimeSpan.FromSeconds(_settings.RefreshIntervalSeconds); _refreshTimer.Start(); return; }
-        _watcher = new FileSystemWatcher(Path.GetDirectoryName(_repository.DatabasePath)!) { Filter = "statistics.db*", NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName, EnableRaisingEvents = true }; _watcher.Changed += WatcherChanged; _watcher.Created += WatcherChanged; _watcher.Renamed += WatcherChanged; _watcher.Deleted += WatcherChanged;
+        _watcher = new FileSystemWatcher(Path.GetDirectoryName(_repository.DatabasePath)!) { Filter = "*", IncludeSubdirectories = true, NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName, EnableRaisingEvents = true }; _watcher.Changed += WatcherChanged; _watcher.Created += WatcherChanged; _watcher.Renamed += WatcherChanged; _watcher.Deleted += WatcherChanged;
     }
-    private void WatcherChanged(object sender, FileSystemEventArgs e) { _refreshDebounce?.Cancel(); _refreshDebounce?.Dispose(); _refreshDebounce = new(); var token = _refreshDebounce.Token; _ = Application.Current.Dispatcher.InvokeAsync(async () => { try { await Task.Delay(1500, token); await RefreshAsync(incremental: true); } catch (OperationCanceledException) { } }); }
+    private void WatcherChanged(object sender, FileSystemEventArgs e)
+    {
+        var file = Path.GetFileName(e.FullPath);
+        if (!file.StartsWith("statistics.db", StringComparison.OrdinalIgnoreCase) &&
+            !file.Equals("config.json", StringComparison.OrdinalIgnoreCase) &&
+            !file.Equals("library.json", StringComparison.OrdinalIgnoreCase)) return;
+        _refreshDebounce?.Cancel(); _refreshDebounce?.Dispose(); _refreshDebounce = new(); var token = _refreshDebounce.Token;
+        _ = Application.Current.Dispatcher.InvokeAsync(async () => { try { await Task.Delay(900, token); await RefreshAsync(incremental: true); } catch (OperationCanceledException) { } });
+    }
     private void ClearAnalytics() { Period = null; Comparison = null; Story = null; SelectedInsight = null; Trend.Clear(); Heatmap.Clear(); Hourly.Clear(); Weekdays.Clear(); TimeBlocks.Clear(); CompletionTimeline.Clear(); StreakTimeline.Clear(); CumulativeJourney.Clear(); MonthlyJourney.Clear(); ComparisonBars.Clear(); StatisticsTopBooks.Clear(); Records.Clear(); QuickInsights.Clear(); AllInsights.Clear(); Sessions.Clear(); Books.Clear(); Goals.Clear(); CalendarDays.Clear(); WeekHourMatrix.Clear(); DayTimeline.Clear(); SessionDots.Clear(); ReadingStyleDays.Clear(); BookAttention.Clear(); YearBookAttention.Clear(); BookDayMatrix.Clear(); ReadingFingerprint.Clear(); RollingMomentum.Clear(); PeriodDumbbells.Clear(); SessionStaircase.Clear(); GoalPace.Clear(); BestReadingDays.Clear(); UpdateOpenBookState(); ExportCsvCommand.Refresh(); ExportJsonCommand.Refresh(); Raise(nameof(NoPeriodData)); Raise(nameof(HasData)); }
     private static string Friendly(Exception ex) => ex switch { UnauthorizedAccessException => "Permission denied while reading the database.", IOException => ex.Message, Microsoft.Data.Sqlite.SqliteException => "The database is locked, corrupted, or incompatible.", _ => ex.Message };
     private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> values) { target.Clear(); foreach (var value in values) target.Add(value); }

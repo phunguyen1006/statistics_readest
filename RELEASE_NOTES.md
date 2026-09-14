@@ -1,3 +1,30 @@
+# Readest Stats v1.5.0
+
+Version 1.5.0 adds a local-first Notes Library connected to Readest's per-book note files. The source database and note files remain read-only; personal organization and review state live in Readest Stats settings.
+
+## Notes Library
+
+- Indexes highlights and annotations from Readest book configurations and maps them to the local book library.
+- Full-text search across book, author, highlight, note, tags, and collections.
+- Filters for book, type, color, tag, collection, visibility, date range, content type, and review state.
+- Newest, oldest, book, and most-seen sorting with deterministic empty and missing-book states.
+- Random note with repeat avoidance and selectable current-filter, unread, due, favorite, or all-note pools; deterministic daily note; and one-click opening of the book in Readest.
+- Favorite and hide actions, local tags, collections, and private notes that never modify Readest.
+- Review actions with due queue, remembered/review-later states, and expanding local review intervals.
+- Markdown, JSON, and CSV export of the active filtered note view.
+- Note analytics for books, months, types, colors, and top tags with accessible chart labels.
+- Refreshes when Readest's statistics, library, or per-book configuration files change.
+
+## Safety and verification
+
+- Readest note files are opened with shared read access and retry handling while Readest is writing.
+- Deleted source notes are excluded from the active library without deleting local curation.
+- Existing reading statistics, goals, books, and settings workflows remain unchanged.
+- 74 automated tests passing before release packaging.
+- The Windows x64 package is available as ReadestStats-v1.5.0-win-x64.zip with a sidecar SHA-256 file.
+
+---
+
 # Readest Stats v1.4.0
 
 Version 1.4.0 turns the existing editorial report into a broader visual atlas while preserving the native WPF architecture, navigation, monochrome identity, local data pipeline, and read-only database guarantees.

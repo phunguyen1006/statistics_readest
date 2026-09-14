@@ -1,14 +1,16 @@
-# Readest Stats 1.4.0
+# Readest Stats 1.5.0
 
-[![Version](https://img.shields.io/badge/version-1.4.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/tag/v1.4.0)
+[![Version](https://img.shields.io/badge/version-1.5.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/tag/v1.5.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-555555)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-Readest Stats is an independent native Windows desktop viewer for the reading data stored locally by Readest. Version 1.4.0 expands the app into a minimalist visual atlas: matrices, real-time session bands, adaptive dot distributions, composition strips, dumbbells, pace trajectories, fingerprints, staircases, and compact yearly glyphs reveal reading behavior without fabricating unsupported data.
+Readest Stats is an independent native Windows desktop viewer for the reading data stored locally by Readest. Version 1.5.0 keeps the minimalist visual atlas and adds a local-first Notes Library for searching, curating, reviewing, and rediscovering highlights and annotations without modifying Readest.
 
 The Statistics reading story combines a keyboard-accessible 365-day heatmap, a 30-day streak strip, a 24-hour reading clock, weekday rhythm, line-based selected-period and 12-month journeys, cumulative reading, direct period comparison, goal progress, session distribution, ranked reading-time bars, and personal records. Every chart is computed from observed event duration and local timestamps; unsupported genre, rating, word-count, and reading-speed dimensions are not guessed.
 
-Other features include one-click opening of a selected local book in Readest, locally managed reading statuses and finished-book goals, pinned-book filtering, source-quality checks, monthly Markdown reports, update checks, daily rotating settings backups, persistent window placement, full-screen mode, and Ctrl+1–8 navigation shortcuts.
+Other features include one-click opening of a selected local book in Readest, locally managed reading statuses and finished-book goals, pinned-book filtering, source-quality checks, monthly Markdown reports, update checks, daily rotating settings backups, persistent window placement, full-screen mode, and Ctrl+1–8 navigation shortcuts (Notes uses Ctrl+9).
+
+The Notes tab reads highlights and annotations from Readest's per-book config.json files and maps them to library.json. It supports full-text search, book/type/color/tag/collection/date/content filters, random and daily notes with selectable rediscovery pools, favorite/tag/collection curation, private notes, local review scheduling, due queues, Markdown/JSON/CSV export, and note analytics. Personal curation is stored separately in %LOCALAPPDATA%\\ReadestStats\\settings.json.
 
 ## Screenshots
 
@@ -37,6 +39,8 @@ artifacts\v1.0.0\ReadestStats.exe
 artifacts\v1.1.0\ReadestStats.exe
 artifacts\v1.2.0\ReadestStats.exe
 artifacts\v1.4.0\ReadestStats.exe
+artifacts\v1.5.0\ReadestStats.exe
+artifacts\v1.5.0\ReadestStats-v1.5.0-win-x64.zip
 ```
 
 `artifacts\win-x64\ReadestStats.exe` remains a convenience copy of the latest build.

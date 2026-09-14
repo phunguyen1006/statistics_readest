@@ -52,6 +52,8 @@ public sealed class AppSettings
     public Dictionary<string, BookTrackingState> BookTracking { get; set; } = [];
     public List<string> PinnedBookKeys { get; set; } = [];
     public bool AutomaticBackups { get; set; } = true;
+    /// <summary>Statistics-owned note curation. Readest source files remain read-only.</summary>
+    public Dictionary<string, NoteUserState> NoteStates { get; set; } = [];
 }
 
 public sealed class BookTrackingState
