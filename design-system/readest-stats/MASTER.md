@@ -1,11 +1,12 @@
-# Readest Stats 1.2 — Design System
+# Readest Stats 1.4 — Design System
 
 This file is the implementation reference for every screen. It supersedes the former blue dashboard theme.
 
 ## Product character
 
 - Native Windows desktop analytics app: quiet, precise, private, and information-dense.
-- Fixed high-contrast dark monochrome appearance. No gradients, decorative shadows, glass, blue accents, or green goal bars.
+- High-contrast monochrome light, dark, and system themes. No gradients, decorative shadows, glass, blue accents, or green goal bars.
+- Every analytical page reads as an editorial personal report: question-led sections, direct annotations, and generous dividers replace a wall of equal KPI cards.
 - Prefer native WPF controls, keyboard operation, vector icons, and stable layouts.
 - Density: 8/10. Motion: 1/10; state changes remain usable when motion is reduced.
 
@@ -15,7 +16,7 @@ This file is the implementation reference for every screen. It supersedes the fo
 |---|---:|---|
 | AppBackground | `#0A0A0A` | window background |
 | Sidebar | `#0D0D0D` | persistent navigation |
-| Surface | `#111111` | cards |
+| Surface | `#111111` | menus, dialogs, and raised controls |
 | SurfaceRaised | `#151515` | controls and nested regions |
 | SurfaceHover | `#1A1A1A` | hover state |
 | SurfacePressed | `#222222` | pressed/selected state |
@@ -42,23 +43,27 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 - Sidebar: 196px, fixed, icon plus label for every destination.
 - Top bar: 72px, page context left and global period controls right.
 - Main page gutter: 26px horizontal, 22px top, 28px bottom.
-- Use a 4/8px rhythm. Standard card padding 16px; section gap 16–18px.
+- Use a 4/8px rhythm. Editorial sections use 18–24px vertical breathing room and thin full-width dividers.
 - Use scroll viewers for vertical overflow. Avoid horizontal scrolling and nested scroll regions.
 - Large lists use virtualizing WPF controls; charts aggregate before drawing.
 
 ## Components
 
-- Cards: 1px border, 10px corner radius, no shadow. Nested sections use surface contrast and spacing.
+- Content sections sit directly on `AppBackground`; use typography, whitespace, and 1px separators instead of enclosing cards. Reserve raised surfaces for menus, dialogs, inputs, and interactive affordances.
 - Buttons: minimum 34px height, 8px radius, visible hover/pressed/focus states without moving layout.
 - Icon-only buttons must have a tooltip and `AutomationProperties.Name`.
 - Inputs: persistent labels, 1px border, 34px minimum height, white focus outline.
 - Navigation: 16px outline vector icons with consistent 1.6 stroke; active row uses white text and a surface fill.
 - App identity: a black rounded-square icon with a white open-book mark; use the same mark in the executable, title bar, taskbar, and sidebar header.
-- KPI cards: short uppercase label, prominent value, single supporting line.
+- KPI bands: short uppercase label, prominent value, single supporting line, and vertical dividers rather than boxed tiles.
 - Data tables: sortable/filterable where the view exposes controls; alternating rows and restrained separators.
 - Charts: grayscale, subtle grid lines, exact-value tooltips, explicit empty states, readable units, and a maximum bar width so sparse data never becomes a giant block.
 - Heatmaps: five quantile-derived grayscale levels plus a labeled legend; cells expose exact date/time details.
 - Goals: progress uses white/gray only and includes a textual status such as Ahead, On track, Behind, Complete, or Not enough data.
+- Visual vocabulary: matrices for relationships, timeline bands for actual sessions, dots for sparse distributions, segmented bands for composition, dumbbells for two-period comparison, staircases for session accumulation, bullets for target tracking, and lollipops/small glyphs for yearly storytelling.
+- Sparse-selection rules are deterministic: 15 or fewer sessions use individual dots; larger samples use grouped distributions; fewer than four active days withhold scatter interpretation; ranges longer than 45 days aggregate book matrices by week.
+- Repeated data must change level or visual question across pages: Overview previews rhythm, Statistics explains relationships, and Year in Reading supplies annual narrative context.
+- Every visualization begins with a user question and keeps the exact value available through a visible annotation, summary, or tooltip.
 
 ## Accessibility and interaction
 

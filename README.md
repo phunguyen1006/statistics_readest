@@ -1,12 +1,12 @@
-# Readest Stats 1.2.0
+# Readest Stats 1.4.0
 
-[![Version](https://img.shields.io/badge/version-1.2.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/tag/v1.2.0)
+[![Version](https://img.shields.io/badge/version-1.4.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/tag/v1.4.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-555555)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-Readest Stats is an independent native Windows desktop viewer for the reading data stored locally by Readest. Version 1.2.0 replaces the former Insights page with one consolidated Statistics dashboard, while retaining the complete dark, light, and system themes across Overview, Activity, Sessions, the cover-first Books library, Goals, Year in Reading, and Settings.
+Readest Stats is an independent native Windows desktop viewer for the reading data stored locally by Readest. Version 1.4.0 expands the app into a minimalist visual atlas: matrices, real-time session bands, adaptive dot distributions, composition strips, dumbbells, pace trajectories, fingerprints, staircases, and compact yearly glyphs reveal reading behavior without fabricating unsupported data.
 
-The Statistics dashboard combines reading time, active days, sessions, active and finished books, streaks, configurable trends, a clickable 365-day heatmap, hourly/weekday/time-of-day patterns, session distribution, a 12-month completion timeline, top books, yearly-goal progress, and personal records. Global date choices include Today plus rolling 7-day, 30-day, 3-month, 6-month, and 1-year ranges.
+The Statistics reading story combines a keyboard-accessible 365-day heatmap, a 30-day streak strip, a 24-hour reading clock, weekday rhythm, line-based selected-period and 12-month journeys, cumulative reading, direct period comparison, goal progress, session distribution, ranked reading-time bars, and personal records. Every chart is computed from observed event duration and local timestamps; unsupported genre, rating, word-count, and reading-speed dimensions are not guessed.
 
 Other features include one-click opening of a selected local book in Readest, locally managed reading statuses and finished-book goals, pinned-book filtering, source-quality checks, monthly Markdown reports, update checks, daily rotating settings backups, persistent window placement, full-screen mode, and Ctrl+1–8 navigation shortcuts.
 
@@ -36,6 +36,7 @@ Local builds are retained side by side:
 artifacts\v1.0.0\ReadestStats.exe
 artifacts\v1.1.0\ReadestStats.exe
 artifacts\v1.2.0\ReadestStats.exe
+artifacts\v1.4.0\ReadestStats.exe
 ```
 
 `artifacts\win-x64\ReadestStats.exe` remains a convenience copy of the latest build.
@@ -54,7 +55,7 @@ Page numbers and total-page values can change with pagination, font size, layout
 
 ## Statistics methodology
 
-The v1.2 design was informed by BookOrbit's summary-and-chart organization but was implemented independently for Readest's available local data. Unsupported dimensions are not guessed. See the [BookOrbit audit](docs/bookorbit-statistics-audit.md), [data map](docs/readest-statistics-data-map.md), [gap analysis](docs/statistics-gap-analysis.md), and [validation notes](docs/bookorbit-validation.md).
+The earlier statistics audit was informed by BookOrbit's summary-and-chart organization but was implemented independently for Readest's available local data. Unsupported dimensions are not guessed. See the [BookOrbit audit](docs/bookorbit-statistics-audit.md), [data map](docs/readest-statistics-data-map.md), [gap analysis](docs/statistics-gap-analysis.md), and [validation notes](docs/bookorbit-validation.md).
 
 ## Refresh and local state
 

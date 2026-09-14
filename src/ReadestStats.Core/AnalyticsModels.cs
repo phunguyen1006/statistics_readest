@@ -8,6 +8,23 @@ public sealed record InsightItem(string Id, int Priority, string Category, strin
 public sealed record CalendarDayItem(DateOnly Date, bool IsInMonth, double Seconds, int Sessions, int Books, string Intensity, string DurationLabel);
 public sealed record DayDetails(DateOnly Date, double Seconds, int Sessions, int Books, DateTimeOffset? FirstSession, DateTimeOffset? LastSession, IReadOnlyList<SessionDisplay> SessionItems, IReadOnlyList<ChartPoint> BookItems);
 public sealed record YearInReading(int Year, double TotalSeconds, int ActiveDays, int Sessions, int ActiveBooks, int LongestStreak, DailyStat? BestDay, ChartPoint? BestMonth, BookSummary? TopBook, ChartPoint? FavoriteHour, ChartPoint? FavoriteWeekday, IReadOnlyList<ChartPoint> Months, IReadOnlyList<ChartPoint> Heatmap, IReadOnlyList<BookSummary> TopBooks);
+public sealed record ReadingStory(
+    IReadOnlyList<ChartPoint> StreakTimeline,
+    IReadOnlyList<ChartPoint> CumulativeJourney,
+    IReadOnlyList<ChartPoint> MonthlyJourney,
+    IReadOnlyList<ChartPoint> ComparisonBars,
+    string PeakWindow,
+    string PeakWeekday,
+    string BestMonth,
+    string StreakContext,
+    int ActiveLast30);
+
+public sealed record MatrixCell(string RowLabel, string ColumnLabel, int Row, int Column, double Value, int Count, string Detail);
+public sealed record TimelineSpan(double StartHour, double EndHour, int Lane, string Label, string Detail);
+public sealed record DotDatum(string Label, double Value, double Secondary, string Detail);
+public sealed record CompositionPart(string Label, double Value, string Detail, int Index);
+public sealed record DumbbellDatum(string Label, double Current, double Previous, string CurrentLabel, string PreviousLabel);
+public sealed record PaceDatum(string Label, double Actual, double Required, string Detail);
 
 public enum GoalPeriod { Daily, Weekly, Monthly, Yearly }
 public enum GoalMetric { ReadingTime, ActiveDays, Sessions, Books }

@@ -6,13 +6,14 @@
     </Style>
   </UserControl.Resources>
   <Grid Margin="26,22,26,26">
-    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
     <Grid Margin="0,0,0,16"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="160"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
       <TextBox Text="{Binding BookSearch,UpdateSourceTrigger=PropertyChanged}" ToolTip="Search title or author" AutomationProperties.Name="Search books"/>
       <ComboBox Grid.Column="1" ItemsSource="{Binding BookFilters}" SelectedItem="{Binding BookFilter}" Margin="8,0" AutomationProperties.Name="Filter books"/>
       <ComboBox Grid.Column="2" ItemsSource="{Binding BookSorts}" SelectedItem="{Binding BookSort}" AutomationProperties.Name="Sort books"/>
     </Grid>
-    <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="1.55*"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
+    <Grid Grid.Row="1" Margin="0,0,0,18"><Grid.ColumnDefinitions><ColumnDefinition Width=".9*"/><ColumnDefinition Width="1.4*"/></Grid.ColumnDefinitions><StackPanel Margin="0,0,24,0"><TextBlock Text="BOOK ATTENTION SHARE" Style="{StaticResource Eyebrow}"/><TextBlock Text="How selected-period reading time was divided" Style="{StaticResource Muted}" Margin="0,3,0,2"/><charts:SegmentedBandChart ItemsSource="{Binding BookAttention}" Height="78" AutomationProperties.Name="Book attention composition"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="BOOK × PERIOD MATRIX" Style="{StaticResource Eyebrow}"/><TextBlock Text="Daily cells through 45 days; weekly cells for longer ranges" Style="{StaticResource Muted}" Margin="0,3,0,2"/><charts:MatrixChart ItemsSource="{Binding BookDayMatrix}" Height="132" AutomationProperties.Name="Book attention by date matrix"/></StackPanel></Grid>
+    <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="1.55*"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
       <ListBox ItemsSource="{Binding Books}" SelectedItem="{Binding SelectedBook}" Background="Transparent" BorderThickness="0" ItemContainerStyle="{StaticResource LibraryBookItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Book library">
         <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
         <ListBox.ItemTemplate><DataTemplate><StackPanel>
@@ -24,7 +25,7 @@
           <TextBlock Text="{Binding Seconds,Converter={StaticResource Duration}}" Foreground="{DynamicResource TextSecondary}" FontSize="11" Margin="1,5,1,0"/>
         </StackPanel></DataTemplate></ListBox.ItemTemplate>
       </ListBox>
-      <Border Grid.Column="1" Style="{StaticResource Card}" Margin="16,0,0,0">
+      <Border Grid.Column="1" Style="{StaticResource EditorialAside}" Margin="16,0,0,0">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
           <Grid Margin="0,0,0,14"><Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition/></Grid.ColumnDefinitions>
             <Border Width="80" Height="114" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="6" ClipToBounds="True" VerticalAlignment="Top"><Grid><Image Source="/ReadestStats;component/Assets/readest-book.png" Width="36" Height="36" Opacity="0.42"/><Image Source="{Binding SelectedBook.CoverPath,Converter={StaticResource CoverImage},ConverterParameter=160}" Stretch="UniformToFill"/></Grid></Border>
@@ -44,7 +45,7 @@
             <StackPanel Margin="0,0,8,12"><TextBlock Text="FIRST READ" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding BookDetail.Summary.FirstRead,StringFormat={}{0:MMM d, yyyy}}"/></StackPanel>
             <StackPanel Margin="8,0,0,12"><TextBlock Text="LAST READ" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding BookDetail.Summary.LastRead,StringFormat={}{0:MMM d, yyyy}}"/></StackPanel>
           </UniformGrid>
-          <Border Background="{DynamicResource SurfaceAlt}" CornerRadius="8" Padding="10" Margin="0,0,0,14"><WrapPanel><TextBlock Text="{Binding BookDetail.CurrentStreak,StringFormat=Current {0}d}"/><TextBlock Text="  ·  "/><TextBlock Text="{Binding BookDetail.LongestStreak,StringFormat=Best {0}d}"/><TextBlock Text="  ·  "/><TextBlock Text="{Binding SelectedBook.Share,StringFormat={}{0:P0} share}"/><TextBlock Text="  ·  "/><TextBlock Text="{Binding SelectedBook.TypicalHour,StringFormat=Typical {0}}"/></WrapPanel></Border>
+          <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,1" Padding="0,10" Margin="0,0,0,14"><WrapPanel><TextBlock Text="{Binding BookDetail.CurrentStreak,StringFormat=Current {0}d}"/><TextBlock Text="  ·  "/><TextBlock Text="{Binding BookDetail.LongestStreak,StringFormat=Best {0}d}"/><TextBlock Text="  ·  "/><TextBlock Text="{Binding SelectedBook.Share,StringFormat={}{0:P0} share}"/><TextBlock Text="  ·  "/><TextBlock Text="{Binding SelectedBook.TypicalHour,StringFormat=Typical {0}}"/></WrapPanel></Border>
           <TextBlock Text="Daily reading" Style="{StaticResource SectionTitle}"/><charts:BarChart ItemsSource="{Binding BookTrend}" Height="150" MaxBarWidth="12"/>
           <TextBlock Text="Time of day" Style="{StaticResource SectionTitle}" Margin="0,14,0,0"/><charts:BarChart ItemsSource="{Binding BookHourly}" Height="130" MaxBarWidth="10"/>
           <TextBlock Text="Day of week" Style="{StaticResource SectionTitle}" Margin="0,14,0,0"/><charts:BarChart ItemsSource="{Binding BookWeekdays}" Height="130" MaxBarWidth="22"/>

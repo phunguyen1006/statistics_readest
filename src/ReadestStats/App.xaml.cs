@@ -7,11 +7,23 @@ namespace ReadestStats;
 
 public partial class App : Application
 {
+    private static readonly HashSet<string> ReportedDispatcherErrors = [];
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         Log("Application starting");
-        DispatcherUnhandledException += (_, args) => { MessageBox.Show(args.Exception.Message, "Readest Stats", MessageBoxButton.OK, MessageBoxImage.Warning); args.Handled = true; };
+        DispatcherUnhandledException += (_, args) =>
+        {
+            Log("Unhandled UI error: " + args.Exception);
+            var errorKey = $"{args.Exception.GetType().FullName}:{args.Exception.Message}";
+            if (ReportedDispatcherErrors.Add(errorKey))
+            {
+                MessageBox.Show(args.Exception.Message, "Readest Stats", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+
+            args.Handled = true;
+        };
         try
         {
             var viewModel = new MainViewModel(

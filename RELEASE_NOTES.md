@@ -1,3 +1,46 @@
+# Readest Stats v1.4.0
+
+Version 1.4.0 turns the existing editorial report into a broader visual atlas while preserving the native WPF architecture, navigation, monochrome identity, local data pipeline, and read-only database guarantees.
+
+## Visual atlas
+
+- Weekday × hour matrix reveals exactly when weekly reading clusters.
+- Activity uses a real 24-hour session timeline, calendar session glyphs, and rolling momentum.
+- Sessions switch deterministically between individual duration dots at 15 or fewer observations and a grouped distribution above 15; a day-level style map compares frequency with typical duration.
+- Books adds a 100% attention strip and a book × period matrix with daily or weekly columns based on range length.
+- Goals adds actual-versus-required yearly pace, bullet charts, and compact hit-history strips.
+- Statistics adds period dumbbells, a session staircase, composition, and sparse-data-aware session marks.
+- Year in Reading adds a daily fingerprint, monthly glyphs, best-day lollipops, and yearly book-attention composition.
+
+## Data integrity and accessibility
+
+- Every new transform uses observed reading events, reconstructed sessions, locally stored finished dates, or configured goals.
+- No genres, pages read, completion, ratings, speed, or AI-generated scores are inferred.
+- Dense matrices aggregate before rendering; long book ranges switch to weekly columns.
+- Primary messages are directly labeled and every dense visual has an automation name and descriptive help text.
+
+## Highlights
+
+- New 24-hour radial reading clock with a directly labeled peak reading window.
+- New 30-day streak timeline paired with the keyboard-accessible 365-day contribution heatmap.
+- New line-based reading journey, 12-month journey, and cumulative reading visualization.
+- New paired current/previous-period comparison with finite zero-baseline behavior.
+- New compact goal ring, ranked reading-time bars, and contextual session distribution.
+- A dedicated `VisualizationEngine` converts canonical events into presentation-ready chart series without querying storage from UI controls.
+- Statistics now follows the questions how often, when, how reading changes, and how sessions/books receive time instead of presenting six equal KPI cards.
+
+## Data integrity
+
+Primary visualizations use positive-duration reading events and local timestamps. Finished-book goals continue to use explicit completion dates stored by Readest Stats. Genre, rating, words-per-minute, trustworthy historical completion, and reading pace remain intentionally unavailable because the Readest statistics database does not provide reliable inputs for them.
+
+## Verification
+
+- 66 automated tests, including new visualization pipeline coverage.
+- Debug and release builds validate WPF/XAML compilation.
+- No new runtime or chart dependency.
+
+---
+
 # Readest Stats v1.1.0
 
 Readest Stats v1.1.0 is a major native Windows UI and analytics upgrade. It remains an independent, local-only companion for Readest and opens the Readest statistics database strictly in read-only mode.
