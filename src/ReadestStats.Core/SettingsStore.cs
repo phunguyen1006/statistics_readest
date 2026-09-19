@@ -16,6 +16,7 @@ public sealed class SettingsStore
             if (!File.Exists(_path)) return new();
             await using var stream = File.OpenRead(_path);
             var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions, cancellationToken) ?? new();
+            Normalize(settings);
             GoalEngine.Migrate(settings);
             return settings;
         }
@@ -24,6 +25,7 @@ public sealed class SettingsStore
 
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
+        Normalize(settings);
         await _writeLock.WaitAsync(cancellationToken);
         try
         {
@@ -51,5 +53,17 @@ public sealed class SettingsStore
         File.Copy(_path, destination);
         foreach (var old in Directory.EnumerateFiles(directory, "settings-*.json").OrderByDescending(File.GetLastWriteTimeUtc).Skip(Math.Max(1, retainedCopies))) File.Delete(old);
         return true;
+    }
+
+    private static void Normalize(AppSettings settings)
+    {
+        settings.Goals ??= [];
+        settings.GoalArchives ??= [];
+        settings.BookTracking ??= [];
+        settings.BookLinks ??= [];
+        settings.PinnedBookKeys ??= [];
+        settings.NoteStates ??= [];
+        settings.BookLinks.RemoveAll(link => link is null || string.IsNullOrWhiteSpace(link.ManualKey) || string.IsNullOrWhiteSpace(link.ReadestKey));
+        settings.LibrarySchemaVersion = Math.Max(2, settings.LibrarySchemaVersion);
     }
 }

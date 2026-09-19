@@ -167,7 +167,7 @@
         </Border>
       </Grid>
 
-      <Expander Header="Find notes" Margin="0,0,0,10" AutomationProperties.Name="Find notes"><TextBox Text="{Binding NoteSearch,UpdateSourceTrigger=PropertyChanged}" Margin="0,8,0,2" AutomationProperties.Name="Search note text, book, or author"/></Expander>
+      <Expander Header="Find and filter notes" Margin="0,0,0,10" AutomationProperties.Name="Find notes"><Grid Margin="0,8,0,2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions><TextBox Text="{Binding NoteSearch,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Search note text, book, or author"/><ComboBox Grid.Column="1" ItemsSource="{Binding NoteScopeOptions}" SelectedItem="{Binding NoteScope}" Margin="8,0,0,0" AutomationProperties.Name="Note source filter"/></Grid></Expander>
       <Grid Height="430" Margin="0,0,0,26">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="1.35*"/>
@@ -280,8 +280,16 @@
               </WrapPanel>
               <TextBlock Text="HIGHLIGHT" Style="{StaticResource Eyebrow}"/>
               <TextBlock Text="{Binding SelectedNote.Text}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" Margin="0,5,0,12"/>
-              <TextBlock Text="READEST NOTE" Style="{StaticResource Eyebrow}" Visibility="{Binding SelectedNote.HasComment,Converter={StaticResource BoolVis}}"/>
-              <TextBlock Text="{Binding SelectedNote.Note}" TextWrapping="Wrap" Margin="0,5,0,14" Visibility="{Binding SelectedNote.HasComment,Converter={StaticResource BoolVis}}"/>
+              <TextBlock Text="READEST NOTE" Style="{StaticResource Eyebrow}" Visibility="{Binding SelectedNote.IsReadest,Converter={StaticResource BoolVis}}"/>
+              <TextBlock Text="{Binding SelectedNote.Note}" TextWrapping="Wrap" Margin="0,5,0,14" Visibility="{Binding SelectedNote.IsReadest,Converter={StaticResource BoolVis}}"/>
+              <TextBlock Text="SESSION NOTE" Style="{StaticResource Eyebrow}" Visibility="{Binding SelectedNote.IsManual,Converter={StaticResource BoolVis}}"/>
+              <TextBox Text="{Binding SelectedNote.Note,UpdateSourceTrigger=LostFocus}"
+                       AcceptsReturn="True"
+                       TextWrapping="Wrap"
+                       MinHeight="62"
+                       Margin="0,5,0,14"
+                       Visibility="{Binding SelectedNote.IsManual,Converter={StaticResource BoolVis}}"
+                       AutomationProperties.Name="Physical session note"/>
               <Separator Background="{DynamicResource Border}" Margin="0,0,0,14"/>
               <TextBlock Text="MY NOTE" Style="{StaticResource Eyebrow}"/>
               <TextBox Text="{Binding SelectedNote.PersonalNote,UpdateSourceTrigger=LostFocus}"
@@ -292,6 +300,7 @@
                        AutomationProperties.Name="Personal note"/>
               <WrapPanel>
                 <Button Content="Open in Readest" Command="{Binding OpenSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Open note book in Readest"/>
+                <Button Content="Another from this book" Command="{Binding RandomSameBookCommand}" Margin="0,0,6,6" AutomationProperties.Name="Show another note from this book"/>
                 <Button Content="Copy" Command="{Binding CopySelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Copy selected note"/>
                 <Button Content="Save" Command="{Binding SaveSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Save personal note"/>
               </WrapPanel>

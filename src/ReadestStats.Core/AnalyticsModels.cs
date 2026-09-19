@@ -25,6 +25,14 @@ public sealed record DotDatum(string Label, double Value, double Secondary, stri
 public sealed record CompositionPart(string Label, double Value, string Detail, int Index);
 public sealed record DumbbellDatum(string Label, double Current, double Previous, string CurrentLabel, string PreviousLabel);
 public sealed record PaceDatum(string Label, double Actual, double Required, string Detail);
+public sealed record BookFocusItem(BookRow Book, string Reason, string ActionLabel, ReadingPlanProgress Plan)
+{
+    public string Title => Book.Title;
+    public string Authors => Book.Authors;
+    public string? CoverPath => Book.CoverPath;
+    public string ProgressLabel => Book.ProgressLabel;
+    public string Source => Book.Source;
+}
 
 public enum GoalPeriod { Daily, Weekly, Monthly, Yearly }
 public enum GoalMetric { ReadingTime, ActiveDays, Sessions, Books }
@@ -49,7 +57,7 @@ public sealed class GoalArchive
     public string Status => TargetBooks > 0 && BooksRead >= TargetBooks ? "Goal reached" : "Goal not reached";
 }
 public sealed record YearBookGoalSummary(int Year, int BooksRead, double TargetBooks, double ProgressPercent, string Status, string Detail);
-public sealed record BookRow(BookSummary Summary, int Sessions, double AverageSessionSeconds, string TypicalHour, string? CoverPath = null, string Status = "Unspecified", bool IsPinned = false)
+public sealed record BookRow(BookSummary Summary, int Sessions, double AverageSessionSeconds, string TypicalHour, string? CoverPath = null, string Status = "Unspecified", bool IsPinned = false, string Source = "Readest", double ProgressPercent = 0, string ProgressLabel = "")
 {
     public long Id => Summary.Id;
     public string Title => Summary.Title;

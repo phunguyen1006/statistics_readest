@@ -1,16 +1,18 @@
-# Readest Stats 1.6.0
+# Readest Stats 1.9.0
 
-[![Version](https://img.shields.io/badge/version-1.6.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.9.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-555555)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-Readest Stats is an independent native Windows desktop viewer for the reading data stored locally by Readest. Version 1.6.0 improves statistical correctness, contextual filtering, chart accessibility, large-library performance, finished-book history, and random-note rediscovery without modifying Readest.
+Readest Stats is an independent native Windows desktop companion for digital and physical reading. Version 1.9.0 turns the combined library into an active reading system: per-book plans, Continue Reading, edition linking, lifecycle filters, safer session correction, scoped random-note discovery, metadata refresh, and portable physical-library import/export all work without modifying Readest.
 
 The Statistics reading story combines a keyboard-accessible 365-day heatmap, a 30-day streak strip, a 24-hour reading clock, weekday rhythm, line-based selected-period and 12-month journeys, cumulative reading, direct period comparison, goal progress, session distribution, ranked reading-time bars, and personal records. Every chart is computed from observed event duration and local timestamps; unsupported genre, rating, word-count, and reading-speed dimensions are not guessed.
 
-Other features include one-click opening of a selected local book in Readest, locally managed reading statuses and finished-book goals, pinned-book filtering, source-quality checks, monthly Markdown reports, update checks, daily rotating settings backups, persistent window placement, full-screen mode, and Ctrl+1–8 navigation shortcuts (Notes uses Ctrl+9).
+Other features include one-click opening of a selected local book in Readest, a physical-book library with page progress, source-aware analytics, locally managed reading statuses and finished-book goals, pinned-book filtering, source-quality checks, monthly Markdown reports, update checks, seven rotating complete daily backups, persistent window placement, full-screen mode, and keyboard navigation (Ctrl+M opens Manual log).
 
-The Notes tab reads highlights and annotations from Readest's per-book config.json files and maps them to library.json. It centers daily and shuffle-bag random-note rediscovery, includes history/back, source diversity, copy, lightweight search, heart-based favorites and private notes, and supports privacy-confirmed Markdown/JSON/CSV export. Personal curation is stored separately in `%LOCALAPPDATA%\\ReadestStats\\settings.json`.
+Manual books, timer segments, page ranges, session notes, and completed sessions are saved atomically in `%LOCALAPPDATA%\\ReadestStats\\manual-reading.json`, with a recovery backup. If a manual interval overlaps an imported Readest interval, the Readest interval wins in the combined view so reading time is not counted twice. Sessions crossing local midnight are split correctly between calendar days.
+
+The Notes tab combines highlights and annotations from Readest's per-book config.json files with notes written after physical-book sessions. It centers daily and shuffle-bag random-note rediscovery, includes history/back, source diversity, copy, lightweight search, heart-based favorites and private notes, and supports privacy-confirmed Markdown/JSON/CSV export. Personal curation is stored separately in `%LOCALAPPDATA%\\ReadestStats\\settings.json`.
 
 ## Screenshots
 
@@ -35,22 +37,27 @@ Download `ReadestStats.exe` from the [latest GitHub release](https://github.com/
 Local builds are retained side by side:
 
 ```text
-artifacts\v1.0.0\ReadestStats.exe
-artifacts\v1.1.0\ReadestStats.exe
-artifacts\v1.2.0\ReadestStats.exe
-artifacts\v1.4.0\ReadestStats.exe
-artifacts\v1.5.0\ReadestStats.exe
+artifacts\v1.0.0\ReadestStats-v1.0.0.exe
+artifacts\v1.1.0\ReadestStats-v1.1.0.exe
+artifacts\v1.2.0\ReadestStats-v1.2.0.exe
+artifacts\v1.3.0\ReadestStats-v1.3.0.exe
+artifacts\v1.4.0\ReadestStats-v1.4.0.exe
+artifacts\v1.5.0\ReadestStats-v1.5.0.exe
 artifacts\v1.5.0\ReadestStats-v1.5.0-win-x64.zip
 artifacts\v1.5.0\ReadestStats-v1.5.1.exe
 artifacts\v1.6.0\ReadestStats-v1.6.0.exe
 artifacts\v1.6.0\ReadestStats-v1.6.0-win-x64.zip
+artifacts\v1.7.0\ReadestStats-v1.7.0.exe
+artifacts\v1.7.0\ReadestStats-v1.7.0-win-x64.zip
+artifacts\v1.8.0\ReadestStats-v1.8.0.exe
+artifacts\v1.8.0\ReadestStats-v1.8.0-win-x64.zip
+artifacts\v1.9.0\ReadestStats-v1.9.0.exe
+artifacts\v1.9.0\ReadestStats-v1.9.0-win-x64.zip
 ```
-
-`artifacts\win-x64\ReadestStats.exe` remains a convenience copy of the latest build.
 
 ## Data safety
 
-The Readest database is opened with SQLite `ReadOnly` mode and a connection-local `query_only` guard. The application contains no generic write API for the source database. Settings, goals, reading statuses, and explicit completion dates are stored separately in `%LOCALAPPDATA%\ReadestStats\`.
+The Readest database is opened with SQLite `ReadOnly` mode and a connection-local `query_only` guard. The application contains no generic write API for the source database. Settings, goals, reading statuses, explicit completion dates, physical books, and manual sessions are stored separately in `%LOCALAPPDATA%\ReadestStats\`.
 
 The default data location is:
 
@@ -66,7 +73,7 @@ The earlier statistics audit was informed by BookOrbit's summary-and-chart organ
 
 ## Refresh and local state
 
-Refresh can be manual, triggered by Readest database changes, or run on a 30-second, 1-minute, or 5-minute interval. Refreshing happens in the background and preserves the last good dataset if the source is briefly busy or unavailable. Goals and settings can be backed up as JSON and survive upgrades through schema migration.
+Refresh can be manual, triggered by Readest database changes, or run on a 30-second, 1-minute, or 5-minute interval. Refreshing happens in the background and preserves the last good dataset if the source is briefly busy or unavailable. A complete ZIP backup contains settings, goals, physical books, sessions, notes, and cached covers; restore keeps recovery copies of the replaced local files.
 
 ## Build
 

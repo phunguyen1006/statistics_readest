@@ -4,10 +4,13 @@ namespace ReadestStats.ViewModels;
 
 public sealed class NoteRow : ObservableObject
 {
+    private string _sourceNote;
+
     public NoteRow(ReadestNote source, NoteUserState state)
     {
         Source = source;
         State = state;
+        _sourceNote = source.Note;
     }
 
     public ReadestNote Source { get; }
@@ -19,7 +22,14 @@ public sealed class NoteRow : ObservableObject
     public string? BookPath => Source.BookPath;
     public string? CoverPath => Source.CoverPath;
     public string Text => Source.Text;
-    public string Note => Source.Note;
+    public string Note
+    {
+        get => _sourceNote;
+        set { if (Set(ref _sourceNote, value ?? "")) Raise(nameof(HasComment)); }
+    }
+    public bool IsManual => Id.StartsWith("manual:", StringComparison.OrdinalIgnoreCase);
+    public bool IsReadest => !IsManual;
+    public bool HasComment => !string.IsNullOrWhiteSpace(Note);
     public string TypeLabel => Source.TypeLabel;
     public string ColorLabel => Source.ColorLabel;
     public int? Page => Source.Page;
@@ -27,7 +37,6 @@ public sealed class NoteRow : ObservableObject
     public string DisplayDate => Source.DisplayDate;
     public DateTimeOffset SortDate => Source.CreatedAt ?? Source.UpdatedAt ?? DateTimeOffset.MinValue;
     public bool HasHighlight => Source.HasHighlight;
-    public bool HasComment => Source.HasComment;
     public string? Cfi => Source.Cfi;
     public string? XpointerStart => Source.XpointerStart;
     public string? XpointerEnd => Source.XpointerEnd;

@@ -31,7 +31,9 @@ public partial class App : Application
                 () => { var dialog = new OpenFileDialog { Title = "Select Readest statistics.db", Filter = "Readest statistics database|statistics.db|SQLite database|*.db" }; return dialog.ShowDialog() == true ? dialog.FileName : null; },
                 (extension, filter) => { var dialog = new SaveFileDialog { DefaultExt = extension, Filter = filter, FileName = $"readest-stats-{DateTime.Now:yyyy-MM-dd}.{extension}" }; return dialog.ShowDialog() == true ? dialog.FileName : null; },
                 Log,
-                ThemeManager.Apply);
+                ThemeManager.Apply,
+                () => { var dialog = new OpenFileDialog { Title = "Restore Readest Stats backup", Filter = "Readest Stats backup|*.zip" }; return dialog.ShowDialog() == true ? dialog.FileName : null; },
+                (title, filter) => { var dialog = new OpenFileDialog { Title = title, Filter = filter }; return dialog.ShowDialog() == true ? dialog.FileName : null; });
             var window = new MainWindow { DataContext = viewModel };
             MainWindow = window;
             window.Closed += (_, _) => viewModel.Dispose();

@@ -38,7 +38,7 @@ public sealed class StatisticsEngine
         var start = events.Min(e => e.Start);
         var end = events.Max(e => e.End);
         var duration = MergeDuration(events);
-        return new(start, end, duration, events.Select(e => e.BookId).Distinct().ToArray(), events.Count);
+        return new(start, end, duration, events.Select(e => e.BookId).Distinct().ToArray(), events.Count, events.Select(e => e.Source).Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
     }
 
     private static double MergeDuration(IEnumerable<ReadingEvent> events)
@@ -59,8 +59,38 @@ public sealed class StatisticsEngine
     public IReadOnlyList<DailyStat> Daily(IEnumerable<ReadingEvent> source, TimeSpan sessionGap)
     {
         var events = source.Where(e => e.DurationSeconds > 0).ToList();
-        var sessionDates = BuildSessions(events, sessionGap).GroupBy(s => DateOnly.FromDateTime(ToLocal(s.Start).DateTime)).ToDictionary(g => g.Key, g => g.Count());
-        return events.GroupBy(LocalDate).OrderBy(g => g.Key).Select(g => new DailyStat(g.Key, g.Sum(e => e.DurationSeconds), g.Select(e => e.BookId).Distinct().Count(), sessionDates.GetValueOrDefault(g.Key))).ToArray();
+        var sessionDates = BuildSessions(events, sessionGap)
+            .SelectMany(session => TouchedLocalDates(session.Start, session.End).Select(date => (date, session)))
+            .GroupBy(item => item.date)
+            .ToDictionary(group => group.Key, group => group.Count());
+        var slices = events.SelectMany(SplitByLocalDate).ToArray();
+        return slices.GroupBy(item => item.Date).OrderBy(group => group.Key)
+            .Select(group => new DailyStat(group.Key, group.Sum(item => item.Seconds), group.Select(item => item.BookId).Distinct().Count(), sessionDates.GetValueOrDefault(group.Key))).ToArray();
+    }
+
+    private IEnumerable<(DateOnly Date, double Seconds, long BookId)> SplitByLocalDate(ReadingEvent readingEvent)
+    {
+        var cursor = readingEvent.Start;
+        var end = readingEvent.End;
+        while (cursor < end)
+        {
+            var local = ToLocal(cursor);
+            var date = DateOnly.FromDateTime(local.DateTime);
+            var nextLocalMidnight = date.AddDays(1).ToDateTime(TimeOnly.MinValue);
+            var nextUtc = ToUtc(nextLocalMidnight);
+            var segmentEnd = nextUtc < end ? nextUtc : end;
+            if (segmentEnd <= cursor) break;
+            yield return (date, (segmentEnd - cursor).TotalSeconds, readingEvent.BookId);
+            cursor = segmentEnd;
+        }
+    }
+
+    private IEnumerable<DateOnly> TouchedLocalDates(DateTimeOffset start, DateTimeOffset end)
+    {
+        var first = DateOnly.FromDateTime(ToLocal(start).DateTime);
+        var lastInstant = end > start ? end.AddTicks(-1) : end;
+        var last = DateOnly.FromDateTime(ToLocal(lastInstant).DateTime);
+        for (var date = first; date <= last; date = date.AddDays(1)) yield return date;
     }
 
     public (int Current, int Longest) Streaks(IEnumerable<DateOnly> dates, DateOnly today)

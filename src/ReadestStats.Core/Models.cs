@@ -1,7 +1,7 @@
 namespace ReadestStats.Core;
 
-public sealed record Book(long Id, string Title, string Authors, long? LastOpen = null, int? Pages = null, string? Series = null, string? Language = null, string? Hash = null);
-public sealed record ReadingEvent(long BookId, int Page, long StartTime, double DurationSeconds, int? TotalPages)
+public sealed record Book(long Id, string Title, string Authors, long? LastOpen = null, int? Pages = null, string? Series = null, string? Language = null, string? Hash = null, string Source = "Readest", string? CoverUrl = null);
+public sealed record ReadingEvent(long BookId, int Page, long StartTime, double DurationSeconds, int? TotalPages, string Source = "Readest")
 {
     public DateTimeOffset Start => DateTimeOffset.FromUnixTimeSeconds(StartTime);
     public DateTimeOffset End => Start.AddSeconds(Math.Max(0, DurationSeconds));
@@ -9,11 +9,11 @@ public sealed record ReadingEvent(long BookId, int Page, long StartTime, double 
 
 public sealed record DailyStat(DateOnly Date, double Seconds, int Books, int Sessions);
 public sealed record ChartPoint(string Label, double Value, string? Detail = null, string? Unit = null);
-public sealed record ReadingSession(DateTimeOffset Start, DateTimeOffset End, double DurationSeconds, IReadOnlyList<long> BookIds, int EventCount)
+public sealed record ReadingSession(DateTimeOffset Start, DateTimeOffset End, double DurationSeconds, IReadOnlyList<long> BookIds, int EventCount, IReadOnlyList<string>? Sources = null)
 {
     public TimeSpan Duration => TimeSpan.FromSeconds(DurationSeconds);
 }
-public sealed record SessionDisplay(DateTimeOffset Start, DateTimeOffset End, double DurationSeconds, string Books, int EventCount, ReadingSession Source)
+public sealed record SessionDisplay(DateTimeOffset Start, DateTimeOffset End, double DurationSeconds, string Books, int EventCount, ReadingSession Source, string SourceLabel = "Readest", string PageRangeLabel = "—")
 {
     public double ElapsedSeconds => Math.Max(0, (End - Start).TotalSeconds);
     public string DateLabel => Start.ToString("MMM d, yyyy");
@@ -40,6 +40,8 @@ public sealed class AppSettings
     public DateOnly? CustomRangeEnd { get; set; }
     public string TrendMetric { get; set; } = "Reading time";
     public string TrendGranularity { get; set; } = "Auto";
+    public string DefaultSourceFilter { get; set; } = "All sources";
+    public string? GoogleBooksApiKey { get; set; }
     public bool AutoRefresh { get; set; } = true;
     public string Theme { get; set; } = "System";
     public double DailyGoalMinutes { get; set; } = 30;
@@ -55,6 +57,8 @@ public sealed class AppSettings
     public bool Use24HourTime { get; set; } = true;
     public bool ReduceMotion { get; set; }
     public Dictionary<string, BookTrackingState> BookTracking { get; set; } = [];
+    public List<BookEditionLink> BookLinks { get; set; } = [];
+    public int LibrarySchemaVersion { get; set; } = 2;
     public List<string> PinnedBookKeys { get; set; } = [];
     public bool AutomaticBackups { get; set; } = true;
     /// <summary>Statistics-owned note curation. Readest source files remain read-only.</summary>
@@ -65,8 +69,41 @@ public sealed class AppSettings
 public sealed class BookTrackingState
 {
     public string Status { get; set; } = "Unspecified";
+    public DateTimeOffset? StartedAtUtc { get; set; }
     public DateTimeOffset? CompletedAtUtc { get; set; }
+    public ReadingPlan? Plan { get; set; }
 }
+
+public sealed class ReadingPlan
+{
+    public bool Enabled { get; set; }
+    public DateOnly? TargetDate { get; set; }
+    public double DailyMinutes { get; set; }
+    public int DailyPages { get; set; }
+    public bool IncludeWeekends { get; set; } = true;
+    public int Priority { get; set; } = 2;
+    public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class BookEditionLink
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string ReadestKey { get; set; } = "";
+    public string ManualKey { get; set; } = "";
+    public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed record ReadingPlanProgress(
+    bool Enabled,
+    string Status,
+    string Summary,
+    double Actual,
+    double Required,
+    double Target,
+    double Remaining,
+    double RequiredPerReadingDay,
+    DateOnly? ProjectedFinish,
+    string Unit);
 
 public static class Formatters
 {

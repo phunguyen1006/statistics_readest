@@ -1,4 +1,4 @@
-# Readest Stats 1.4 — Design System
+# Readest Stats 1.9 — Design System
 
 This file is the implementation reference for every screen. It supersedes the former blue dashboard theme.
 
@@ -86,7 +86,15 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 
 ## Screen map
 
-Overview → Activity → Sessions → Books → Goals → Statistics → Year in Reading → Settings.
+Overview → Activity → Sessions → Manual log → Books → Notes → Goals → Statistics → Year in Reading → Settings.
+
+Manual log uses a single editorial workflow: current timer first, edition search only while adding a book, then the physical library beside recent sessions. Timer state is stated in words as well as time; page progress is shown only for user-entered physical editions, never inferred from Readest pagination.
+
+The v1.8 reading journal keeps timer truth visible: Finish closes the current active segment immediately, sleep recovery explains why the timer paused, and saved sessions can be corrected later. Historical entry and edit dialogs use persistent labels, inline validation, and an explicit primary Save action. Session notes from physical books share the same Daily/Random discovery surface as Readest notes but remain clearly labeled as Manual notes.
+
+The v1.9 planning layer stays inside the existing editorial hierarchy rather than adding another dashboard. Overview shows at most three Continue Reading actions; Goals lists every active book plan; Books owns plan editing, lifecycle state, edition linking, and metadata maintenance. Plan-versus-actual uses a grayscale bullet chart plus exact pace text, and every Behind state includes the required daily pace. Linked digital and physical editions appear as one canonical book in the combined view while source filters preserve provenance.
+
+Source composition uses a segmented band only when it answers a real comparison; every segment also has a direct duration summary. Physical page progress uses user-confirmed session endpoints and always provides an expandable exact-value list. Remote cover art is cached only after a book is saved so browsing does not create unbounded local files.
 
 Every screen keeps the sidebar and top bar stable, uses the global date range where relevant, and provides a meaningful no-data state rather than an empty chart frame.
 

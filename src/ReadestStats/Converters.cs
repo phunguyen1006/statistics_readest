@@ -89,19 +89,23 @@ public sealed class CoverImageConverter : IValueConverter
 {
     public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is not string path || string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+        if (value is not string path || string.IsNullOrWhiteSpace(path)) return null;
         try
         {
+            var uri = new Uri(path, UriKind.Absolute);
+            var remote = uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            if (!remote && !File.Exists(path)) return null;
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
+            if (remote) image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
             if (int.TryParse(parameter?.ToString(), out var width)) image.DecodePixelWidth = width;
-            image.UriSource = new Uri(path, UriKind.Absolute);
+            image.UriSource = uri;
             image.EndInit();
-            image.Freeze();
+            if (image.CanFreeze) image.Freeze();
             return image;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException) { return null; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or UriFormatException or System.Net.WebException) { return null; }
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
