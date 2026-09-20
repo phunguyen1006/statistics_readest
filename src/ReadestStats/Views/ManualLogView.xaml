@@ -103,7 +103,7 @@
         <StackPanel>
           <DockPanel LastChildFill="False"><TextBlock Text="PHYSICAL LIBRARY" Style="{StaticResource Eyebrow}"/><Button DockPanel.Dock="Right" Content="Undo import" Command="{Binding UndoLastImportCommand}" Padding="9,4" MinHeight="28" Visibility="{Binding CanUndoLastImport,Converter={StaticResource BoolVis}}"/><Button DockPanel.Dock="Right" Content="Undo book delete" Command="{Binding UndoDeleteBookCommand}" Padding="9,4" MinHeight="28" Margin="0,0,6,0" Visibility="{Binding CanUndoDeleteBook,Converter={StaticResource BoolVis}}"/></DockPanel>
           <TextBlock Text="Books available for manual sessions" Style="{StaticResource SectionTitle}" Margin="0,5,0,3"/>
-          <TextBlock Text="{Binding LibrarySummary}" Style="{StaticResource Muted}" Margin="0,0,0,12"/>
+          <DockPanel Margin="0,0,0,12"><Button DockPanel.Dock="Right" Content="Archive selected" Command="{Binding ArchiveSelectedBookCommand}" Padding="9,4"/><TextBlock Text="{Binding LibrarySummary}" Style="{StaticResource Muted}" VerticalAlignment="Center"/></DockPanel>
           <ListBox ItemsSource="{Binding Books}" SelectedItem="{Binding SelectedBook}" Background="Transparent" BorderThickness="0" MaxHeight="340" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True">
             <ListBox.ItemTemplate>
               <DataTemplate DataType="{x:Type core:ManualBook}">
@@ -128,6 +128,8 @@
           <TextBlock Text="No sessions yet. Select a book and start the timer." Style="{StaticResource Muted}" Margin="0,10,0,0" Visibility="{Binding HasSessions,Converter={StaticResource InverseBoolVis}}"/>
         </StackPanel>
       </Grid>
+      <Border Style="{StaticResource EditorialSection}" Margin="0,20,0,0" Visibility="{Binding HasDuplicateGroups,Converter={StaticResource BoolVis}}"><StackPanel><TextBlock Text="LIBRARY MAINTENANCE" Style="{StaticResource Eyebrow}"/><TextBlock Text="Potential duplicate physical editions" Style="{StaticResource SectionTitle}" Margin="0,4,0,8"/><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ComboBox ItemsSource="{Binding DuplicateGroups}" SelectedItem="{Binding SelectedDuplicateGroup}" DisplayMemberPath="Detail"/><Button Grid.Column="1" Content="Merge and preserve sessions" Command="{Binding MergeDuplicateBooksCommand}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/></Grid><TextBlock Text="The most-used edition is kept. Missing metadata is filled and every session is moved to it." Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/></StackPanel></Border>
+      <Border Style="{StaticResource EditorialSection}" Margin="0,20,0,0" Visibility="{Binding HasActivityLog,Converter={StaticResource BoolVis}}"><StackPanel><DockPanel><Button DockPanel.Dock="Right" Content="Undo latest" Command="{Binding UndoRecentActionCommand}" Style="{StaticResource PrimaryButton}" Padding="10,5"/><StackPanel><TextBlock Text="RECENT LIBRARY CHANGES" Style="{StaticResource Eyebrow}"/><TextBlock Text="Durable undo history survives an app restart" Style="{StaticResource Muted}" Margin="0,3,0,0"/></StackPanel></DockPanel><ItemsControl ItemsSource="{Binding ActivityLog}" Margin="0,9,0,0"><ItemsControl.ItemTemplate><DataTemplate><DockPanel Margin="0,3"><TextBlock DockPanel.Dock="Right" Text="{Binding TimeLabel}" Style="{StaticResource Muted}"/><TextBlock Text="{Binding Action}"/></DockPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

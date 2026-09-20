@@ -40,6 +40,9 @@ public sealed class AppSettings
     public DateOnly? CustomRangeEnd { get; set; }
     public string TrendMetric { get; set; } = "Reading time";
     public string TrendGranularity { get; set; } = "Auto";
+    public string CompareMode { get; set; } = "Previous period";
+    public DateOnly? CompareCustomStart { get; set; }
+    public DateOnly? CompareCustomEnd { get; set; }
     public string DefaultSourceFilter { get; set; } = "All sources";
     public string? GoogleBooksApiKey { get; set; }
     public bool AutoRefresh { get; set; } = true;
@@ -61,6 +64,7 @@ public sealed class AppSettings
     public int LibrarySchemaVersion { get; set; } = 2;
     public List<string> PinnedBookKeys { get; set; } = [];
     public bool AutomaticBackups { get; set; } = true;
+    public int BackupRetentionDays { get; set; } = 7;
     public string Language { get; set; } = "System";
     /// <summary>Statistics-owned note curation. Readest source files remain read-only.</summary>
     public Dictionary<string, NoteUserState> NoteStates { get; set; } = [];

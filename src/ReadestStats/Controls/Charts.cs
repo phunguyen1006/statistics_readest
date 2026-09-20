@@ -86,7 +86,9 @@ public sealed class HeatmapChart : FrameworkElement
 public sealed class LineChart : FrameworkElement
 {
     public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(LineChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
+    public static readonly DependencyProperty ComparisonItemsSourceProperty = DependencyProperty.Register(nameof(ComparisonItemsSource), typeof(IEnumerable<ChartPoint>), typeof(LineChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
     public IEnumerable<ChartPoint>? ItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
+    public IEnumerable<ChartPoint>? ComparisonItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ComparisonItemsSourceProperty); set => SetValue(ComparisonItemsSourceProperty, value); }
     private readonly List<(Rect Rect, ChartPoint Item)> _hits = [];
     private int _selectedIndex;
     public LineChart() => Focusable = true;
@@ -97,9 +99,10 @@ public sealed class LineChart : FrameworkElement
     {
         base.OnRender(dc); _hits.Clear();
         var items = ItemsSource?.ToArray() ?? [];
+        var comparison = ComparisonItemsSource?.ToArray() ?? [];
         var muted = (Brush)FindResource("TextMuted"); var grid = (Brush)FindResource("ChartGrid"); var primary = (Brush)FindResource("Primary"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        if (items.Length == 0 || items.All(item => item.Value <= 0)) { DrawText(dc, "Not enough reading history yet", new(8, Math.Max(8, ActualHeight / 2 - 8)), 12, muted, dpi); return; }
-        var plot = new Rect(42, 13, Math.Max(1, ActualWidth - 54), Math.Max(1, ActualHeight - 44)); var max = Math.Max(1, items.Max(item => item.Value));
+        if (items.Length == 0 || items.All(item => item.Value <= 0) && comparison.All(item => item.Value <= 0)) { DrawText(dc, "Not enough reading history yet", new(8, Math.Max(8, ActualHeight / 2 - 8)), 12, muted, dpi); return; }
+        var plot = new Rect(42, 13, Math.Max(1, ActualWidth - 54), Math.Max(1, ActualHeight - 44)); var max = Math.Max(1, items.Concat(comparison).Max(item => item.Value));
         var unit = items.Select(item => item.Unit).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
         for (var i = 0; i <= 2; i++) { var y = plot.Top + plot.Height * i / 2; dc.DrawLine(new Pen(grid, 1), new(plot.Left, y), new(plot.Right, y)); DrawText(dc, FormatValue(max * (2 - i) / 2, unit), new(1, y - 7), 10, muted, dpi); }
         var points = new List<Point>(); var slot = items.Length == 1 ? 0d : plot.Width / (items.Length - 1);
@@ -107,6 +110,12 @@ public sealed class LineChart : FrameworkElement
         {
             var point = new Point(items.Length == 1 ? plot.Left + plot.Width / 2 : plot.Left + slot * i, plot.Bottom - plot.Height * Math.Max(0, items[i].Value) / max);
             points.Add(point); var hitWidth = items.Length == 1 ? plot.Width : Math.Max(12, slot); _hits.Add((new Rect(point.X - hitWidth / 2, plot.Top, hitWidth, plot.Height), items[i]));
+        }
+        if (comparison.Length > 0)
+        {
+            var comparePoints = new List<Point>(); var compareSlot = comparison.Length == 1 ? 0d : plot.Width / (comparison.Length - 1);
+            for (var i = 0; i < comparison.Length; i++) comparePoints.Add(new Point(comparison.Length == 1 ? plot.Left + plot.Width / 2 : plot.Left + compareSlot * i, plot.Bottom - plot.Height * Math.Max(0, comparison[i].Value) / max));
+            if (comparePoints.Count > 1) dc.DrawGeometry(null, new Pen(muted, 1.6) { DashStyle = DashStyles.Dash, LineJoin = PenLineJoin.Round }, new StreamGeometryBuilder(comparePoints).Geometry);
         }
         if (points.Count > 1) dc.DrawGeometry(null, new Pen(primary, 2) { LineJoin = PenLineJoin.Round }, new StreamGeometryBuilder(points).Geometry);
         var bestIndex = Array.FindIndex(items, item => item == items.MaxBy(value => value.Value));
@@ -116,7 +125,7 @@ public sealed class LineChart : FrameworkElement
         if (bestIndex >= 0) DrawText(dc, $"Peak · {items[bestIndex].Label}", new(Math.Min(plot.Right - 70, points[bestIndex].X + 7), Math.Max(0, points[bestIndex].Y - 20)), 10, primary, dpi);
     }
 
-    protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : $"{hit.Item.Label}\n{hit.Item.Detail ?? Compact(hit.Item.Value)}"; }
+    protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this))); if (hit.Item is null) { ToolTip = null; return; } var index = _hits.IndexOf(hit); var compare = ComparisonItemsSource?.ElementAtOrDefault(index); ToolTip = compare is null ? $"{hit.Item.Label}\n{hit.Item.Detail ?? Compact(hit.Item.Value)}" : $"{hit.Item.Label}\nCurrent: {hit.Item.Detail ?? Compact(hit.Item.Value)}\nComparison: {compare.Detail ?? Compact(compare.Value)}"; }
     protected override void OnKeyDown(KeyEventArgs e) { var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var old = _selectedIndex; _selectedIndex = e.Key switch { Key.Left => Math.Max(0, _selectedIndex - 1), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 1), Key.Home => 0, Key.End => items.Length - 1, _ => _selectedIndex }; if (old == _selectedIndex) return; Announce(items[_selectedIndex]); InvalidateVisual(); e.Handled = true; }
     protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) { _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); Announce(items[_selectedIndex]); } InvalidateVisual(); }
     protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); InvalidateVisual(); }

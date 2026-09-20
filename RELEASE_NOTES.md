@@ -1,3 +1,28 @@
+# Readest Stats v2.2.0
+
+Version 2.2.0 makes comparison, recovery, rediscovery, and library maintenance first-class workflows.
+
+## Focus and comparison
+
+- Replaces duplicate Today queues with one Next up area and direct Details/Start actions.
+- Adds Off, previous-period, same-period-last-year, and custom comparison modes.
+- Draws comparison trends on a shared scale with a dashed grayscale series, exact tooltips, and accessible data tables.
+
+## Data safety and maintenance
+
+- Turns Data Health checks into repair routes that open the relevant workspace.
+- Adds a Backup & Recovery Center with selectable snapshots, immediate creation, restore, guarded deletion, folder access, and 7/14/30-day retention.
+- Adds an SQLite-backed undo journal that survives restarts and restores destructive physical-library changes.
+- Detects duplicate physical editions, merges them without losing sessions, and supports safe archiving.
+
+## Notes and language
+
+- Adds Random Note pools, rediscovery history, 1/7/30-day snooze, exclusion controls, and citation copying.
+- Adds System, English, and Vietnamese language preferences with localized page context as the first app-wide language layer.
+- Adds v2.2 regression tests for undo persistence, backup deletion boundaries, and new preference storage.
+
+---
+
 # Readest Stats v2.1.0
 
 Version 2.1.0 makes the daily workflow more actionable and every risky library operation easier to understand or reverse.

@@ -127,10 +127,7 @@
               <RowDefinition/>
               <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <DockPanel>
-              <TextBlock DockPanel.Dock="Right" Text="{Binding RandomNote.DisplayDate}" Style="{StaticResource Muted}"/>
-              <TextBlock Text="RANDOM NOTE" Style="{StaticResource Eyebrow}"/>
-            </DockPanel>
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="RANDOM STUDIO" Style="{StaticResource Eyebrow}"/><ComboBox Grid.Column="1" ItemsSource="{Binding RandomNotePools}" SelectedItem="{Binding RandomNotePool}" Width="154" MinHeight="28" AutomationProperties.Name="Random note pool"/></Grid>
             <StackPanel Grid.Row="1" Margin="0,10,0,8">
               <TextBlock Text="{Binding RandomNote.BookTitle}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
               <TextBlock Text="{Binding RandomNote.Text}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="42" Margin="0,6,0,0"/>
@@ -140,6 +137,8 @@
           </Grid>
         </Border>
       </Grid>
+
+      <Border Style="{StaticResource EditorialSection}" Margin="0,0,0,20"><StackPanel><TextBlock Text="RECENTLY REDISCOVERED" Style="{StaticResource Eyebrow}"/><ItemsControl ItemsSource="{Binding RandomNoteHistory}" Margin="0,8,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Command="{Binding DataContext.SelectNoteCommand,RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" HorizontalContentAlignment="Stretch" Margin="0,0,8,0" Padding="10,7"><StackPanel><TextBlock Text="{Binding BookTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Text}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
 
       <Grid Margin="0,0,0,20">
         <Grid.ColumnDefinitions>
@@ -302,8 +301,11 @@
                 <Button Content="Open in Readest" Command="{Binding OpenSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Open note book in Readest"/>
                 <Button Content="Another from this book" Command="{Binding RandomSameBookCommand}" Margin="0,0,6,6" AutomationProperties.Name="Show another note from this book"/>
                 <Button Content="Copy" Command="{Binding CopySelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Copy selected note"/>
+                <Button Content="Copy citation" Command="{Binding CopyNoteCitationCommand}" Margin="0,0,6,6" AutomationProperties.Name="Copy note with book citation"/>
                 <Button Content="Save" Command="{Binding SaveSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Save personal note"/>
-                <Button Content="Snooze 7 days" Command="{Binding SnoozeSelectedNoteCommand}" Margin="0,0,6,6" ToolTip="Hide this note from random picks for seven days"/>
+                <Button Content="Tomorrow" Command="{Binding SnoozeNoteForCommand}" CommandParameter="1" Margin="0,0,6,6" ToolTip="Hide from random picks until tomorrow"/>
+                <Button Content="Snooze 7 days" Command="{Binding SnoozeNoteForCommand}" CommandParameter="7" Margin="0,0,6,6" ToolTip="Hide this note from random picks for seven days"/>
+                <Button Content="Snooze 30 days" Command="{Binding SnoozeNoteForCommand}" CommandParameter="30" Margin="0,0,6,6" ToolTip="Hide this note from random picks for thirty days"/>
                 <Button Content="{Binding SelectedNote.RandomEligibilityLabel}" Command="{Binding ToggleRandomEligibilityCommand}" Margin="0,0,6,6" ToolTip="Include or exclude this note from random picks"/>
               </WrapPanel>
               <TextBlock Text="{Binding SelectedNote.SnoozeLabel}" Style="{StaticResource Muted}" Margin="0,2,0,0"/>

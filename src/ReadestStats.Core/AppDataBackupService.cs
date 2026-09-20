@@ -93,6 +93,17 @@ public sealed class AppDataBackupService
             }).ToArray();
     }
 
+    public void DeleteAutomatic(string path)
+    {
+        var directory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(_settingsPath)!, "backups"));
+        var target = Path.GetFullPath(path);
+        if (!target.StartsWith(directory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !Path.GetFileName(target).StartsWith("readest-stats-", StringComparison.OrdinalIgnoreCase) || !target.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Only automatic Readest Stats backups can be deleted here.");
+        if (File.Exists(target)) File.Delete(target);
+    }
+
+    public string BackupDirectory => Path.Combine(Path.GetDirectoryName(_settingsPath)!, "backups");
+
     public void Restore(string source)
     {
         using var archive = ZipFile.OpenRead(source);

@@ -18,6 +18,9 @@ public sealed class ManualReadingStore
     public string DatabasePath => _database.Path;
     public AppDatabaseHealth InspectDatabase() => _database.Inspect();
     public void CheckpointDatabase() => _database.Checkpoint();
+    public void CaptureUndo(string action, ManualReadingData data) => _database.CaptureUndo(action, data);
+    public IReadOnlyList<OperationJournalEntry> ListOperations() => _database.ListOperations();
+    public ManualReadingData? RestoreLatestUndo() => _database.RestoreLatestUndo();
 
     public static async Task<ManualReadingData> LoadPortableFileAsync(string path, CancellationToken cancellationToken = default)
     {

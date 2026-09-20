@@ -10,6 +10,10 @@ namespace ReadestStats.ViewModels;
 
 public sealed class ManualLogViewModel : ObservableObject, IDisposable
 {
+    public sealed record DuplicateBookGroup(string Key, string Label, IReadOnlyList<ManualBook> Books)
+    {
+        public string Detail => $"{Books.Count} editions · {string.Join(" · ", Books.Select(book => book.Title))}";
+    }
     private readonly ManualReadingStore _store;
     private readonly BookMetadataService _metadata;
     private readonly Action<string> _log;
@@ -44,6 +48,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
     private List<ManualReadingSession> _lastDeletedBookSessions = [];
     private readonly List<long> _lastImportedBookIds = [];
     private readonly List<string> _lastImportedSessionIds = [];
+    private DuplicateBookGroup? _selectedDuplicateGroup;
 
     public ManualLogViewModel(ManualReadingStore store, BookMetadataService metadata, Action<string>? log = null, CoverCacheService? coverCache = null)
     {
@@ -67,15 +72,20 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
         UndoDeleteSessionCommand = new AsyncCommand(UndoDeleteSessionAsync, () => _lastDeletedSession is not null);
         UndoDeleteBookCommand = new AsyncCommand(UndoDeleteBookAsync, () => _lastDeletedBook is not null);
         UndoLastImportCommand = new AsyncCommand(UndoLastImportAsync, () => _lastImportedBookIds.Count > 0 || _lastImportedSessionIds.Count > 0);
+        UndoRecentActionCommand = new AsyncCommand(UndoRecentActionAsync, () => ActivityLog.Count > 0);
         DeleteBookCommand = new ParameterCommand<ManualBook>(book => { if (book is not null) _ = DeleteBookAsync(book.Id); });
         EditBookCommand = new ParameterCommand<ManualBook>(BeginEditBook, book => book is not null && !HasActiveSession);
         OpenMetadataCommand = new RelayCommand(OpenMetadata, () => SelectedSearchResult?.InfoUrl is not null);
+        ArchiveSelectedBookCommand = new AsyncCommand(ArchiveSelectedBookAsync, () => SelectedBook is not null && !HasActiveSession);
+        MergeDuplicateBooksCommand = new AsyncCommand(MergeDuplicateBooksAsync, () => SelectedDuplicateGroup is not null && !HasActiveSession);
     }
 
     public event EventHandler? DataChanged;
     public ObservableCollection<ManualBook> Books { get; } = [];
     public ObservableCollection<ManualSessionRow> RecentSessions { get; } = [];
     public ObservableCollection<BookMetadataResult> SearchResults { get; } = [];
+    public ObservableCollection<OperationJournalEntry> ActivityLog { get; } = [];
+    public ObservableCollection<DuplicateBookGroup> DuplicateGroups { get; } = [];
 
     public RelayCommand AddBookCommand { get; }
     public RelayCommand CancelAddBookCommand { get; }
@@ -92,9 +102,12 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
     public AsyncCommand UndoDeleteSessionCommand { get; }
     public AsyncCommand UndoDeleteBookCommand { get; }
     public AsyncCommand UndoLastImportCommand { get; }
+    public AsyncCommand UndoRecentActionCommand { get; }
     public ParameterCommand<ManualBook> DeleteBookCommand { get; }
     public ParameterCommand<ManualBook> EditBookCommand { get; }
     public RelayCommand OpenMetadataCommand { get; }
+    public AsyncCommand ArchiveSelectedBookCommand { get; }
+    public AsyncCommand MergeDuplicateBooksCommand { get; }
 
     public ManualBook? SelectedBook
     {
@@ -105,6 +118,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
             Raise(nameof(SelectedBookProgress));
             Raise(nameof(SelectedBookProgressLabel));
             StartSessionCommand.Refresh();
+            ArchiveSelectedBookCommand.Refresh();
         }
     }
 
@@ -123,6 +137,8 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
             OpenMetadataCommand.Refresh();
         }
     }
+    public DuplicateBookGroup? SelectedDuplicateGroup { get => _selectedDuplicateGroup; set { if (Set(ref _selectedDuplicateGroup, value)) MergeDuplicateBooksCommand.Refresh(); } }
+    public bool HasDuplicateGroups => DuplicateGroups.Count > 0;
 
     public string SearchQuery { get => _searchQuery; set { if (Set(ref _searchQuery, value)) SearchBooksCommand.Refresh(); } }
     public string SearchStatus { get => _searchStatus; private set => Set(ref _searchStatus, value); }
@@ -190,6 +206,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
     {
         _data = await _store.LoadAsync();
         RebuildCollections();
+        RefreshActivityLog();
         if (_data.ActiveSession is not null)
         {
             var now = DateTimeOffset.UtcNow;
@@ -300,6 +317,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
 
     public async Task<(int Books, int Sessions)> ImportLibraryAsync(string path)
     {
+        CaptureUndo("Imported physical library");
         _lastImportedBookIds.Clear(); _lastImportedSessionIds.Clear();
         var incoming = await ManualReadingStore.LoadPortableFileAsync(path);
         var idMap = new Dictionary<long, long>();
@@ -337,6 +355,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
 
     public async Task<int> ImportCatalogAsync(IEnumerable<CatalogImportBook> incoming)
     {
+        CaptureUndo("Imported book catalog");
         _lastImportedBookIds.Clear(); _lastImportedSessionIds.Clear();
         var added = 0;
         foreach (var source in incoming)
@@ -671,6 +690,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
     {
         var session = _data.Sessions.FirstOrDefault(item => item.Id == id);
         if (session is null) return;
+        CaptureUndo("Deleted manual session");
         _lastDeletedSession = CloneSession(session);
         _data.Sessions.Remove(session);
         RecalculateBookProgress(session.BookId);
@@ -700,6 +720,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
         if (_data.ActiveSession?.BookId == id) { Status = "Finish or discard the active session before deleting this book."; return; }
         var book = _data.Books.FirstOrDefault(item => item.Id == id);
         if (book is null) return;
+        CaptureUndo($"Deleted {book.Title}");
         _lastDeletedBook = CloneBook(book);
         _lastDeletedBookSessions = _data.Sessions.Where(session => session.BookId == id).Select(CloneSession).ToList();
         _data.Sessions.RemoveAll(session => session.BookId == id);
@@ -721,6 +742,21 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
 
     private void RaiseImportUndo() { Raise(nameof(CanUndoLastImport)); UndoLastImportCommand.Refresh(); }
 
+    private void CaptureUndo(string action)
+    {
+        try { _store.CaptureUndo(action, _data); RefreshActivityLog(); }
+        catch (Exception ex) { _log("Undo journal error: " + ex); }
+    }
+
+    private void RefreshActivityLog() { Replace(ActivityLog, _store.ListOperations()); UndoRecentActionCommand.Refresh(); Raise(nameof(HasActivityLog)); }
+    public bool HasActivityLog => ActivityLog.Count > 0;
+
+    private async Task UndoRecentActionAsync()
+    {
+        var restored = _store.RestoreLatestUndo(); if (restored is null) return;
+        _data = restored; await _store.SaveAsync(_data); RebuildCollections(); RefreshActivityLog(); DataChanged?.Invoke(this, EventArgs.Empty); Status = "The most recent library change was restored.";
+    }
+
     private static ManualBook CloneBook(ManualBook source) => JsonSerializer.Deserialize<ManualBook>(JsonSerializer.Serialize(source))!;
 
     private void RecalculateBookProgress(long bookId)
@@ -732,10 +768,37 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
         if (book.TotalPages is null || book.CurrentPage < book.TotalPages) book.CompletedAtUtc = null;
     }
 
+    private void BuildDuplicateGroups()
+    {
+        static string Normalize(string value) => new(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+        var groups = _data.Books.Where(book => !book.Archived).GroupBy(book => !string.IsNullOrWhiteSpace(book.Isbn13) ? "isbn:" + Normalize(book.Isbn13) : "book:" + Normalize(book.Title) + ":" + Normalize(book.Authors), StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1).Select(group => new DuplicateBookGroup(group.Key, group.First().Title, group.ToArray())).ToArray();
+        Replace(DuplicateGroups, groups); SelectedDuplicateGroup = DuplicateGroups.FirstOrDefault(); Raise(nameof(HasDuplicateGroups));
+    }
+
+    private async Task ArchiveSelectedBookAsync()
+    {
+        if (SelectedBook is null) return; CaptureUndo($"Archived {SelectedBook.Title}"); SelectedBook.Archived = true; await SaveAndPublishAsync(); RebuildCollections(); Status = "Book archived; its sessions remain in statistics.";
+    }
+
+    private async Task MergeDuplicateBooksAsync()
+    {
+        if (SelectedDuplicateGroup?.Books.Count < 2) return;
+        var group = SelectedDuplicateGroup!; var primary = group.Books.OrderByDescending(book => _data.Sessions.Count(session => session.BookId == book.Id)).ThenBy(book => book.CreatedAtUtc).First();
+        CaptureUndo($"Merged duplicate editions of {primary.Title}");
+        foreach (var duplicate in group.Books.Where(book => book.Id != primary.Id))
+        {
+            foreach (var session in _data.Sessions.Where(session => session.BookId == duplicate.Id)) session.BookId = primary.Id;
+            primary.TotalPages ??= duplicate.TotalPages; primary.CoverUrl ??= duplicate.CoverUrl; primary.Isbn13 ??= duplicate.Isbn13; primary.Publisher ??= duplicate.Publisher; primary.PublishedDate ??= duplicate.PublishedDate;
+            _data.Books.Remove(duplicate);
+        }
+        RecalculateBookProgress(primary.Id); await SaveAndPublishAsync(); RebuildCollections(); SelectedBook = Books.FirstOrDefault(book => book.Id == primary.Id); Status = "Duplicate editions merged; all sessions were preserved.";
+    }
+
     private void RebuildCollections()
     {
         var selectedId = SelectedBook?.Id;
         Replace(Books, _data.Books.Where(book => !book.Archived).OrderByDescending(book => _data.Sessions.Where(item => item.BookId == book.Id).Select(item => item.StartedAtUtc).DefaultIfEmpty(book.CreatedAtUtc).Max()).ThenBy(book => book.Title));
+        BuildDuplicateGroups();
         Replace(RecentSessions, _data.Sessions.OrderByDescending(item => item.StartedAtUtc).Take(250).Select(item =>
         {
             var book = _data.Books.FirstOrDefault(entry => entry.Id == item.BookId);
@@ -748,6 +811,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
         Raise(nameof(SelectedBookProgress));
         Raise(nameof(SelectedBookProgressLabel));
         StartSessionCommand.Refresh();
+        ArchiveSelectedBookCommand.Refresh(); MergeDuplicateBooksCommand.Refresh();
     }
 
     private async Task SaveAndPublishAsync(bool publish = true)

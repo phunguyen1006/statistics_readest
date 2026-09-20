@@ -4,13 +4,17 @@ using Microsoft.Data.Sqlite;
 namespace ReadestStats.Core;
 
 public sealed record AppDatabaseHealth(int SchemaVersion, int Books, int Sessions, bool HasActiveSession, string IntegrityStatus, string Path);
+public sealed record OperationJournalEntry(long Id, string Action, DateTimeOffset CreatedAtUtc)
+{
+    public string TimeLabel => CreatedAtUtc.ToLocalTime().ToString("MMM d · HH:mm");
+}
 
 /// <summary>
 /// Transactional, app-owned storage. This database never attaches to or writes to Readest.
 /// </summary>
 public sealed class AppDatabase
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
     private readonly string _path;
 
@@ -29,6 +33,8 @@ public sealed class AppDatabase
         Execute(connection, transaction, "CREATE TABLE IF NOT EXISTS manual_sessions (id TEXT PRIMARY KEY, book_id INTEGER NOT NULL, started_utc TEXT NOT NULL, ended_utc TEXT NOT NULL, duration_seconds REAL NOT NULL, note TEXT NOT NULL, payload TEXT NOT NULL)");
         Execute(connection, transaction, "CREATE INDEX IF NOT EXISTS ix_manual_sessions_book_start ON manual_sessions(book_id, started_utc)");
         Execute(connection, transaction, "CREATE TABLE IF NOT EXISTS active_manual_session (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), payload TEXT NOT NULL)");
+        Execute(connection, transaction, "CREATE TABLE IF NOT EXISTS operation_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL, created_utc TEXT NOT NULL, snapshot TEXT NOT NULL)");
+        Execute(connection, transaction, "CREATE INDEX IF NOT EXISTS ix_operation_journal_created ON operation_journal(created_utc DESC)");
         SetMeta(connection, transaction, "schema_version", CurrentSchemaVersion.ToString());
         transaction.Commit();
     }
@@ -135,6 +141,32 @@ public sealed class AppDatabase
         using var command = connection.CreateCommand();
         command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
         command.ExecuteNonQuery();
+    }
+
+    public void CaptureUndo(string action, ManualReadingData data, int keep = 50)
+    {
+        Initialize(); using var connection = Open(); using var transaction = connection.BeginTransaction();
+        using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction; command.CommandText = "INSERT INTO operation_journal(action,created_utc,snapshot) VALUES($action,$created,$snapshot)";
+            command.Parameters.AddWithValue("$action", action); command.Parameters.AddWithValue("$created", DateTimeOffset.UtcNow.ToString("O")); command.Parameters.AddWithValue("$snapshot", JsonSerializer.Serialize(data, JsonOptions)); command.ExecuteNonQuery();
+        }
+        using (var trim = connection.CreateCommand()) { trim.Transaction = transaction; trim.CommandText = "DELETE FROM operation_journal WHERE id NOT IN (SELECT id FROM operation_journal ORDER BY id DESC LIMIT $keep)"; trim.Parameters.AddWithValue("$keep", Math.Max(1, keep)); trim.ExecuteNonQuery(); }
+        transaction.Commit();
+    }
+
+    public IReadOnlyList<OperationJournalEntry> ListOperations(int limit = 20)
+    {
+        Initialize(); using var connection = Open(); using var command = connection.CreateCommand(); command.CommandText = "SELECT id,action,created_utc FROM operation_journal ORDER BY id DESC LIMIT $limit"; command.Parameters.AddWithValue("$limit", Math.Max(1, limit));
+        var result = new List<OperationJournalEntry>(); using var reader = command.ExecuteReader(); while (reader.Read()) if (DateTimeOffset.TryParse(reader.GetString(2), out var created)) result.Add(new(reader.GetInt64(0), reader.GetString(1), created)); return result;
+    }
+
+    public ManualReadingData? RestoreLatestUndo()
+    {
+        Initialize(); using var connection = Open(); using var transaction = connection.BeginTransaction(); long id; string json;
+        using (var command = connection.CreateCommand()) { command.Transaction = transaction; command.CommandText = "SELECT id,snapshot FROM operation_journal ORDER BY id DESC LIMIT 1"; using var reader = command.ExecuteReader(); if (!reader.Read()) return null; id = reader.GetInt64(0); json = reader.GetString(1); }
+        using (var command = connection.CreateCommand()) { command.Transaction = transaction; command.CommandText = "DELETE FROM operation_journal WHERE id=$id"; command.Parameters.AddWithValue("$id", id); command.ExecuteNonQuery(); }
+        transaction.Commit(); return Deserialize<ManualReadingData>(json);
     }
 
     private SqliteConnection Open()

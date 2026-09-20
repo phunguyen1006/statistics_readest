@@ -1,10 +1,10 @@
-# Readest Stats 2.1.0
+# Readest Stats 2.2.0
 
-[![Version](https://img.shields.io/badge/version-2.1.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
+[![Version](https://img.shields.io/badge/version-2.2.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-555555)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-Readest Stats is an independent native Windows desktop companion for digital and physical reading. Version 2.1.0 turns Today into a practical action center, adds 14-day plan adherence and reading-cycle history, previews imports before changing the library, expands note rediscovery controls, improves accent-insensitive command search, and makes backup/data-health history visible—all without modifying Readest.
+Readest Stats is an independent native Windows desktop companion for digital and physical reading. Version 2.2.0 unifies Today around a single Next up queue, adds real comparison overlays to reading trends, turns Data Health and backups into action centers, preserves a durable undo journal, expands Random Note Studio, and adds duplicate-aware physical-library maintenance—all without modifying Readest.
 
 The Statistics reading story combines a keyboard-accessible 365-day heatmap, a 30-day streak strip, a 24-hour reading clock, weekday rhythm, line-based selected-period and 12-month journeys, cumulative reading, direct period comparison, goal progress, session distribution, ranked reading-time bars, and personal records. Every chart is computed from observed event duration and local timestamps; unsupported genre, rating, word-count, and reading-speed dimensions are not guessed.
 
@@ -57,6 +57,8 @@ artifacts\v2.0.0\ReadestStats-v2.0.0.exe
 artifacts\v2.0.0\ReadestStats-v2.0.0-win-x64.zip
 artifacts\v2.1.0\ReadestStats-v2.1.0.exe
 artifacts\v2.1.0\ReadestStats-v2.1.0-win-x64.zip
+artifacts\v2.2.0\ReadestStats-v2.2.0.exe
+artifacts\v2.2.0\ReadestStats-v2.2.0-win-x64.zip
 ```
 
 ## Data safety

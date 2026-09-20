@@ -1,4 +1,4 @@
-# Readest Stats 2.1 — Design System
+# Readest Stats 2.2 — Design System
 
 This file is the implementation reference for every screen. It supersedes the former blue dashboard theme.
 
@@ -43,6 +43,7 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 - Sidebar: 196px, fixed, icon plus label for every destination.
 - Top bar: 72px, page context left and global period controls right.
 - Today is the default landing workspace. It surfaces the next reading action, daily rediscovery, and current priorities before deeper analytics.
+- Today exposes one Next up queue; planning and recency must never appear as competing duplicate sections.
 - Ctrl+K opens one centered command palette for pages, books, notes, and sessions; the palette traps the immediate search task and closes with Escape.
 - An active physical-reading session uses a compact persistent dock below the top bar on every page; it must always expose elapsed time, pause/resume, finish, and a route back to the timer.
 - Main page gutter: 26px horizontal, 22px top, 28px bottom.
@@ -65,6 +66,9 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 - Plan adherence uses a compact 14-day actual-versus-target chart plus explicit Complete, Partial, Missed, Rest day, and Skipped wording. Skipping today never rewrites past reading activity.
 - Import Center is a confirmation surface: provider, valid/skipped counts, and a virtualized edition preview must be visible before the first write; the latest import remains undoable during the session.
 - Note rediscovery keeps random history local, visibly explains snoozed/excluded state, and never serves excluded or currently snoozed notes.
+- Comparison charts use a solid primary series and dashed secondary series on one scale; color is never the only distinguishing cue.
+- Destructive physical-library actions create a durable undo snapshot before mutation.
+- Backup deletion is restricted to app-owned automatic archives and always requires confirmation.
 - Backup history lists only app-owned archives and exposes time, size, app version, record counts, and readability without using color alone.
 - Charts: grayscale, subtle grid lines, exact-value tooltips, explicit empty states, readable units, and a maximum bar width so sparse data never becomes a giant block.
 - Heatmaps: five quantile-derived grayscale levels plus a labeled legend; cells expose exact date/time details.

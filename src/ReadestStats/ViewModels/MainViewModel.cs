@@ -10,7 +10,14 @@ using ReadestStats.Core;
 
 namespace ReadestStats.ViewModels;
 
-public sealed record NavItem(string Name, string Icon, string Group);
+public sealed class NavItem(string name, string icon, string group) : ObservableObject
+{
+    private string _label = name;
+    public string Name { get; } = name;
+    public string Icon { get; } = icon;
+    public string Group { get; } = group;
+    public string Label { get => _label; set => Set(ref _label, value); }
+}
 public sealed record BookFilterOption(long? Id, string Label);
 public sealed record GlobalSearchResult(string Kind, string Title, string Detail, string Target, string? Key = null);
 
@@ -75,6 +82,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private ReadingWindow? _commonWindow;
     private string _trendMetric = "Reading time";
     private string _trendGranularity = "Auto";
+    private string _compareMode = "Previous period";
+    private DateTime? _compareCustomStart = DateTime.Today.AddDays(-59);
+    private DateTime? _compareCustomEnd = DateTime.Today.AddDays(-30);
     private string _patternMetric = "Time";
     private DateTime _month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateOnly _selectedDate = DateOnly.FromDateTime(DateTime.Today);
@@ -90,6 +100,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly Stack<string> _randomHistory = new();
     private string _noteSearch = "";
     private string _noteScope = "All notes";
+    private string _randomNotePool = "All eligible notes";
     private string _notesStatus = "Readest notes are stored locally and never modified.";
     private BookDetail? _bookDetail;
     private BookFilterOption _sessionBook = new(null, "All books");
@@ -105,6 +116,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private YearBookGoalSummary? _currentYearBookGoal;
     private InsightItem? _selectedInsight;
     private DataQualityReport? _dataQuality;
+    private BackupHistoryItem? _selectedBackup;
     private ReadingStory? _story;
     private string _openBookStatus = "Select a book to open it in Readest.";
     private string _updateStatus = "Not checked yet";
@@ -138,6 +150,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         SnoozeSelectedNoteCommand = new AsyncCommand(SnoozeSelectedNoteAsync, () => SelectedNote is not null);
         ToggleRandomEligibilityCommand = new AsyncCommand(ToggleRandomEligibilityAsync, () => SelectedNote is not null);
         CopySelectedNoteCommand = new RelayCommand(CopySelectedNote, () => SelectedNote is not null);
+        CopyNoteCitationCommand = new RelayCommand(CopyNoteCitation, () => SelectedNote is not null);
+        SnoozeNoteForCommand = new ParameterCommand<string>(value => { if (int.TryParse(value, out var days)) _ = SnoozeSelectedNoteAsync(days); }, _ => SelectedNote is not null);
         DailyNoteCommand = new RelayCommand(SelectDailyNote, () => _allNoteRows.Count > 0);
         SaveSelectedNoteCommand = new AsyncCommand(SaveSelectedNoteAsync, () => SelectedNote is not null);
         RefreshNotesCommand = new AsyncCommand(RefreshNotesAsync, () => _notesRepository is not null);
@@ -169,6 +183,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OpenFolderCommand = new RelayCommand(OpenFolder, () => Diagnostics is not null); ExportCsvCommand = new AsyncCommand(ExportCsvAsync, () => Period is not null); ExportJsonCommand = new AsyncCommand(ExportJsonAsync, () => Period is not null); ExportMonthlyReportCommand = new AsyncCommand(ExportMonthlyReportAsync, () => IsConnected);
         OpenLogsCommand = new RelayCommand(OpenLogs);
         SaveSettingsCommand = new AsyncCommand(SaveSettingsAsync); SaveGoalsCommand = new AsyncCommand(SaveGoalsAsync); BackupSettingsCommand = new AsyncCommand(BackupSettingsAsync); RestoreBackupCommand = new AsyncCommand(RestoreBackupAsync); ResetSettingsCommand = new AsyncCommand(ResetSettingsAsync);
+        CreateAutomaticBackupCommand = new RelayCommand(CreateAutomaticBackup);
+        RestoreSelectedBackupCommand = new AsyncCommand(RestoreSelectedBackupAsync, () => SelectedBackup is not null);
+        DeleteSelectedBackupCommand = new RelayCommand(DeleteSelectedBackup, () => SelectedBackup is not null);
+        OpenBackupFolderCommand = new RelayCommand(OpenBackupFolder);
+        ReviewDataQualityCommand = new ParameterCommand<DataQualityCheck>(ReviewDataQuality, check => check is not null);
         PreviousMonthCommand = new RelayCommand(() => { Month = Month.AddMonths(-1); BuildActivity(); }); NextMonthCommand = new RelayCommand(() => { if (Month < new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1)) { Month = Month.AddMonths(1); BuildActivity(); } }); TodayCommand = new RelayCommand(() => { Month = new(DateTime.Today.Year, DateTime.Today.Month, 1); SelectedDate = DateOnly.FromDateTime(DateTime.Today); BuildActivity(); });
         PreviousYearCommand = new RelayCommand(() => { Year--; BuildYear(); }); NextYearCommand = new RelayCommand(() => { if (Year < DateTime.Today.Year) { Year++; BuildYear(); } });
         SelectDayCommand = new ParameterCommand<CalendarDayItem>(day => { if (day is not null) { SelectedDate = day.Date; BuildSelectedDay(); } });
@@ -194,6 +213,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string[] SourceOptions { get; } = ["All sources", "Readest", "Manual"];
     public string[] TrendMetrics { get; } = ["Reading time", "Sessions", "Active books"];
     public string[] Granularities { get; } = ["Auto", "Day", "Week", "Month"];
+    public string[] CompareModes { get; } = ["Off", "Previous period", "Same period last year", "Custom"];
     public string[] PatternMetrics { get; } = ["Time", "Sessions"];
     public string[] SessionDurations { get; } = ["All durations", "<5m", "5–15m", "15–30m", "30–60m", "60m+"];
     public string[] SessionSorts { get; } = ["Newest", "Oldest", "Longest", "Shortest"];
@@ -202,8 +222,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string[] BookStatusOptions { get; } = ["Unspecified", "Want to read", "Reading", "Finished", "Paused", "Dropped"];
     public string[] RefreshModes { get; } = ["Manual", "On Readest changes", "30 sec", "1 min", "5 min"];
     public string[] ThemeOptions { get; } = ["Dark", "Light", "System"];
+    public string[] LanguageOptions { get; } = ["System", "English", "Tiếng Việt"];
 
     public ObservableCollection<ChartPoint> Trend { get; } = [];
+    public ObservableCollection<ChartPoint> ComparisonTrend { get; } = [];
     public ObservableCollection<ChartPoint> Heatmap { get; } = [];
     public ObservableCollection<ChartPoint> Hourly { get; } = [];
     public ObservableCollection<ChartPoint> Weekdays { get; } = [];
@@ -260,6 +282,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<PaceDatum> GoalPace { get; } = [];
     public ObservableCollection<ChartPoint> BestReadingDays { get; } = [];
     public ObservableCollection<NoteRow> Notes { get; } = [];
+    public ObservableCollection<NoteRow> RandomNoteHistory { get; } = [];
     public ObservableCollection<GlobalSearchResult> GlobalSearchResults { get; } = [];
     public ObservableCollection<ChartPoint> NotesByBook { get; } = [];
     public ObservableCollection<ChartPoint> NotesByMonth { get; } = [];
@@ -279,6 +302,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public AsyncCommand SnoozeSelectedNoteCommand { get; }
     public AsyncCommand ToggleRandomEligibilityCommand { get; }
     public RelayCommand CopySelectedNoteCommand { get; }
+    public RelayCommand CopyNoteCitationCommand { get; }
+    public ParameterCommand<string> SnoozeNoteForCommand { get; }
     public RelayCommand DailyNoteCommand { get; }
     public AsyncCommand SaveSelectedNoteCommand { get; }
     public AsyncCommand RefreshNotesCommand { get; }
@@ -321,15 +346,21 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public AsyncCommand BackupSettingsCommand { get; }
     public AsyncCommand RestoreBackupCommand { get; }
     public AsyncCommand ResetSettingsCommand { get; }
+    public RelayCommand CreateAutomaticBackupCommand { get; }
+    public AsyncCommand RestoreSelectedBackupCommand { get; }
+    public RelayCommand DeleteSelectedBackupCommand { get; }
+    public RelayCommand OpenBackupFolderCommand { get; }
+    public ParameterCommand<DataQualityCheck> ReviewDataQualityCommand { get; }
     public RelayCommand PreviousMonthCommand { get; }
     public RelayCommand NextMonthCommand { get; }
     public RelayCommand TodayCommand { get; }
     public RelayCommand PreviousYearCommand { get; }
     public RelayCommand NextYearCommand { get; }
 
-    public string SelectedPage { get => _selectedPage; set { if (string.IsNullOrWhiteSpace(value) || value == _selectedPage) return; var previous = _selectedPage; if (Set(ref _selectedPage, value)) { if (!_isGoingBack) _navigationHistory.Push(previous); Raise(nameof(PageSubtitle)); Raise(nameof(Breadcrumb)); Raise(nameof(CanGoBack)); Raise(nameof(IsGlobalRangeVisible)); Raise(nameof(IsSourceFilterVisible)); BackCommand.Refresh(); RefreshSelectedPage(); _applyTheme(Theme); _ = Application.Current.Dispatcher.InvokeAsync(() => _applyTheme(Theme), DispatcherPriority.Loaded); } } }
-    public string PageSubtitle => SelectedPage switch { "Today" => "Your reading focus for today", "Activity" => "Calendar analytics", "Sessions" => "Continuous reading periods", "Manual log" => "Physical books and timed sessions", "Books" => "Your reading library", "Notes" => "Your personal knowledge library", "Goals" => "Targets, pace and history", "Statistics" => "Your personal reading story", "Year in Reading" => "Your annual reading story", _ => "Data, quality and preferences" };
-    public string Breadcrumb => $"Readest Stats  /  {SelectedPage}";
+    public string SelectedPage { get => _selectedPage; set { if (string.IsNullOrWhiteSpace(value) || value == _selectedPage) return; var previous = _selectedPage; if (Set(ref _selectedPage, value)) { if (!_isGoingBack) _navigationHistory.Push(previous); Raise(nameof(PageTitle)); Raise(nameof(PageSubtitle)); Raise(nameof(Breadcrumb)); Raise(nameof(CanGoBack)); Raise(nameof(IsGlobalRangeVisible)); Raise(nameof(IsSourceFilterVisible)); BackCommand.Refresh(); RefreshSelectedPage(); _applyTheme(Theme); _ = Application.Current.Dispatcher.InvokeAsync(() => _applyTheme(Theme), DispatcherPriority.Loaded); } } }
+    public string PageTitle => Translate(SelectedPage);
+    public string PageSubtitle => IsVietnamese ? SelectedPage switch { "Today" => "Trọng tâm đọc hôm nay", "Activity" => "Phân tích theo lịch", "Sessions" => "Các phiên đọc liên tục", "Manual log" => "Sách giấy và phiên bấm giờ", "Books" => "Thư viện đọc của bạn", "Notes" => "Thư viện ghi chú cá nhân", "Goals" => "Mục tiêu, tiến độ và lịch sử", "Statistics" => "Câu chuyện đọc sách của bạn", "Year in Reading" => "Tổng kết năm đọc sách", _ => "Dữ liệu, chất lượng và tùy chỉnh" } : SelectedPage switch { "Today" => "Your reading focus for today", "Activity" => "Calendar analytics", "Sessions" => "Continuous reading periods", "Manual log" => "Physical books and timed sessions", "Books" => "Your reading library", "Notes" => "Your personal knowledge library", "Goals" => "Targets, pace and history", "Statistics" => "Your personal reading story", "Year in Reading" => "Your annual reading story", _ => "Data, quality and preferences" };
+    public string Breadcrumb => $"Readest Stats  /  {PageTitle}";
     public bool CanGoBack => _navigationHistory.Count > 0;
     public bool IsGlobalRangeVisible => SelectedPage is "Today" or "Sessions" or "Books" or "Statistics";
     public bool IsSourceFilterVisible => SelectedPage is "Today" or "Activity" or "Sessions" or "Books" or "Goals" or "Statistics" or "Year in Reading";
@@ -372,6 +403,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string TopBookLabel { get; private set; } = "No active book";
     public string TrendMetric { get => _trendMetric; set { if (Set(ref _trendMetric, value)) { _settings.TrendMetric = value; BuildTrend(); SchedulePreferenceSave(); } } }
     public string TrendGranularity { get => _trendGranularity; set { if (Set(ref _trendGranularity, value)) { _settings.TrendGranularity = value; BuildTrend(); SchedulePreferenceSave(); } } }
+    public string CompareMode { get => _compareMode; set { var normalized = CompareModes.Contains(value) ? value : "Previous period"; if (Set(ref _compareMode, normalized)) { _settings.CompareMode = normalized; Raise(nameof(IsCustomComparison)); BuildTrend(); SchedulePreferenceSave(); } } }
+    public bool IsCustomComparison => CompareMode == "Custom";
+    public DateTime? CompareCustomStart { get => _compareCustomStart; set { if (Set(ref _compareCustomStart, value) && IsCustomComparison) { _settings.CompareCustomStart = value is null ? null : DateOnly.FromDateTime(value.Value); BuildTrend(); SchedulePreferenceSave(); } } }
+    public DateTime? CompareCustomEnd { get => _compareCustomEnd; set { if (Set(ref _compareCustomEnd, value) && IsCustomComparison) { _settings.CompareCustomEnd = value is null ? null : DateOnly.FromDateTime(value.Value); BuildTrend(); SchedulePreferenceSave(); } } }
+    public bool HasComparisonTrend => ComparisonTrend.Count > 0;
+    public string ComparisonLegend => CompareMode == "Off" ? "Comparison off" : $"Solid: selected period · Dashed: {CompareMode.ToLowerInvariant()}";
     public string ReadingPeriodSummary => $"{Formatters.Duration(Period?.TotalSeconds ?? 0)} total · {Formatters.Duration(Period?.AveragePerCalendarDay ?? 0)}/day";
     public string TrendSummary
     {
@@ -412,6 +449,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             SaveSelectedNoteCommand.Refresh();
             OpenSelectedNoteCommand.Refresh();
             CopySelectedNoteCommand.Refresh();
+            CopyNoteCitationCommand.Refresh(); SnoozeNoteForCommand.Refresh();
             RandomSameBookCommand.Refresh();
             SnoozeSelectedNoteCommand.Refresh();
             ToggleRandomEligibilityCommand.Refresh();
@@ -439,6 +477,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string YearFavoriteHour { get { var label = YearSummary?.FavoriteHour?.Label; return label is not null && label.Length >= 2 && int.TryParse(label[..2], out var hour) ? FormatHourRange(hour, 1) : "—"; } }
     public int AllSessionCount { get => _allSessionCount; private set => Set(ref _allSessionCount, value); }
     public DataQualityReport? DataQuality { get => _dataQuality; private set => Set(ref _dataQuality, value); }
+    public BackupHistoryItem? SelectedBackup { get => _selectedBackup; set { if (Set(ref _selectedBackup, value)) { RestoreSelectedBackupCommand.Refresh(); DeleteSelectedBackupCommand.Refresh(); } } }
     public string AppDatabaseSummary { get; private set; } = "App database has not been checked yet.";
     public string AppDatabasePath => Manual.DatabasePath;
     public ReadingStory? Story { get => _story; private set => Set(ref _story, value); }
@@ -452,6 +491,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public int NotesReadCount => _allNoteRows.Count(note => note.TimesSeen > 0);
     public string NoteSearch { get => _noteSearch; set { if (Set(ref _noteSearch, value ?? "")) ApplyNoteFilters(); } }
     public string[] NoteScopeOptions { get; } = ["All notes", "Unseen", "Not seen recently", "Readest only", "Physical books only", "Favorites only", "Selected book"];
+    public string[] RandomNotePools { get; } = ["All eligible notes", "Favorites", "Unseen", "Not seen recently", "Readest", "Physical books", "Current book"];
+    public string RandomNotePool { get => _randomNotePool; set { var normalized = RandomNotePools.Contains(value) ? value : "All eligible notes"; if (Set(ref _randomNotePool, normalized)) SelectRandomNote(); } }
     public string NoteScope { get => _noteScope; set { var normalized = NoteScopeOptions.Contains(value) ? value : "All notes"; if (Set(ref _noteScope, normalized)) ApplyNoteFilters(); } }
     public string NotesSummary
     {
@@ -606,6 +647,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         $"{SelectedBookPlan.RequiredPerReadingDay:0.#} per reading day",
         SelectedBookPlan.ProjectedFinish is { } date ? $"Projected {date:MMM d}" : "Projection unavailable");
     public bool AutomaticBackups { get => _settings.AutomaticBackups; set { _settings.AutomaticBackups = value; Raise(); } }
+    public int BackupRetentionDays { get => Math.Clamp(_settings.BackupRetentionDays, 1, 30); set { _settings.BackupRetentionDays = Math.Clamp(value, 1, 30); Raise(); } }
     public string PageMetricReliability => ExperimentalPageMetrics ? "Approximate · enabled" : "Approximate · hidden";
     public string AppVersion => Assembly.GetEntryAssembly()?.GetName().Version is { } version ? $"{version.Major}.{version.Minor}.{version.Build}" : "1.3.0";
     public string BuildCommit { get { var value = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion; var commit = value?.Split('+').ElementAtOrDefault(1); return string.IsNullOrWhiteSpace(commit) ? "Development build" : commit[..Math.Min(7, commit.Length)]; } }
@@ -620,6 +662,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool ReduceMotion { get => _settings.ReduceMotion; set { _settings.ReduceMotion = value; Raise(); } }
     public string GoogleBooksApiKey { get => _settings.GoogleBooksApiKey ?? ""; set { _settings.GoogleBooksApiKey = string.IsNullOrWhiteSpace(value) ? null : value.Trim(); Manual.GoogleApiKeyState = _settings.GoogleBooksApiKey; Raise(); } }
     public string Theme { get => ThemeManager.Normalize(_settings.Theme); set { var normalized = ThemeManager.Normalize(value); if (_settings.Theme == normalized) return; _settings.Theme = normalized; Raise(); _applyTheme(normalized); } }
+    public string Language { get => LanguageOptions.Contains(_settings.Language) ? _settings.Language : "System"; set { var normalized = LanguageOptions.Contains(value) ? value : "System"; if (_settings.Language == normalized) return; _settings.Language = normalized; Raise(); ApplyNavigationLanguage(); Raise(nameof(PageTitle)); Raise(nameof(PageSubtitle)); Raise(nameof(Breadcrumb)); SchedulePreferenceSave(); } }
+    private bool IsVietnamese => Language == "Tiếng Việt" || Language == "System" && System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("vi", StringComparison.OrdinalIgnoreCase);
+    private string Translate(string value) => !IsVietnamese ? value : value switch { "Today" => "Hôm nay", "Activity" => "Hoạt động", "Sessions" => "Phiên đọc", "Manual log" => "Ghi thủ công", "Books" => "Sách", "Notes" => "Ghi chú", "Goals" => "Mục tiêu", "Statistics" => "Thống kê", "Year in Reading" => "Năm đọc sách", "Settings" => "Cài đặt", _ => value };
+    private void ApplyNavigationLanguage() { foreach (var item in Navigation) item.Label = Translate(item.Name); }
     public string RefreshMode
     {
         get => _settings.RefreshIntervalSeconds switch { 30 => "30 sec", 60 => "1 min", 300 => "5 min", _ => _settings.AutoRefresh ? "On Readest changes" : "Manual" };
@@ -628,7 +674,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync()
     {
-        _settings = await _store.LoadAsync(); _settings.BookTracking ??= []; _settings.BookLinks ??= []; _settings.PinnedBookKeys ??= []; _settings.NoteStates ??= []; if (_settings.AutomaticBackups) { try { _store.CreateAutomaticBackup(); } catch (Exception ex) { _log("Automatic backup error: " + ex); } } GoalEngine.Migrate(_settings); _settings.Theme = ThemeManager.Normalize(_settings.Theme); _applyTheme(_settings.Theme); _selectedRange = DateRangePresets.All.Contains(_settings.DefaultRangePreset) ? _settings.DefaultRangePreset : _settings.DefaultRangeDays switch { 1 => "Today", 7 => "7 days", 90 => "90 days", 183 => "6 months", 366 => "1 year", 365 => "This year", -1 => "All time", _ => "30 days" }; _selectedSource = SourceOptions.Contains(_settings.DefaultSourceFilter) ? _settings.DefaultSourceFilter : "All sources"; _customStart = _settings.CustomRangeStart?.ToDateTime(TimeOnly.MinValue) ?? _customStart; _customEnd = _settings.CustomRangeEnd?.ToDateTime(TimeOnly.MinValue) ?? _customEnd; _trendMetric = TrendMetrics.Contains(_settings.TrendMetric) ? _settings.TrendMetric : "Reading time"; _trendGranularity = Granularities.Contains(_settings.TrendGranularity) ? _settings.TrendGranularity : "Auto"; Manual.GoogleApiKeyState = _settings.GoogleBooksApiKey; await Manual.InitializeAsync(); if (_settings.AutomaticBackups) { try { _backup.CreateAutomatic(AppVersion); } catch (Exception ex) { _log("Complete automatic backup error: " + ex); } } RefreshBackupHistory(); RaiseSettings(); Raise(nameof(SelectedSource));
+        _settings = await _store.LoadAsync(); _settings.BookTracking ??= []; _settings.BookLinks ??= []; _settings.PinnedBookKeys ??= []; _settings.NoteStates ??= []; if (_settings.AutomaticBackups) { try { _store.CreateAutomaticBackup(); } catch (Exception ex) { _log("Automatic backup error: " + ex); } } GoalEngine.Migrate(_settings); _settings.Theme = ThemeManager.Normalize(_settings.Theme); _applyTheme(_settings.Theme); _selectedRange = DateRangePresets.All.Contains(_settings.DefaultRangePreset) ? _settings.DefaultRangePreset : _settings.DefaultRangeDays switch { 1 => "Today", 7 => "7 days", 90 => "90 days", 183 => "6 months", 366 => "1 year", 365 => "This year", -1 => "All time", _ => "30 days" }; _selectedSource = SourceOptions.Contains(_settings.DefaultSourceFilter) ? _settings.DefaultSourceFilter : "All sources"; _customStart = _settings.CustomRangeStart?.ToDateTime(TimeOnly.MinValue) ?? _customStart; _customEnd = _settings.CustomRangeEnd?.ToDateTime(TimeOnly.MinValue) ?? _customEnd; _trendMetric = TrendMetrics.Contains(_settings.TrendMetric) ? _settings.TrendMetric : "Reading time"; _trendGranularity = Granularities.Contains(_settings.TrendGranularity) ? _settings.TrendGranularity : "Auto"; _compareMode = CompareModes.Contains(_settings.CompareMode) ? _settings.CompareMode : "Previous period"; _compareCustomStart = _settings.CompareCustomStart?.ToDateTime(TimeOnly.MinValue) ?? _compareCustomStart; _compareCustomEnd = _settings.CompareCustomEnd?.ToDateTime(TimeOnly.MinValue) ?? _compareCustomEnd; Manual.GoogleApiKeyState = _settings.GoogleBooksApiKey; await Manual.InitializeAsync(); if (_settings.AutomaticBackups) { try { _backup.CreateAutomatic(AppVersion, Math.Clamp(_settings.BackupRetentionDays, 1, 30)); } catch (Exception ex) { _log("Complete automatic backup error: " + ex); } } RefreshBackupHistory(); RaiseSettings(); Raise(nameof(SelectedSource));
+        ApplyNavigationLanguage(); Raise(nameof(PageTitle)); Raise(nameof(PageSubtitle)); Raise(nameof(Breadcrumb));
         var path = await _locator.LocateAsync(_settings.DatabasePath);
         if (path is null) { Status = Manual.HasBooks ? "Manual library ready" : "No Readest data found"; Error = "Readest data was not found. Manual log remains available; choose statistics.db to connect digital reading."; RaiseConnectionState(); return; }
         await ConnectAsync(path);
@@ -727,7 +774,30 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void BuildTrend() { if (_resolvedRange is null) return; Replace(Trend, _analytics.AggregateTrend(_events, _resolvedRange, TrendMetric, TrendGranularity, SessionGapMinutes)); Raise(nameof(TrendSummary)); }
+    private void BuildTrend()
+    {
+        if (_resolvedRange is null) return;
+        Replace(Trend, _analytics.AggregateTrend(_events, _resolvedRange, TrendMetric, TrendGranularity, SessionGapMinutes));
+        ComparisonTrend.Clear();
+        var comparisonRange = ResolveComparisonRange();
+        if (comparisonRange is not null) Replace(ComparisonTrend, _analytics.AggregateTrend(_events, comparisonRange, TrendMetric, TrendGranularity, SessionGapMinutes));
+        Raise(nameof(TrendSummary)); Raise(nameof(HasComparisonTrend)); Raise(nameof(ComparisonLegend));
+    }
+
+    private ResolvedDateRange? ResolveComparisonRange()
+    {
+        if (_resolvedRange is null || CompareMode == "Off") return null;
+        DateOnly start; DateOnly end;
+        if (CompareMode == "Same period last year") { start = _resolvedRange.StartDate.AddYears(-1); end = _resolvedRange.EndDate.AddYears(-1); }
+        else if (CompareMode == "Custom")
+        {
+            start = DateOnly.FromDateTime(CompareCustomStart ?? DateTime.Today.AddDays(-29)); end = DateOnly.FromDateTime(CompareCustomEnd ?? DateTime.Today);
+            if (end < start) (start, end) = (end, start);
+        }
+        else { start = DateOnly.FromDateTime(_statistics.ToLocal(_resolvedRange.PreviousStart).DateTime); end = DateOnly.FromDateTime(_statistics.ToLocal(_resolvedRange.PreviousEnd.AddTicks(-1)).DateTime); }
+        var startUtc = _ranges.ToUtc(start); var endUtc = _ranges.ToUtc(end.AddDays(1));
+        return new(CompareMode, startUtc, endUtc, startUtc, endUtc, start, end, end.DayNumber - start.DayNumber + 1);
+    }
     private void BuildHeatmap(IReadOnlyList<DailyStat> daily)
     {
         var map = daily.ToDictionary(d => d.Date); var start = DateOnly.FromDateTime(DateTime.Today.AddDays(-364)); Replace(Heatmap, Enumerable.Range(0, 365).Select(i => { var date = start.AddDays(i); var d = map.GetValueOrDefault(date); return new ChartPoint(date.ToString("yyyy-MM-dd"), (d?.Seconds ?? 0) / 60, d is null ? "No activity" : $"{date:MMM d, yyyy}\n{Formatters.Duration(d.Seconds)} · {Formatters.Count(d.Sessions, "session")} · {Formatters.Count(d.Books, "book")}", "min"); }));
@@ -1111,8 +1181,19 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private NoteRow? ChooseRandomNote()
     {
-        var candidates = Notes.Where(note => note.Id != _lastRandomNoteId && !note.ExcludeFromRandom && !note.IsSnoozed).ToArray();
-        if (candidates.Length == 0) candidates = Notes.ToArray();
+        IEnumerable<NoteRow> pool = _allNoteRows.Where(note => !note.ExcludeFromRandom && !note.IsSnoozed);
+        pool = RandomNotePool switch
+        {
+            "Favorites" => pool.Where(note => note.IsFavorite),
+            "Unseen" => pool.Where(note => note.TimesSeen == 0),
+            "Not seen recently" => pool.Where(note => note.LastSeenUtc is null || note.LastSeenUtc < DateTimeOffset.UtcNow.AddDays(-30)),
+            "Readest" => pool.Where(note => note.IsReadest),
+            "Physical books" => pool.Where(note => note.IsManual),
+            "Current book" when SelectedNote is not null => pool.Where(note => note.BookHash.Equals(SelectedNote.BookHash, StringComparison.OrdinalIgnoreCase)),
+            _ => pool
+        };
+        var candidates = pool.Where(note => note.Id != _lastRandomNoteId).ToArray();
+        if (candidates.Length == 0) candidates = pool.ToArray();
         if (candidates.Length == 0) return null;
         var poolSize = Math.Max(1, (int)Math.Ceiling(candidates.Length * 0.4));
         var rediscoveryPool = candidates.OrderBy(note => note.TimesSeen).ThenBy(note => note.LastSeenUtc ?? DateTimeOffset.MinValue).Take(poolSize).ToArray();
@@ -1134,6 +1215,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             if (_randomHistory.Count > 20) { var recent = _randomHistory.Take(20).Reverse().ToArray(); _randomHistory.Clear(); foreach (var id in recent) _randomHistory.Push(id); }
         }
         RandomNote = selected;
+        RandomNoteHistory.Remove(selected); RandomNoteHistory.Insert(0, selected); while (RandomNoteHistory.Count > 8) RandomNoteHistory.RemoveAt(RandomNoteHistory.Count - 1);
         _lastRandomNoteId = selected.Id;
         SelectedNote = selected;
         PreviousRandomNoteCommand.Refresh();
@@ -1166,6 +1248,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Clipboard.SetText(content); NotesStatus = "Note copied to clipboard.";
     }
 
+    private void CopyNoteCitation()
+    {
+        if (SelectedNote is null) return;
+        var location = string.IsNullOrWhiteSpace(SelectedNote.PageLabel) ? "" : $", {SelectedNote.PageLabel}";
+        Clipboard.SetText($"{SelectedNote.BookTitle} — {SelectedNote.Authors}{location}\n\n{SelectedNote.Text}".Trim()); NotesStatus = "Note and citation copied to clipboard.";
+    }
+
     private void ToggleFavoriteNote(NoteRow? note)
     {
         if (note is null) return;
@@ -1173,10 +1262,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Raise(nameof(FavoriteNotesCount));
     }
 
-    private async Task SnoozeSelectedNoteAsync()
+    private Task SnoozeSelectedNoteAsync() => SnoozeSelectedNoteAsync(7);
+    private async Task SnoozeSelectedNoteAsync(int days)
     {
         if (SelectedNote is null) return;
-        SelectedNote.Snooze(7); await SaveNoteStateAsync(SelectedNote); NotesStatus = "This note will stay out of Random Note for 7 days."; SelectRandomNote();
+        SelectedNote.Snooze(days); await SaveNoteStateAsync(SelectedNote); NotesStatus = $"This note will stay out of Random Note for {days} days."; SelectRandomNote();
     }
 
     private async Task ToggleRandomEligibilityAsync()
@@ -1913,7 +2003,48 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Status = "Complete backup created · settings, goals, physical books, sessions and notes included";
     }
 
-    private void RefreshBackupHistory() => Replace(BackupHistory, _backup.ListAutomatic());
+    private void RefreshBackupHistory()
+    {
+        var selectedPath = SelectedBackup?.Path;
+        Replace(BackupHistory, _backup.ListAutomatic());
+        SelectedBackup = BackupHistory.FirstOrDefault(item => string.Equals(item.Path, selectedPath, StringComparison.OrdinalIgnoreCase)) ?? BackupHistory.FirstOrDefault();
+    }
+
+    private void CreateAutomaticBackup()
+    {
+        try { var path = _backup.CreateAutomatic(AppVersion, BackupRetentionDays); RefreshBackupHistory(); Status = $"Backup created · {Path.GetFileName(path)}"; }
+        catch (Exception ex) { Status = "Backup failed: " + Friendly(ex); _log("Backup error: " + ex); }
+    }
+
+    private async Task RestoreSelectedBackupAsync()
+    {
+        if (SelectedBackup is null) return;
+        if (MessageBox.Show($"Restore {SelectedBackup.FileName}?\n\nCurrent app-owned data will be kept as recovery copies.", "Restore Readest Stats backup", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        try { _backup.Restore(SelectedBackup.Path); _settings = await _store.LoadAsync(); GoalEngine.Migrate(_settings); await Manual.InitializeAsync(); RaiseSettings(); await RefreshAsync(force: true); Status = "Backup restored successfully"; }
+        catch (Exception ex) { Status = "Backup restore failed: " + Friendly(ex); _log("Backup restore error: " + ex); }
+    }
+
+    private void DeleteSelectedBackup()
+    {
+        if (SelectedBackup is null || MessageBox.Show($"Delete {SelectedBackup.FileName}?", "Delete backup", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try { _backup.DeleteAutomatic(SelectedBackup.Path); RefreshBackupHistory(); Status = "Backup deleted"; }
+        catch (Exception ex) { Status = "Backup could not be deleted: " + Friendly(ex); }
+    }
+
+    private void OpenBackupFolder() { Directory.CreateDirectory(_backup.BackupDirectory); Process.Start(new ProcessStartInfo("explorer.exe", _backup.BackupDirectory) { UseShellExecute = true }); }
+
+    private void ReviewDataQuality(DataQualityCheck? check)
+    {
+        if (check is null) return;
+        SelectedPage = check.Name switch
+        {
+            "Duplicate ISBNs" or "Page progress" or "Manual session overlaps" => "Manual log",
+            "Edition links" => "Books",
+            "Readest note files" => "Notes",
+            _ => "Settings"
+        };
+        Status = check.NeedsAttention ? $"Reviewing: {check.Detail}" : $"{check.Name} passed";
+    }
 
     private async Task RestoreBackupAsync()
     {
@@ -1956,6 +2087,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private static string Friendly(Exception ex) => ex switch { UnauthorizedAccessException => "Permission denied while reading the database.", IOException => ex.Message, Microsoft.Data.Sqlite.SqliteException => "The database is locked, corrupted, or incompatible.", _ => ex.Message };
     private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> values) { target.Clear(); foreach (var value in values) target.Add(value); }
     private void RaiseConnectionState() { Raise(nameof(IsConnected)); Raise(nameof(NoPeriodData)); Raise(nameof(HasData)); OpenFolderCommand.Refresh(); }
-    private void RaiseSettings() { Raise(nameof(SessionGapMinutes)); Raise(nameof(MinimumSessionSeconds)); Raise(nameof(FirstDayOfWeek)); Raise(nameof(ExperimentalPageMetrics)); Raise(nameof(CompactMode)); Raise(nameof(Use24HourTime)); Raise(nameof(ReduceMotion)); Raise(nameof(AutomaticBackups)); Raise(nameof(Theme)); Raise(nameof(RefreshMode)); Raise(nameof(SelectedRange)); Raise(nameof(SelectedSource)); Raise(nameof(GoogleBooksApiKey)); }
+    private void RaiseSettings() { Raise(nameof(SessionGapMinutes)); Raise(nameof(MinimumSessionSeconds)); Raise(nameof(FirstDayOfWeek)); Raise(nameof(ExperimentalPageMetrics)); Raise(nameof(CompactMode)); Raise(nameof(Use24HourTime)); Raise(nameof(ReduceMotion)); Raise(nameof(AutomaticBackups)); Raise(nameof(BackupRetentionDays)); Raise(nameof(Theme)); Raise(nameof(Language)); Raise(nameof(RefreshMode)); Raise(nameof(SelectedRange)); Raise(nameof(SelectedSource)); Raise(nameof(GoogleBooksApiKey)); Raise(nameof(CompareMode)); Raise(nameof(CompareCustomStart)); Raise(nameof(CompareCustomEnd)); }
     public void Dispose() { Manual.Dispose(); _watcher?.Dispose(); _refreshTimer.Stop(); _refreshDebounce?.Cancel(); _refreshDebounce?.Dispose(); _activeRefresh?.Cancel(); _activeRefresh?.Dispose(); _noteSaveDebounce?.Cancel(); _noteSaveDebounce?.Dispose(); _preferenceSaveDebounce?.Cancel(); _preferenceSaveDebounce?.Dispose(); }
 }
