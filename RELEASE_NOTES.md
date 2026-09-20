@@ -1,3 +1,29 @@
+# Readest Stats v2.0.0
+
+Version 2.0.0 is the new local-first foundation for Readest Stats, connecting daily focus, physical reading, book planning, note rediscovery, and data safety into one workflow.
+
+## Today, search, and session continuity
+
+- Replaces Overview with a Today workspace containing the daily note, a rediscovery note, quick actions, continue-reading priorities, and current-period context.
+- Adds app-wide Ctrl+K search across pages, books, notes, and manual sessions.
+- Adds a global session dock so a physical-book timer remains visible and controllable from every page.
+
+## Durable local data and reading lifecycle
+
+- Introduces an app-owned transactional SQLite database with schema versioning, integrity checks, WAL checkpoints, and automatic migration from the v1.x JSON store.
+- Keeps Readest strictly read-only and retains `manual-reading.json` as a portable recovery mirror.
+- Adds explicit reading cycles and re-read actions so completing the same book again is preserved as a new lifecycle event.
+- Upgrades per-book plans with start dates, pause/resume, and selectable reading weekdays.
+
+## Rediscovery, health, and verification
+
+- Prioritizes unseen and least-recently-seen notes, records the last rediscovery time, and adds Unseen and Not seen recently scopes.
+- Adds the Readest Stats database to Data Health and complete backups, including a direct integrity result and record counts.
+- Fixes portable-library import isolation so the chosen JSON cannot accidentally resolve a neighboring local database.
+- Adds v2 migration, storage, custom-plan-day, paused-plan, reading-cycle, rediscovery-state, and import-isolation coverage.
+
+---
+
 # Readest Stats v1.9.0
 
 Version 1.9.0 connects planning, physical progress, notes, and library maintenance into one local-first reading workflow.

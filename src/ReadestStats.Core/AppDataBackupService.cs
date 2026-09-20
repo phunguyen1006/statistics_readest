@@ -9,12 +9,14 @@ public sealed class AppDataBackupService
 {
     private readonly string _settingsPath;
     private readonly string _manualReadingPath;
+    private readonly string _databasePath;
     private readonly string _coverDirectory;
 
     public AppDataBackupService(string settingsPath, string manualReadingPath)
     {
         _settingsPath = Path.GetFullPath(settingsPath);
         _manualReadingPath = Path.GetFullPath(manualReadingPath);
+        _databasePath = Path.Combine(Path.GetDirectoryName(_manualReadingPath)!, "readest-stats.db");
         _coverDirectory = Path.Combine(Path.GetDirectoryName(_manualReadingPath)!, "covers");
     }
 
@@ -29,6 +31,7 @@ public sealed class AppDataBackupService
         {
             AddIfPresent(archive, _settingsPath, "settings.json", files);
             AddIfPresent(archive, _manualReadingPath, "manual-reading.json", files);
+            AddIfPresent(archive, _databasePath, "readest-stats.db", files);
             if (Directory.Exists(_coverDirectory))
             {
                 foreach (var cover in Directory.EnumerateFiles(_coverDirectory))
@@ -71,6 +74,7 @@ public sealed class AppDataBackupService
         _ = ReadManifest(archive);
         RestoreEntry(archive, "settings.json", _settingsPath);
         RestoreEntry(archive, "manual-reading.json", _manualReadingPath);
+        RestoreEntry(archive, "readest-stats.db", _databasePath);
         foreach (var entry in archive.Entries.Where(item => item.FullName.StartsWith("covers/", StringComparison.Ordinal) && !item.FullName.EndsWith('/')))
         {
             var fileName = Path.GetFileName(entry.FullName);

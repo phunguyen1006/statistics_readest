@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using ReadestStats.ViewModels;
 
 namespace ReadestStats;
 
@@ -46,6 +47,26 @@ public partial class MainWindow : Window
         ToggleFullScreen();
         e.Handled = true;
     }
+
+    private void CommandSearchBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is not true) return;
+        Dispatcher.BeginInvoke(() => { CommandSearchBox.Focus(); CommandSearchBox.SelectAll(); });
+    }
+
+    private void CommandSearchBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || DataContext is not MainViewModel viewModel || viewModel.SelectedGlobalSearchResult is null) return;
+        viewModel.OpenGlobalSearchResultCommand.Execute(viewModel.SelectedGlobalSearchResult);
+        e.Handled = true;
+    }
+
+    private void CommandPaletteBackdrop_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel) viewModel.CloseCommandPaletteCommand.Execute(null);
+    }
+
+    private void CommandPalettePanel_MouseDown(object sender, MouseButtonEventArgs e) => e.Handled = true;
 
     private void ToggleFullScreen()
     {

@@ -12,6 +12,7 @@ namespace ReadestStats.ViewModels;
 
 public sealed record NavItem(string Name, string Icon, string Group);
 public sealed record BookFilterOption(long? Id, string Label);
+public sealed record GlobalSearchResult(string Kind, string Title, string Detail, string Target, string? Key = null);
 
 public sealed class MainViewModel : ObservableObject, IDisposable
 {
@@ -22,6 +23,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly DateRangeService _ranges = new();
     private readonly GoalEngine _goalEngine = new();
     private readonly ReadingPlanEngine _readingPlanEngine = new();
+    private readonly LibraryImportService _libraryImport = new();
     private readonly InsightEngine _insightEngine = new();
     private readonly DataQualityEngine _dataQualityEngine = new();
     private readonly VisualizationEngine _visualization = new();
@@ -54,7 +56,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private IReadOnlyList<ReadingSession> _allSessions = [];
     private AppSettings _settings = new();
     private ResolvedDateRange? _resolvedRange;
-    private string _selectedPage = "Overview";
+    private string _selectedPage = "Today";
     private string _selectedRange = "30 days";
     private string _selectedSource = "All sources";
     private DateTime? _customStart = DateTime.Today.AddDays(-29);
@@ -109,6 +111,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private int _allSessionCount;
     private readonly Stack<string> _navigationHistory = new();
     private bool _isGoingBack;
+    private bool _isCommandPaletteOpen;
+    private string _globalSearch = "";
+    private GlobalSearchResult? _selectedGlobalSearchResult;
 
     public MainViewModel(Func<string?> chooseDatabase, Func<string, string, string?> chooseExport, Action<string>? log = null, Action<string>? applyTheme = null, Func<string?>? chooseBackupImport = null, Func<string, string, string?>? chooseImport = null)
     {
@@ -137,6 +142,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         TogglePinnedBookCommand = new AsyncCommand(TogglePinnedBookAsync, () => SelectedBook is not null);
         SaveReadingPlanCommand = new AsyncCommand(SaveReadingPlanAsync, () => SelectedBook is not null);
         RemoveReadingPlanCommand = new AsyncCommand(RemoveReadingPlanAsync, () => SelectedBookPlan.Enabled);
+        ToggleReadingPlanPauseCommand = new AsyncCommand(ToggleReadingPlanPauseAsync, () => SelectedTracking?.Plan?.Enabled == true);
+        StartRereadCommand = new AsyncCommand(StartRereadAsync, () => SelectedBook is not null && SelectedBookStatus == "Finished");
         OpenFocusBookCommand = new ParameterCommand<BookFocusItem>(OpenFocusBook, item => item is not null);
         StartSelectedManualSessionCommand = new AsyncCommand(StartSelectedManualSessionAsync, () => SelectedManualBook is not null && !Manual.HasActiveSession);
         LinkSelectedEditionCommand = new AsyncCommand(LinkSelectedEditionAsync, () => SelectedBook is not null && LinkCandidate is not null && !IsSelectedBookLinked);
@@ -148,6 +155,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         CheckForUpdatesCommand = new AsyncCommand(CheckForUpdatesAsync);
         OpenUpdateCommand = new RelayCommand(OpenUpdate, () => !string.IsNullOrWhiteSpace(_updateUrl));
         BackCommand = new RelayCommand(GoBack, () => _navigationHistory.Count > 0);
+        OpenCommandPaletteCommand = new RelayCommand(OpenCommandPalette);
+        CloseCommandPaletteCommand = new RelayCommand(CloseCommandPalette, () => IsCommandPaletteOpen);
+        OpenGlobalSearchResultCommand = new ParameterCommand<GlobalSearchResult>(OpenGlobalSearchResult, result => result is not null);
         RefreshCommand = new AsyncCommand(() => RefreshAsync()); ChangeDatabaseCommand = new AsyncCommand(ChangeDatabaseAsync); RedetectCommand = new AsyncCommand(RedetectAsync);
         OpenFolderCommand = new RelayCommand(OpenFolder, () => Diagnostics is not null); ExportCsvCommand = new AsyncCommand(ExportCsvAsync, () => Period is not null); ExportJsonCommand = new AsyncCommand(ExportJsonAsync, () => Period is not null); ExportMonthlyReportCommand = new AsyncCommand(ExportMonthlyReportAsync, () => IsConnected);
         OpenLogsCommand = new RelayCommand(OpenLogs);
@@ -159,10 +169,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _refreshTimer.Tick += async (_, _) => await RefreshAsync(incremental: true);
     }
 
-    public string[] Pages { get; } = ["Overview", "Activity", "Sessions", "Manual log", "Books", "Notes", "Goals", "Statistics", "Year in Reading", "Settings"];
+    public string[] Pages { get; } = ["Today", "Activity", "Sessions", "Manual log", "Books", "Notes", "Goals", "Statistics", "Year in Reading", "Settings"];
     public NavItem[] Navigation { get; } =
     [
-        new("Overview", "M3,3 H17 V7 H3 Z M3,10 H9 V17 H3 Z M12,10 H17 V17 H12 Z", "READING"),
+        new("Today", "M3,3 H17 V7 H3 Z M3,10 H9 V17 H3 Z M12,10 H17 V17 H12 Z", "READING"),
         new("Activity", "M3,4 H17 V17 H3 Z M3,8 H17 M7,2 V6 M13,2 V6", "READING"),
         new("Sessions", "M10,3 A7,7 0 1 1 9.9,3 M10,6 V10 L13,12", "READING"),
         new("Manual log", "M4,3 H16 V17 H4 Z M7,7 H13 M7,10 H13 M7,13 H10 M15,2 V6 M13,4 H17", "READING"),
@@ -240,6 +250,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<PaceDatum> GoalPace { get; } = [];
     public ObservableCollection<ChartPoint> BestReadingDays { get; } = [];
     public ObservableCollection<NoteRow> Notes { get; } = [];
+    public ObservableCollection<GlobalSearchResult> GlobalSearchResults { get; } = [];
     public ObservableCollection<ChartPoint> NotesByBook { get; } = [];
     public ObservableCollection<ChartPoint> NotesByMonth { get; } = [];
     public ObservableCollection<ChartPoint> NotesByType { get; } = [];
@@ -265,6 +276,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public AsyncCommand TogglePinnedBookCommand { get; }
     public AsyncCommand SaveReadingPlanCommand { get; }
     public AsyncCommand RemoveReadingPlanCommand { get; }
+    public AsyncCommand ToggleReadingPlanPauseCommand { get; }
+    public AsyncCommand StartRereadCommand { get; }
     public ParameterCommand<BookFocusItem> OpenFocusBookCommand { get; }
     public AsyncCommand StartSelectedManualSessionCommand { get; }
     public AsyncCommand LinkSelectedEditionCommand { get; }
@@ -276,6 +289,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public AsyncCommand CheckForUpdatesCommand { get; }
     public RelayCommand OpenUpdateCommand { get; }
     public RelayCommand BackCommand { get; }
+    public RelayCommand OpenCommandPaletteCommand { get; }
+    public RelayCommand CloseCommandPaletteCommand { get; }
+    public ParameterCommand<GlobalSearchResult> OpenGlobalSearchResultCommand { get; }
     public ParameterCommand<CalendarDayItem> SelectDayCommand { get; }
     public ParameterCommand<ChartPoint> SelectHeatmapDayCommand { get; }
     public AsyncCommand RefreshCommand { get; }
@@ -298,17 +314,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public RelayCommand NextYearCommand { get; }
 
     public string SelectedPage { get => _selectedPage; set { if (string.IsNullOrWhiteSpace(value) || value == _selectedPage) return; var previous = _selectedPage; if (Set(ref _selectedPage, value)) { if (!_isGoingBack) _navigationHistory.Push(previous); Raise(nameof(PageSubtitle)); Raise(nameof(Breadcrumb)); Raise(nameof(CanGoBack)); Raise(nameof(IsGlobalRangeVisible)); Raise(nameof(IsSourceFilterVisible)); BackCommand.Refresh(); RefreshSelectedPage(); _applyTheme(Theme); _ = Application.Current.Dispatcher.InvokeAsync(() => _applyTheme(Theme), DispatcherPriority.Loaded); } } }
-    public string PageSubtitle => SelectedPage switch { "Overview" => "Your reading activity", "Activity" => "Calendar analytics", "Sessions" => "Continuous reading periods", "Manual log" => "Physical books and timed sessions", "Books" => "Your reading library", "Notes" => "Your personal knowledge library", "Goals" => "Targets, pace and history", "Statistics" => "Your personal reading story", "Year in Reading" => "Your annual reading story", _ => "Data, quality and preferences" };
+    public string PageSubtitle => SelectedPage switch { "Today" => "Your reading focus for today", "Activity" => "Calendar analytics", "Sessions" => "Continuous reading periods", "Manual log" => "Physical books and timed sessions", "Books" => "Your reading library", "Notes" => "Your personal knowledge library", "Goals" => "Targets, pace and history", "Statistics" => "Your personal reading story", "Year in Reading" => "Your annual reading story", _ => "Data, quality and preferences" };
     public string Breadcrumb => $"Readest Stats  /  {SelectedPage}";
     public bool CanGoBack => _navigationHistory.Count > 0;
-    public bool IsGlobalRangeVisible => SelectedPage is "Overview" or "Sessions" or "Books" or "Statistics";
-    public bool IsSourceFilterVisible => SelectedPage is "Overview" or "Activity" or "Sessions" or "Books" or "Goals" or "Statistics" or "Year in Reading";
+    public bool IsGlobalRangeVisible => SelectedPage is "Today" or "Sessions" or "Books" or "Statistics";
+    public bool IsSourceFilterVisible => SelectedPage is "Today" or "Activity" or "Sessions" or "Books" or "Goals" or "Statistics" or "Year in Reading";
     public string SelectedSource { get => _selectedSource; set { var normalized = SourceOptions.Contains(value) ? value : "All sources"; if (Set(ref _selectedSource, normalized)) { _settings.DefaultSourceFilter = normalized; ApplySourceSelection(); SchedulePreferenceSave(); } } }
     public string SelectedRange { get => _selectedRange; set { if (Set(ref _selectedRange, value)) { _settings.DefaultRangePreset = value; Raise(nameof(IsCustomRange)); RecalculateAll(); SchedulePreferenceSave(); } } }
     public bool IsCustomRange => SelectedRange == "Custom";
     public DateTime? CustomStart { get => _customStart; set { if (Set(ref _customStart, value) && IsCustomRange) { _settings.CustomRangeStart = value is null ? null : DateOnly.FromDateTime(value.Value); RecalculateAll(); SchedulePreferenceSave(); } } }
     public DateTime? CustomEnd { get => _customEnd; set { if (Set(ref _customEnd, value) && IsCustomRange) { _settings.CustomRangeEnd = value is null ? null : DateOnly.FromDateTime(value.Value); RecalculateAll(); SchedulePreferenceSave(); } } }
     public string Status { get => _status; private set => Set(ref _status, value); }
+    public bool IsCommandPaletteOpen { get => _isCommandPaletteOpen; private set { if (Set(ref _isCommandPaletteOpen, value)) CloseCommandPaletteCommand.Refresh(); } }
+    public string GlobalSearch { get => _globalSearch; set { if (Set(ref _globalSearch, value ?? "")) RebuildGlobalSearch(); } }
+    public GlobalSearchResult? SelectedGlobalSearchResult { get => _selectedGlobalSearchResult; set => Set(ref _selectedGlobalSearchResult, value); }
     public string? Error { get => _error; private set { Set(ref _error, value); Raise(nameof(HasError)); } }
     public bool HasError => !string.IsNullOrWhiteSpace(Error);
     public bool IsBusy { get => _isBusy; private set => Set(ref _isBusy, value); }
@@ -363,7 +382,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public DateOnly SelectedDate { get => _selectedDate; private set => Set(ref _selectedDate, value); }
     public DayDetails? SelectedDay { get => _selectedDay; private set => Set(ref _selectedDay, value); }
     public SessionDisplay? SelectedSession { get => _selectedSession; set { if (Set(ref _selectedSession, value)) BuildSessionDetail(); } }
-    public BookRow? SelectedBook { get => _selectedBook; set { if (Set(ref _selectedBook, value)) { BuildBookDetail(); UpdateOpenBookState(); Raise(nameof(IsSelectedBookPinned)); Raise(nameof(PinBookLabel)); Raise(nameof(SelectedBookOpenLabel)); Raise(nameof(SelectedManualBook)); Raise(nameof(LinkCandidate)); Raise(nameof(IsSelectedBookLinked)); Raise(nameof(LinkEditionLabel)); TogglePinnedBookCommand.Refresh(); SaveReadingPlanCommand.Refresh(); StartSelectedManualSessionCommand.Refresh(); LinkSelectedEditionCommand.Refresh(); UnlinkSelectedEditionCommand.Refresh(); RefreshSelectedMetadataCommand.Refresh(); } } }
+    public BookRow? SelectedBook { get => _selectedBook; set { if (Set(ref _selectedBook, value)) { BuildBookDetail(); UpdateOpenBookState(); Raise(nameof(IsSelectedBookPinned)); Raise(nameof(PinBookLabel)); Raise(nameof(SelectedBookOpenLabel)); Raise(nameof(SelectedManualBook)); Raise(nameof(LinkCandidate)); Raise(nameof(IsSelectedBookLinked)); Raise(nameof(LinkEditionLabel)); Raise(nameof(SelectedBookCycleSummary)); TogglePinnedBookCommand.Refresh(); SaveReadingPlanCommand.Refresh(); StartSelectedManualSessionCommand.Refresh(); StartRereadCommand.Refresh(); LinkSelectedEditionCommand.Refresh(); UnlinkSelectedEditionCommand.Refresh(); RefreshSelectedMetadataCommand.Refresh(); } } }
     public NoteRow? SelectedNote
     {
         get => _selectedNote;
@@ -404,6 +423,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string YearFavoriteHour { get { var label = YearSummary?.FavoriteHour?.Label; return label is not null && label.Length >= 2 && int.TryParse(label[..2], out var hour) ? FormatHourRange(hour, 1) : "—"; } }
     public int AllSessionCount { get => _allSessionCount; private set => Set(ref _allSessionCount, value); }
     public DataQualityReport? DataQuality { get => _dataQuality; private set => Set(ref _dataQuality, value); }
+    public string AppDatabaseSummary { get; private set; } = "App database has not been checked yet.";
+    public string AppDatabasePath => Manual.DatabasePath;
     public ReadingStory? Story { get => _story; private set => Set(ref _story, value); }
     public string OpenBookStatus { get => _openBookStatus; private set => Set(ref _openBookStatus, value); }
     public string NotesStatus { get => _notesStatus; private set => Set(ref _notesStatus, value); }
@@ -414,7 +435,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public int FavoriteNotesCount => _allNoteRows.Count(note => note.IsFavorite);
     public int NotesReadCount => _allNoteRows.Count(note => note.TimesSeen > 0);
     public string NoteSearch { get => _noteSearch; set { if (Set(ref _noteSearch, value ?? "")) ApplyNoteFilters(); } }
-    public string[] NoteScopeOptions { get; } = ["All notes", "Readest only", "Physical books only", "Favorites only", "Selected book"];
+    public string[] NoteScopeOptions { get; } = ["All notes", "Unseen", "Not seen recently", "Readest only", "Physical books only", "Favorites only", "Selected book"];
     public string NoteScope { get => _noteScope; set { var normalized = NoteScopeOptions.Contains(value) ? value : "All notes"; if (Set(ref _noteScope, normalized)) ApplyNoteFilters(); } }
     public string NotesSummary
     {
@@ -439,11 +460,19 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             {
                 if (!_settings.BookTracking.TryGetValue(key, out var tracking)) _settings.BookTracking[key] = tracking = new();
                 tracking.Status = normalized;
-                if (normalized == "Reading") tracking.StartedAtUtc ??= DateTimeOffset.UtcNow;
+                tracking.Cycles ??= [];
+                if (normalized == "Reading")
+                {
+                    tracking.StartedAtUtc ??= DateTimeOffset.UtcNow;
+                    EnsureOpenCycle(tracking);
+                }
                 tracking.CompletedAtUtc = normalized == "Finished" ? tracking.CompletedAtUtc ?? DateTimeOffset.UtcNow : null;
+                if (normalized == "Finished" && tracking.CompletedAtUtc is { } completed) CompleteOpenCycle(tracking, completed);
             }
             Raise(nameof(SelectedBookStatusDetail));
             Raise(nameof(SelectedBookCompletedDate));
+            Raise(nameof(SelectedBookCycleSummary));
+            StartRereadCommand.Refresh();
             _ = SaveBookTrackingAsync();
         }
     }
@@ -469,7 +498,19 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             var key = SelectedBook is null ? null : BookTrackingKey(SelectedBook.Id);
             if (key is null || !_settings.BookTracking.TryGetValue(key, out var tracking) || tracking.Status != "Finished" || value is null) return;
             tracking.CompletedAtUtc = new DateTimeOffset(DateTime.SpecifyKind(value.Value.Date, DateTimeKind.Local)).ToUniversalTime();
-            Raise(); Raise(nameof(SelectedBookStatusDetail)); _ = SaveBookTrackingAsync();
+            CompleteOpenCycle(tracking, tracking.CompletedAtUtc.Value);
+            Raise(); Raise(nameof(SelectedBookStatusDetail)); Raise(nameof(SelectedBookCycleSummary)); _ = SaveBookTrackingAsync();
+        }
+    }
+    public string SelectedBookCycleSummary
+    {
+        get
+        {
+            var cycles = SelectedTracking?.Cycles ?? [];
+            if (cycles.Count == 0) return "No reading cycle recorded yet.";
+            var current = cycles.FirstOrDefault(cycle => cycle.Id == SelectedTracking?.CurrentCycleId) ?? cycles.OrderByDescending(cycle => cycle.Number).First();
+            var state = current.CompletedAtUtc is { } completed ? $"finished {completed.ToLocalTime():MMM d, yyyy}" : $"started {current.StartedAtUtc.ToLocalTime():MMM d, yyyy}";
+            return $"{current.Label} · {state} · {Formatters.Count(cycles.Count, "cycle")}";
         }
     }
     public bool IsSelectedBookPinned
@@ -482,13 +523,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool IsSelectedBookLinked => SelectedBook is not null && LinkForBook(SelectedBook.Id) is not null;
     public BookRow? LinkCandidate => SelectedBook is null || IsSelectedBookLinked ? null : FindLinkCandidate(SelectedBook);
     public string LinkEditionLabel => IsSelectedBookLinked ? "Linked Readest + physical edition" : LinkCandidate is null ? "No matching edition found" : $"Link with {LinkCandidate.Title} ({LinkCandidate.Source})";
-    public ReadingPlanProgress SelectedBookPlan { get => _selectedBookPlan; private set { if (Set(ref _selectedBookPlan, value)) RemoveReadingPlanCommand.Refresh(); } }
+    public ReadingPlanProgress SelectedBookPlan { get => _selectedBookPlan; private set { if (Set(ref _selectedBookPlan, value)) { RemoveReadingPlanCommand.Refresh(); ToggleReadingPlanPauseCommand.Refresh(); } } }
     public bool HasContinueReading => ContinueReading.Count > 0;
     public bool HasActiveReadingPlans => ActiveReadingPlans.Count > 0;
     public DateTime? SelectedPlanTargetDate
     {
         get => SelectedTracking?.Plan?.TargetDate?.ToDateTime(TimeOnly.MinValue);
         set { var plan = EnsureSelectedPlan(); if (plan is null) return; plan.TargetDate = value is null ? null : DateOnly.FromDateTime(value.Value); Raise(); BuildSelectedPlan(); }
+    }
+    public DateTime? SelectedPlanStartDate
+    {
+        get => SelectedTracking?.Plan?.StartDate?.ToDateTime(TimeOnly.MinValue);
+        set { var plan = EnsureSelectedPlan(); if (plan is null) return; plan.StartDate = value is null ? null : DateOnly.FromDateTime(value.Value); Raise(); BuildSelectedPlan(); }
     }
     public double SelectedPlanDailyMinutes
     {
@@ -505,6 +551,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         get => SelectedTracking?.Plan?.IncludeWeekends ?? true;
         set { var plan = EnsureSelectedPlan(); if (plan is null) return; plan.IncludeWeekends = value; Raise(); BuildSelectedPlan(); }
     }
+    public bool SelectedPlanIsPaused => SelectedTracking?.Plan?.IsPaused == true;
+    public string ReadingPlanPauseLabel => SelectedPlanIsPaused ? "Resume plan" : "Pause plan";
+    public bool SelectedPlanMonday { get => IsPlanDay(DayOfWeek.Monday); set => SetPlanDay(DayOfWeek.Monday, value); }
+    public bool SelectedPlanTuesday { get => IsPlanDay(DayOfWeek.Tuesday); set => SetPlanDay(DayOfWeek.Tuesday, value); }
+    public bool SelectedPlanWednesday { get => IsPlanDay(DayOfWeek.Wednesday); set => SetPlanDay(DayOfWeek.Wednesday, value); }
+    public bool SelectedPlanThursday { get => IsPlanDay(DayOfWeek.Thursday); set => SetPlanDay(DayOfWeek.Thursday, value); }
+    public bool SelectedPlanFriday { get => IsPlanDay(DayOfWeek.Friday); set => SetPlanDay(DayOfWeek.Friday, value); }
+    public bool SelectedPlanSaturday { get => IsPlanDay(DayOfWeek.Saturday); set => SetPlanDay(DayOfWeek.Saturday, value); }
+    public bool SelectedPlanSunday { get => IsPlanDay(DayOfWeek.Sunday); set => SetPlanDay(DayOfWeek.Sunday, value); }
     public int SelectedPlanPriority
     {
         get => SelectedTracking?.Plan?.Priority ?? 2;
@@ -859,6 +914,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         var report = _dataQualityEngine.Analyze(_bookModels, _events, Diagnostics, DateTimeOffset.Now);
         var extraChecks = new List<DataQualityCheck>();
+        try
+        {
+            var database = Manual.DatabaseHealth;
+            var healthy = database.IntegrityStatus.Equals("ok", StringComparison.OrdinalIgnoreCase);
+            AppDatabaseSummary = $"Schema {database.SchemaVersion} · {Formatters.Count(database.Books, "book")} · {Formatters.Count(database.Sessions, "session")} · integrity {database.IntegrityStatus}";
+            extraChecks.Add(new("Readest Stats database", healthy ? "Pass" : "Attention", AppDatabaseSummary, database.Path, !healthy));
+            Raise(nameof(AppDatabaseSummary)); Raise(nameof(AppDatabasePath));
+        }
+        catch (Exception ex)
+        {
+            AppDatabaseSummary = "App database check failed.";
+            extraChecks.Add(new("Readest Stats database", "Attention", AppDatabaseSummary, ex.Message, true));
+            Raise(nameof(AppDatabaseSummary)); Raise(nameof(AppDatabasePath));
+        }
         if (_notesRepository?.LastDiagnostics is { } notes)
         {
             var noteCheck = new DataQualityCheck("Readest note files", notes.FilesFailed == 0 ? "Pass" : "Attention", notes.Summary, "Read-only Books/**/config.json scan", notes.FilesFailed > 0);
@@ -937,6 +1006,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             "Readest only" => rows.Where(note => !note.Id.StartsWith("manual:", StringComparison.OrdinalIgnoreCase)),
             "Physical books only" => rows.Where(note => note.Id.StartsWith("manual:", StringComparison.OrdinalIgnoreCase)),
+            "Unseen" => rows.Where(note => note.TimesSeen == 0),
+            "Not seen recently" => rows.Where(note => note.LastSeenUtc is null || note.LastSeenUtc < DateTimeOffset.UtcNow.AddDays(-30)),
             "Favorites only" => rows.Where(note => note.IsFavorite),
             "Selected book" when SelectedNote is not null => rows.Where(note => note.BookHash.Equals(SelectedNote.BookHash, StringComparison.OrdinalIgnoreCase)),
             _ => rows
@@ -1010,7 +1081,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         var candidates = Notes.Where(note => note.Id != _lastRandomNoteId).ToArray();
         if (candidates.Length == 0) candidates = Notes.ToArray();
-        return candidates.Length == 0 ? null : candidates[Random.Shared.Next(candidates.Length)];
+        if (candidates.Length == 0) return null;
+        var poolSize = Math.Max(1, (int)Math.Ceiling(candidates.Length * 0.4));
+        var rediscoveryPool = candidates.OrderBy(note => note.TimesSeen).ThenBy(note => note.LastSeenUtc ?? DateTimeOffset.MinValue).Take(poolSize).ToArray();
+        return rediscoveryPool[Random.Shared.Next(rediscoveryPool.Length)];
     }
 
     private void SelectDailyNote()
@@ -1232,6 +1306,50 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         BackCommand.Refresh();
     }
 
+    private void OpenCommandPalette()
+    {
+        IsCommandPaletteOpen = true;
+        GlobalSearch = "";
+        RebuildGlobalSearch();
+    }
+
+    private void CloseCommandPalette()
+    {
+        IsCommandPaletteOpen = false;
+        GlobalSearch = "";
+    }
+
+    private void RebuildGlobalSearch()
+    {
+        var query = GlobalSearch.Trim();
+        var results = new List<GlobalSearchResult>();
+        results.AddRange(Pages.Select(page => new GlobalSearchResult("PAGE", page, PageSubtitleFor(page), page)));
+        results.AddRange(_bookModels.Select(book => new GlobalSearchResult("BOOK", book.Title, book.Authors, "Books", book.Id.ToString())));
+        results.AddRange(_allNoteRows.Select(note => new GlobalSearchResult("NOTE", string.IsNullOrWhiteSpace(note.Text) ? note.Note : note.Text, note.BookTitle, "Notes", note.Id)));
+        results.AddRange(Manual.RecentSessions.Select(session => new GlobalSearchResult("SESSION", session.BookTitle, $"{session.DateLabel} · {session.DurationLabel} · {session.PageRangeLabel}", "Manual log", session.Id)));
+        if (!string.IsNullOrWhiteSpace(query)) results = results.Where(item => item.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase) || item.Detail.Contains(query, StringComparison.CurrentCultureIgnoreCase) || item.Kind.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+        Replace(GlobalSearchResults, results.Take(40));
+        SelectedGlobalSearchResult = GlobalSearchResults.FirstOrDefault();
+    }
+
+    private void OpenGlobalSearchResult(GlobalSearchResult? result)
+    {
+        if (result is null) return;
+        if (result.Kind == "BOOK" && long.TryParse(result.Key, out var bookId))
+        {
+            _bookFilter = "All"; Raise(nameof(BookFilter)); ApplyBookFilters();
+            SelectedBook = Books.FirstOrDefault(book => book.Id == bookId);
+        }
+        else if (result.Kind == "NOTE" && result.Key is not null)
+        {
+            SelectedNote = _allNoteRows.FirstOrDefault(note => note.Id.Equals(result.Key, StringComparison.OrdinalIgnoreCase));
+        }
+        SelectedPage = result.Target;
+        CloseCommandPalette();
+    }
+
+    private string PageSubtitleFor(string page) => page switch { "Today" => "Today and reading focus", "Activity" => "Calendar analytics", "Sessions" => "Reading history", "Manual log" => "Physical books and timer", "Books" => "Unified library", "Notes" => "Daily and random rediscovery", "Goals" => "Plans and targets", "Statistics" => "Reading insights", "Year in Reading" => "Annual story", _ => "Preferences and data health" };
+
     private void OpenSessionBook(SessionDisplay? session)
     {
         var bookId = session?.Source.BookIds.FirstOrDefault();
@@ -1408,12 +1526,21 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private async Task ImportPhysicalLibraryAsync()
     {
-        var path = _chooseImport("Import physical library", "Readest Stats physical library|*.json");
+        var path = _chooseImport("Import Center", "Supported library files|*.json;*.csv|Readest Stats physical library|*.json|Goodreads, StoryGraph, or generic CSV|*.csv");
         if (path is null) return;
         try
         {
-            var result = await Manual.ImportLibraryAsync(path);
-            Status = $"Imported {Formatters.Count(result.Books, "new book")} and {Formatters.Count(result.Sessions, "new session")}";
+            if (Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
+            {
+                var preview = await _libraryImport.PreviewCsvAsync(path);
+                var added = await Manual.ImportCatalogAsync(preview.Books);
+                Status = $"Import Center · {preview.Provider}: imported {Formatters.Count(added, "new book")}; {preview.SkippedRows} row(s) skipped.";
+            }
+            else
+            {
+                var result = await Manual.ImportLibraryAsync(path);
+                Status = $"Import Center · Readest Stats: imported {Formatters.Count(result.Books, "new book")} and {Formatters.Count(result.Sessions, "new session")}";
+            }
         }
         catch (Exception ex) { Status = "Library import failed: " + Friendly(ex); _log("Library import error: " + ex); }
     }
@@ -1451,7 +1578,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private void BuildSelectedPlan()
     {
         SelectedBookPlan = SelectedBook is null ? _readingPlanEngine.Evaluate(null, null, null, 0, DateOnly.FromDateTime(DateTime.Today)) : PlanFor(SelectedBook);
-        Raise(nameof(SelectedPlanTargetDate)); Raise(nameof(SelectedPlanDailyMinutes)); Raise(nameof(SelectedPlanDailyPages)); Raise(nameof(SelectedPlanIncludeWeekends)); Raise(nameof(SelectedPlanPriority)); Raise(nameof(SelectedPlanUsesPages)); Raise(nameof(SelectedBookPlanGoal));
+        Raise(nameof(SelectedPlanStartDate)); Raise(nameof(SelectedPlanTargetDate)); Raise(nameof(SelectedPlanDailyMinutes)); Raise(nameof(SelectedPlanDailyPages)); Raise(nameof(SelectedPlanIncludeWeekends)); Raise(nameof(SelectedPlanPriority)); Raise(nameof(SelectedPlanUsesPages)); Raise(nameof(SelectedBookPlanGoal)); Raise(nameof(SelectedPlanIsPaused)); Raise(nameof(ReadingPlanPauseLabel));
+        Raise(nameof(SelectedPlanMonday)); Raise(nameof(SelectedPlanTuesday)); Raise(nameof(SelectedPlanWednesday)); Raise(nameof(SelectedPlanThursday)); Raise(nameof(SelectedPlanFriday)); Raise(nameof(SelectedPlanSaturday)); Raise(nameof(SelectedPlanSunday));
     }
 
     private void BuildContinueReading()
@@ -1505,6 +1633,72 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Status = "Reading plan removed";
     }
 
+    private async Task ToggleReadingPlanPauseAsync()
+    {
+        if (SelectedTracking?.Plan is not { Enabled: true } plan) return;
+        plan.IsPaused = !plan.IsPaused;
+        await _store.SaveAsync(_settings);
+        BuildSelectedPlan(); BuildContinueReading();
+        Status = plan.IsPaused ? "Reading plan paused" : "Reading plan resumed";
+    }
+
+    private bool IsPlanDay(DayOfWeek day)
+    {
+        var plan = SelectedTracking?.Plan;
+        if (plan is null) return true;
+        if (plan.ReadingDays.Count == 0) return day is not (DayOfWeek.Saturday or DayOfWeek.Sunday) || plan.IncludeWeekends;
+        return plan.ReadingDays.Contains(day);
+    }
+
+    private void SetPlanDay(DayOfWeek day, bool enabled)
+    {
+        var plan = EnsureSelectedPlan();
+        if (plan is null) return;
+        if (enabled && !plan.ReadingDays.Contains(day)) plan.ReadingDays.Add(day);
+        if (!enabled) plan.ReadingDays.Remove(day);
+        plan.IncludeWeekends = plan.ReadingDays.Contains(DayOfWeek.Saturday) || plan.ReadingDays.Contains(DayOfWeek.Sunday);
+        Raise(nameof(SelectedPlanIncludeWeekends));
+        BuildSelectedPlan();
+    }
+
+    private async Task StartRereadAsync()
+    {
+        if (SelectedBook is null) return;
+        var key = BookTrackingKey(SelectedBook.Id);
+        if (key is null) return;
+        if (!_settings.BookTracking.TryGetValue(key, out var tracking)) _settings.BookTracking[key] = tracking = new();
+        tracking.Cycles ??= [];
+        var cycle = new ReadingCycle { Number = tracking.Cycles.Select(item => item.Number).DefaultIfEmpty(0).Max() + 1 };
+        tracking.Cycles.Add(cycle);
+        tracking.CurrentCycleId = cycle.Id;
+        tracking.Status = "Reading";
+        tracking.StartedAtUtc = cycle.StartedAtUtc;
+        tracking.CompletedAtUtc = null;
+        _selectedBookStatus = "Reading";
+        Raise(nameof(SelectedBookStatus)); Raise(nameof(SelectedBookStatusDetail)); Raise(nameof(SelectedBookCompletedDate)); Raise(nameof(SelectedBookCycleSummary));
+        StartRereadCommand.Refresh();
+        await SaveBookTrackingAsync();
+        Status = $"Started {cycle.Label.ToLowerInvariant()} for {SelectedBook.Title}";
+    }
+
+    private static ReadingCycle EnsureOpenCycle(BookTrackingState tracking)
+    {
+        tracking.Cycles ??= [];
+        var current = tracking.Cycles.FirstOrDefault(cycle => cycle.Id == tracking.CurrentCycleId && cycle.CompletedAtUtc is null);
+        if (current is not null) return current;
+        current = new ReadingCycle { Number = tracking.Cycles.Select(cycle => cycle.Number).DefaultIfEmpty(0).Max() + 1, StartedAtUtc = tracking.StartedAtUtc ?? DateTimeOffset.UtcNow };
+        tracking.Cycles.Add(current);
+        tracking.CurrentCycleId = current.Id;
+        return current;
+    }
+
+    private static void CompleteOpenCycle(BookTrackingState tracking, DateTimeOffset completed)
+    {
+        var cycle = EnsureOpenCycle(tracking);
+        cycle.CompletedAtUtc = completed;
+        tracking.CurrentCycleId = cycle.Id;
+    }
+
     private Task StartSelectedManualSessionAsync()
     {
         var manualBook = SelectedManualBook;
@@ -1531,7 +1725,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             "Manual" => manualKeys.Contains(item.Key),
             "Readest" => !manualKeys.Contains(item.Key),
             _ => true
-        }).Select(item => item.Value.CompletedAtUtc).Where(date => date is not null).Select(date => date!.Value);
+        }).SelectMany(item => item.Value.Cycles.Count > 0
+            ? item.Value.Cycles.Where(cycle => cycle.CompletedAtUtc is not null).Select(cycle => cycle.CompletedAtUtc!.Value)
+            : item.Value.CompletedAtUtc is { } completed ? [completed] : []);
         var manual = SelectedSource == "Readest" ? [] : Manual.Books.Where(book => book.CompletedAtUtc is not null).Select(book => book.CompletedAtUtc!.Value);
         return tracked.Concat(manual).Distinct().ToArray();
     }

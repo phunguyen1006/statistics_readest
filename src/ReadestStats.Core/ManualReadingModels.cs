@@ -65,7 +65,7 @@ public sealed class ActiveManualSession
 
 public sealed class ManualReadingData
 {
-    public int SchemaVersion { get; set; } = 2;
+    public int SchemaVersion { get; set; } = 3;
     public List<ManualBook> Books { get; set; } = [];
     public List<ManualReadingSession> Sessions { get; set; } = [];
     public ActiveManualSession? ActiveSession { get; set; }

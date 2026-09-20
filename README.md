@@ -1,16 +1,16 @@
-# Readest Stats 1.9.0
+# Readest Stats 2.0.0
 
-[![Version](https://img.shields.io/badge/version-1.9.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
+[![Version](https://img.shields.io/badge/version-2.0.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-555555)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-Readest Stats is an independent native Windows desktop companion for digital and physical reading. Version 1.9.0 turns the combined library into an active reading system: per-book plans, Continue Reading, edition linking, lifecycle filters, safer session correction, scoped random-note discovery, metadata refresh, and portable physical-library import/export all work without modifying Readest.
+Readest Stats is an independent native Windows desktop companion for digital and physical reading. Version 2.0.0 introduces a Today workspace, app-wide search, a global physical-reading timer, transactional app-owned SQLite storage, re-reading cycles, weekday-aware reading plans, smarter note rediscovery, and built-in data-health checks—all without modifying Readest.
 
 The Statistics reading story combines a keyboard-accessible 365-day heatmap, a 30-day streak strip, a 24-hour reading clock, weekday rhythm, line-based selected-period and 12-month journeys, cumulative reading, direct period comparison, goal progress, session distribution, ranked reading-time bars, and personal records. Every chart is computed from observed event duration and local timestamps; unsupported genre, rating, word-count, and reading-speed dimensions are not guessed.
 
 Other features include one-click opening of a selected local book in Readest, a physical-book library with page progress, source-aware analytics, locally managed reading statuses and finished-book goals, pinned-book filtering, source-quality checks, monthly Markdown reports, update checks, seven rotating complete daily backups, persistent window placement, full-screen mode, and keyboard navigation (Ctrl+M opens Manual log).
 
-Manual books, timer segments, page ranges, session notes, and completed sessions are saved atomically in `%LOCALAPPDATA%\\ReadestStats\\manual-reading.json`, with a recovery backup. If a manual interval overlaps an imported Readest interval, the Readest interval wins in the combined view so reading time is not counted twice. Sessions crossing local midnight are split correctly between calendar days.
+Manual books, timer segments, page ranges, session notes, and completed sessions are saved transactionally in `%LOCALAPPDATA%\\ReadestStats\\readest-stats.db`. A human-readable `manual-reading.json` recovery mirror and complete ZIP backups are retained. Existing v1.x JSON data migrates automatically on first launch. If a manual interval overlaps an imported Readest interval, the Readest interval wins in the combined view so reading time is not counted twice.
 
 The Notes tab combines highlights and annotations from Readest's per-book config.json files with notes written after physical-book sessions. It centers daily and shuffle-bag random-note rediscovery, includes history/back, source diversity, copy, lightweight search, heart-based favorites and private notes, and supports privacy-confirmed Markdown/JSON/CSV export. Personal curation is stored separately in `%LOCALAPPDATA%\\ReadestStats\\settings.json`.
 
@@ -53,6 +53,8 @@ artifacts\v1.8.0\ReadestStats-v1.8.0.exe
 artifacts\v1.8.0\ReadestStats-v1.8.0-win-x64.zip
 artifacts\v1.9.0\ReadestStats-v1.9.0.exe
 artifacts\v1.9.0\ReadestStats-v1.9.0-win-x64.zip
+artifacts\v2.0.0\ReadestStats-v2.0.0.exe
+artifacts\v2.0.0\ReadestStats-v2.0.0-win-x64.zip
 ```
 
 ## Data safety

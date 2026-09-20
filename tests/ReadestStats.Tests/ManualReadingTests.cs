@@ -39,6 +39,7 @@ public sealed class ManualReadingTests : IDisposable
         var store = new ManualReadingStore(path);
         await store.SaveAsync(new ManualReadingData { Books = [new ManualBook { Id = -1, Title = "First" }] });
         await store.SaveAsync(new ManualReadingData { Books = [new ManualBook { Id = -1, Title = "Second" }] });
+        File.Delete(store.DatabasePath);
         await File.WriteAllTextAsync(path, "{broken");
 
         var loaded = await store.LoadAsync();

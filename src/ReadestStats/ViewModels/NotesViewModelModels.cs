@@ -57,10 +57,15 @@ public sealed class NoteRow : ObservableObject
 
     public bool HasPersonalNote => !string.IsNullOrWhiteSpace(State.PersonalNote);
     public int TimesSeen => State.TimesSeen;
+    public DateTimeOffset? LastSeenUtc => State.LastSeenUtc;
+    public string RediscoveryLabel => State.LastSeenUtc is null ? "Not seen yet" : $"Last seen {State.LastSeenUtc.Value.ToLocalTime():MMM d, yyyy}";
 
     public void MarkSeen()
     {
         State.TimesSeen++;
+        State.LastSeenUtc = DateTimeOffset.UtcNow;
         Raise(nameof(TimesSeen));
+        Raise(nameof(LastSeenUtc));
+        Raise(nameof(RediscoveryLabel));
     }
 }

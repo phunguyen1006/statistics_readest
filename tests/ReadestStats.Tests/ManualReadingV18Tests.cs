@@ -21,7 +21,7 @@ public sealed class ManualReadingV18Tests
 
         var data = await new ManualReadingStore(path).LoadAsync();
 
-        Assert.Equal(2, data.SchemaVersion);
+        Assert.Equal(3, data.SchemaVersion);
         var segment = Assert.Single(Assert.Single(data.Sessions).Segments);
         Assert.Equal(1500, segment.DurationSeconds, 3);
     }

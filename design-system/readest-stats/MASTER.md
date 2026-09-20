@@ -1,4 +1,4 @@
-# Readest Stats 1.9 — Design System
+# Readest Stats 2.0 — Design System
 
 This file is the implementation reference for every screen. It supersedes the former blue dashboard theme.
 
@@ -42,6 +42,9 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 - Window minimum: 1100×650. Primary QA targets: 1366×768 and 1440×900.
 - Sidebar: 196px, fixed, icon plus label for every destination.
 - Top bar: 72px, page context left and global period controls right.
+- Today is the default landing workspace. It surfaces the next reading action, daily rediscovery, and current priorities before deeper analytics.
+- Ctrl+K opens one centered command palette for pages, books, notes, and sessions; the palette traps the immediate search task and closes with Escape.
+- An active physical-reading session uses a compact persistent dock below the top bar on every page; it must always expose elapsed time, pause/resume, finish, and a route back to the timer.
 - Main page gutter: 26px horizontal, 22px top, 28px bottom.
 - Use a 4/8px rhythm. Editorial sections use 18–24px vertical breathing room and thin full-width dividers.
 - Use scroll viewers for vertical overflow. Avoid horizontal scrolling and nested scroll regions.
@@ -57,6 +60,8 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 - App identity: a black rounded-square icon with a white open-book mark; use the same mark in the executable, title bar, taskbar, and sidebar header.
 - KPI bands: short uppercase label, prominent value, single supporting line, and vertical dividers rather than boxed tiles.
 - Data tables: sortable/filterable where the view exposes controls; alternating rows and restrained separators.
+- Book lifecycle UI distinguishes an edition from a reading cycle. Re-reads append cycles and never overwrite earlier completion history.
+- Reading-plan controls expose start, target, selected reading weekdays, and paused state together; status text must explain the computed pace.
 - Charts: grayscale, subtle grid lines, exact-value tooltips, explicit empty states, readable units, and a maximum bar width so sparse data never becomes a giant block.
 - Heatmaps: five quantile-derived grayscale levels plus a labeled legend; cells expose exact date/time details.
 - Goals: progress uses white/gray only and includes a textual status such as Ahead, On track, Behind, Complete, or Not enough data.
@@ -72,6 +77,7 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 - Visible focus outline is mandatory. Hover is supplementary, never the only way to access information.
 - Loading is non-blocking; refresh is accompanied by progress feedback while work is active.
 - Errors appear as readable inline status with a Retry action; the last good dataset remains visible.
+- Search results use a visible type label plus title and context; no result may rely on an icon alone.
 - No emoji as structural icons. No layout-shifting hover animation.
 
 ## Data integrity rules

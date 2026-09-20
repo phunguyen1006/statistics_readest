@@ -6,21 +6,45 @@ public sealed class ManualReadingStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly string _path;
+    private readonly AppDatabase _database;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
 
-    public ManualReadingStore(string path) => _path = path;
+    public ManualReadingStore(string path)
+    {
+        _path = path;
+        _database = new AppDatabase(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path))!, "readest-stats.db"));
+    }
     public string Path => _path;
+    public string DatabasePath => _database.Path;
+    public AppDatabaseHealth InspectDatabase() => _database.Inspect();
+    public void CheckpointDatabase() => _database.Checkpoint();
+
+    public static async Task<ManualReadingData> LoadPortableFileAsync(string path, CancellationToken cancellationToken = default)
+    {
+        await using var stream = File.OpenRead(path);
+        var data = await JsonSerializer.DeserializeAsync<ManualReadingData>(stream, JsonOptions, cancellationToken) ?? new();
+        Normalize(data);
+        return data;
+    }
 
     public async Task<ManualReadingData> LoadAsync(CancellationToken cancellationToken = default)
     {
         try
         {
+            if (_database.HasManualData())
+            {
+                var stored = _database.LoadManualData();
+                Normalize(stored);
+                return stored;
+            }
             if (!File.Exists(_path)) return new();
             await using var stream = File.OpenRead(_path);
             var data = await JsonSerializer.DeserializeAsync<ManualReadingData>(stream, JsonOptions, cancellationToken) ?? new();
             data.Books ??= [];
             data.Sessions ??= [];
             Normalize(data);
+            _database.SaveManualData(data);
+            _database.Checkpoint();
             return data;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
@@ -47,6 +71,8 @@ public sealed class ManualReadingStore
         try
         {
             Normalize(data);
+            _database.SaveManualData(data);
+            _database.Checkpoint();
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_path)!);
             var temp = _path + ".tmp";
             await using (var stream = File.Create(temp))
@@ -60,7 +86,7 @@ public sealed class ManualReadingStore
     private static void Normalize(ManualReadingData data)
     {
         var sourceVersion = data.SchemaVersion;
-        data.SchemaVersion = 2;
+        data.SchemaVersion = 3;
         data.Books ??= [];
         data.Sessions ??= [];
         var used = new HashSet<long>();

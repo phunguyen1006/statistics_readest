@@ -45,6 +45,7 @@ public sealed class NoteUserState
     public DateTimeOffset? NextReviewUtc { get; set; }
     public int ReviewIntervalDays { get; set; } = 1;
     public int TimesSeen { get; set; }
+    public DateTimeOffset? LastSeenUtc { get; set; }
 }
 
 public sealed record ReadestBookMetadata(

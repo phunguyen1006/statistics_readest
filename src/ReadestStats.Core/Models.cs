@@ -72,15 +72,29 @@ public sealed class BookTrackingState
     public DateTimeOffset? StartedAtUtc { get; set; }
     public DateTimeOffset? CompletedAtUtc { get; set; }
     public ReadingPlan? Plan { get; set; }
+    public List<ReadingCycle> Cycles { get; set; } = [];
+    public string? CurrentCycleId { get; set; }
+}
+
+public sealed class ReadingCycle
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public int Number { get; set; } = 1;
+    public DateTimeOffset StartedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? CompletedAtUtc { get; set; }
+    public string Label => Number == 1 ? "First read" : $"Re-read {Number - 1}";
 }
 
 public sealed class ReadingPlan
 {
     public bool Enabled { get; set; }
+    public bool IsPaused { get; set; }
+    public DateOnly? StartDate { get; set; }
     public DateOnly? TargetDate { get; set; }
     public double DailyMinutes { get; set; }
     public int DailyPages { get; set; }
     public bool IncludeWeekends { get; set; } = true;
+    public List<DayOfWeek> ReadingDays { get; set; } = [];
     public int Priority { get; set; } = 2;
     public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 }

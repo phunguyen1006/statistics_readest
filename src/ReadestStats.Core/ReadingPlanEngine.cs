@@ -10,15 +10,17 @@ public sealed class ReadingPlanEngine
         DateOnly today)
     {
         if (plan is not { Enabled: true }) return new(false, "No plan", "Set a target date or daily pace for this book.", 0, 0, 0, 0, 0, null, "");
+        if (plan.IsPaused) return new(true, "Paused", "This plan is paused; its deadline is preserved.", 0, 0, 0, 0, 0, null, "");
         var pageBased = totalPages is > 0;
         var actual = pageBased ? Math.Clamp(currentPage ?? 0, 0, totalPages!.Value) : recentDailySeconds / 60d;
         var target = pageBased ? totalPages!.Value : Math.Max(plan.DailyMinutes, 1);
         var remaining = Math.Max(0, target - actual);
-        var readingDays = plan.TargetDate is { } date ? CountReadingDays(today, date, plan.IncludeWeekends) : 0;
+        var effectiveToday = plan.StartDate is { } start && start > today ? start : today;
+        var readingDays = plan.TargetDate is { } date ? CountReadingDays(effectiveToday, date, plan) : 0;
         var requiredPerDay = readingDays > 0 ? remaining / readingDays : pageBased ? Math.Max(0, plan.DailyPages) : Math.Max(0, plan.DailyMinutes);
         var plannedDaily = pageBased ? Math.Max(0, plan.DailyPages) : Math.Max(0, plan.DailyMinutes);
         var status = remaining <= 0 ? "Complete" : plan.TargetDate is { } deadline && deadline < today ? "Behind" : plannedDaily <= 0 || requiredPerDay <= plannedDaily ? "On track" : "Behind";
-        var projected = plannedDaily <= 0 || remaining <= 0 ? (DateOnly?)null : AddReadingDays(today, (int)Math.Ceiling(remaining / plannedDaily), plan.IncludeWeekends);
+        var projected = plannedDaily <= 0 || remaining <= 0 ? (DateOnly?)null : AddReadingDays(effectiveToday, (int)Math.Ceiling(remaining / plannedDaily), plan);
         var unit = pageBased ? "pages" : "minutes";
         var summary = remaining <= 0
             ? "Target reached."
@@ -35,6 +37,14 @@ public sealed class ReadingPlanEngine
         return count;
     }
 
+    public static int CountReadingDays(DateOnly start, DateOnly end, ReadingPlan plan)
+    {
+        if (end < start) return 0;
+        var count = 0;
+        for (var date = start; date <= end; date = date.AddDays(1)) if (IsReadingDay(date.DayOfWeek, plan)) count++;
+        return count;
+    }
+
     private static DateOnly AddReadingDays(DateOnly start, int days, bool includeWeekends)
     {
         var date = start;
@@ -46,4 +56,20 @@ public sealed class ReadingPlanEngine
         }
         return date;
     }
+
+    private static DateOnly AddReadingDays(DateOnly start, int days, ReadingPlan plan)
+    {
+        var date = start;
+        var remaining = Math.Max(0, days);
+        while (remaining > 0)
+        {
+            date = date.AddDays(1);
+            if (IsReadingDay(date.DayOfWeek, plan)) remaining--;
+        }
+        return date;
+    }
+
+    private static bool IsReadingDay(DayOfWeek day, ReadingPlan plan) => plan.ReadingDays.Count > 0
+        ? plan.ReadingDays.Contains(day)
+        : plan.IncludeWeekends || day is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
 }

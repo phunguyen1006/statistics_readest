@@ -64,6 +64,11 @@ public sealed class SettingsStore
         settings.PinnedBookKeys ??= [];
         settings.NoteStates ??= [];
         settings.BookLinks.RemoveAll(link => link is null || string.IsNullOrWhiteSpace(link.ManualKey) || string.IsNullOrWhiteSpace(link.ReadestKey));
+        foreach (var tracking in settings.BookTracking.Values)
+        {
+            tracking.Cycles ??= [];
+            if (tracking.Plan is { } plan) plan.ReadingDays ??= [];
+        }
         settings.LibrarySchemaVersion = Math.Max(2, settings.LibrarySchemaVersion);
     }
 }

@@ -173,6 +173,8 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
     public double SelectedBookProgress => SelectedBook?.ProgressPercent ?? 0;
     public string SelectedBookProgressLabel => SelectedBook is null ? "Select a book" : SelectedBook.TotalPages is > 0 ? $"{SelectedBook.CurrentPage ?? 0} / {SelectedBook.TotalPages} pages · {SelectedBook.ProgressPercent:0}%" : $"Page {SelectedBook.CurrentPage ?? 0} · total pages unknown";
     public string LibrarySummary => $"{Books.Count} physical {(Books.Count == 1 ? "book" : "books")} · {RecentSessions.Count} manual {(RecentSessions.Count == 1 ? "session" : "sessions")}";
+    public string DatabasePath => _store.DatabasePath;
+    public AppDatabaseHealth DatabaseHealth => _store.InspectDatabase();
 
     public async Task InitializeAsync()
     {
@@ -288,7 +290,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
 
     public async Task<(int Books, int Sessions)> ImportLibraryAsync(string path)
     {
-        var incoming = await new ManualReadingStore(path).LoadAsync();
+        var incoming = await ManualReadingStore.LoadPortableFileAsync(path);
         var idMap = new Dictionary<long, long>();
         var booksAdded = 0;
         foreach (var source in incoming.Books)
@@ -317,6 +319,27 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
         await SaveAndPublishAsync();
         RebuildCollections();
         return (booksAdded, sessionsAdded);
+    }
+
+    public async Task<int> ImportCatalogAsync(IEnumerable<CatalogImportBook> incoming)
+    {
+        var added = 0;
+        foreach (var source in incoming)
+        {
+            var existing = _data.Books.FirstOrDefault(book => source.Isbn13 is not null && book.Isbn13 == source.Isbn13)
+                ?? _data.Books.FirstOrDefault(book => book.Title.Equals(source.Title, StringComparison.CurrentCultureIgnoreCase) && book.Authors.Equals(source.Authors, StringComparison.CurrentCultureIgnoreCase));
+            if (existing is not null) continue;
+            _data.Books.Add(new ManualBook
+            {
+                Id = ManualReadingStore.NextBookId(_data.Books.Select(book => book.Id)), Title = source.Title, Authors = source.Authors,
+                Isbn13 = source.Isbn13, TotalPages = source.Pages, CompletedAtUtc = source.FinishedAtUtc,
+                CurrentPage = source.FinishedAtUtc is not null ? source.Pages : null, ExternalSource = "CSV import"
+            });
+            added++;
+        }
+        await SaveAndPublishAsync();
+        RebuildCollections();
+        return added;
     }
 
     public async Task<string?> SaveHistoricalSessionAsync(string? id, long bookId, DateTimeOffset startedAt, double durationMinutes, int startPage, int endPage, string note)
