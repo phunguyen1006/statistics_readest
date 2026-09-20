@@ -303,7 +303,10 @@
                 <Button Content="Another from this book" Command="{Binding RandomSameBookCommand}" Margin="0,0,6,6" AutomationProperties.Name="Show another note from this book"/>
                 <Button Content="Copy" Command="{Binding CopySelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Copy selected note"/>
                 <Button Content="Save" Command="{Binding SaveSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Save personal note"/>
+                <Button Content="Snooze 7 days" Command="{Binding SnoozeSelectedNoteCommand}" Margin="0,0,6,6" ToolTip="Hide this note from random picks for seven days"/>
+                <Button Content="{Binding SelectedNote.RandomEligibilityLabel}" Command="{Binding ToggleRandomEligibilityCommand}" Margin="0,0,6,6" ToolTip="Include or exclude this note from random picks"/>
               </WrapPanel>
+              <TextBlock Text="{Binding SelectedNote.SnoozeLabel}" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
               <TextBlock Text="{Binding NotesStatus}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,5,0,0"/>
             </StackPanel>
           </ScrollViewer>

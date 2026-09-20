@@ -101,7 +101,7 @@
       <Grid Visibility="{Binding IsNotAddingBook,Converter={StaticResource BoolVis}}">
         <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="24"/><ColumnDefinition Width="1.45*"/></Grid.ColumnDefinitions>
         <StackPanel>
-          <TextBlock Text="PHYSICAL LIBRARY" Style="{StaticResource Eyebrow}"/>
+          <DockPanel LastChildFill="False"><TextBlock Text="PHYSICAL LIBRARY" Style="{StaticResource Eyebrow}"/><Button DockPanel.Dock="Right" Content="Undo import" Command="{Binding UndoLastImportCommand}" Padding="9,4" MinHeight="28" Visibility="{Binding CanUndoLastImport,Converter={StaticResource BoolVis}}"/><Button DockPanel.Dock="Right" Content="Undo book delete" Command="{Binding UndoDeleteBookCommand}" Padding="9,4" MinHeight="28" Margin="0,0,6,0" Visibility="{Binding CanUndoDeleteBook,Converter={StaticResource BoolVis}}"/></DockPanel>
           <TextBlock Text="Books available for manual sessions" Style="{StaticResource SectionTitle}" Margin="0,5,0,3"/>
           <TextBlock Text="{Binding LibrarySummary}" Style="{StaticResource Muted}" Margin="0,0,0,12"/>
           <ListBox ItemsSource="{Binding Books}" SelectedItem="{Binding SelectedBook}" Background="Transparent" BorderThickness="0" MaxHeight="340" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True">

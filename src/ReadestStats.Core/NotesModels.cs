@@ -46,6 +46,8 @@ public sealed class NoteUserState
     public int ReviewIntervalDays { get; set; } = 1;
     public int TimesSeen { get; set; }
     public DateTimeOffset? LastSeenUtc { get; set; }
+    public DateTimeOffset? SnoozedUntilUtc { get; set; }
+    public bool ExcludeFromRandom { get; set; }
 }
 
 public sealed record ReadestBookMetadata(

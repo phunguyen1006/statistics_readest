@@ -2,6 +2,7 @@ using System.Windows;
 using System.IO;
 using Microsoft.Win32;
 using ReadestStats.ViewModels;
+using ReadestStats.Views;
 
 namespace ReadestStats;
 
@@ -33,7 +34,8 @@ public partial class App : Application
                 Log,
                 ThemeManager.Apply,
                 () => { var dialog = new OpenFileDialog { Title = "Restore Readest Stats backup", Filter = "Readest Stats backup|*.zip" }; return dialog.ShowDialog() == true ? dialog.FileName : null; },
-                (title, filter) => { var dialog = new OpenFileDialog { Title = title, Filter = filter }; return dialog.ShowDialog() == true ? dialog.FileName : null; });
+                (title, filter) => { var dialog = new OpenFileDialog { Title = title, Filter = filter }; return dialog.ShowDialog() == true ? dialog.FileName : null; },
+                preview => new ImportPreviewWindow { Owner = Current.MainWindow, DataContext = preview }.ShowDialog() == true);
             var window = new MainWindow { DataContext = viewModel };
             MainWindow = window;
             window.Closed += (_, _) => viewModel.Dispose();

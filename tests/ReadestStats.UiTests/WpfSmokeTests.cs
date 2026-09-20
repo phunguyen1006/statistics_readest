@@ -32,6 +32,8 @@ public sealed class WpfSmokeTests
             Layout(addBook);
             var sessionEditor = new SessionEditorWindow(viewModel.Manual);
             Layout(sessionEditor);
+            var importPreview = new ImportPreviewWindow { DataContext = new ReadestStats.Core.CatalogImportPreview("Goodreads", 1, 1, 0, [new("Book", "Author", null, 100, null)]) };
+            Layout(importPreview);
             var window = new MainWindow { DataContext = viewModel };
             foreach (var page in viewModel.Pages)
             {

@@ -4,6 +4,11 @@ using System.Text.Json;
 namespace ReadestStats.Core;
 
 public sealed record BackupManifest(int SchemaVersion, string AppVersion, DateTimeOffset CreatedAtUtc, string[] Files, int Books = 0, int Sessions = 0, int Notes = 0, int Covers = 0);
+public sealed record BackupHistoryItem(string Path, string FileName, DateTimeOffset CreatedAt, long SizeBytes, string Version, int Books, int Sessions, string Status)
+{
+    public string SizeLabel => SizeBytes >= 1024 * 1024 ? $"{SizeBytes / 1024d / 1024d:0.0} MB" : $"{Math.Max(1, SizeBytes / 1024d):0} KB";
+    public string Detail => $"{CreatedAt.LocalDateTime:g} · {SizeLabel} · v{Version} · {Books} books · {Sessions} sessions";
+}
 
 public sealed class AppDataBackupService
 {
@@ -66,6 +71,26 @@ public sealed class AppDataBackupService
         var entry = archive.GetEntry("manifest.json") ?? throw new InvalidDataException("This is not a Readest Stats backup.");
         using var stream = entry.Open();
         return JsonSerializer.Deserialize<BackupManifest>(stream) ?? throw new InvalidDataException("The backup manifest is invalid.");
+    }
+
+    public IReadOnlyList<BackupHistoryItem> ListAutomatic()
+    {
+        var directory = Path.Combine(Path.GetDirectoryName(_settingsPath)!, "backups");
+        if (!Directory.Exists(directory)) return [];
+        return Directory.EnumerateFiles(directory, "readest-stats-*.zip")
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .Select(path =>
+            {
+                try
+                {
+                    var manifest = Inspect(path);
+                    return new BackupHistoryItem(path, Path.GetFileName(path), manifest.CreatedAtUtc, new FileInfo(path).Length, manifest.AppVersion, manifest.Books, manifest.Sessions, "Ready");
+                }
+                catch
+                {
+                    return new BackupHistoryItem(path, Path.GetFileName(path), File.GetLastWriteTimeUtc(path), new FileInfo(path).Length, "?", 0, 0, "Unreadable");
+                }
+            }).ToArray();
     }
 
     public void Restore(string source)

@@ -59,6 +59,22 @@ public sealed class NoteRow : ObservableObject
     public int TimesSeen => State.TimesSeen;
     public DateTimeOffset? LastSeenUtc => State.LastSeenUtc;
     public string RediscoveryLabel => State.LastSeenUtc is null ? "Not seen yet" : $"Last seen {State.LastSeenUtc.Value.ToLocalTime():MMM d, yyyy}";
+    public bool IsSnoozed => State.SnoozedUntilUtc > DateTimeOffset.UtcNow;
+    public string SnoozeLabel => IsSnoozed ? $"Snoozed until {State.SnoozedUntilUtc!.Value.ToLocalTime():MMM d}" : "Not snoozed";
+    public bool ExcludeFromRandom => State.ExcludeFromRandom;
+    public string RandomEligibilityLabel => ExcludeFromRandom ? "Allow in random" : "Never show randomly";
+
+    public void Snooze(int days)
+    {
+        State.SnoozedUntilUtc = DateTimeOffset.UtcNow.AddDays(days);
+        Raise(nameof(IsSnoozed)); Raise(nameof(SnoozeLabel));
+    }
+
+    public void ToggleRandomEligibility()
+    {
+        State.ExcludeFromRandom = !State.ExcludeFromRandom;
+        Raise(nameof(ExcludeFromRandom)); Raise(nameof(RandomEligibilityLabel));
+    }
 
     public void MarkSeen()
     {

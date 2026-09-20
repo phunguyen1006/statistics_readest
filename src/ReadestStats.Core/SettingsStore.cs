@@ -67,7 +67,7 @@ public sealed class SettingsStore
         foreach (var tracking in settings.BookTracking.Values)
         {
             tracking.Cycles ??= [];
-            if (tracking.Plan is { } plan) plan.ReadingDays ??= [];
+            if (tracking.Plan is { } plan) { plan.ReadingDays ??= []; plan.SkippedDates ??= []; }
         }
         settings.LibrarySchemaVersion = Math.Max(2, settings.LibrarySchemaVersion);
     }

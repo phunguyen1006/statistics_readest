@@ -1,4 +1,4 @@
-# Readest Stats 2.0 — Design System
+# Readest Stats 2.1 — Design System
 
 This file is the implementation reference for every screen. It supersedes the former blue dashboard theme.
 
@@ -62,6 +62,10 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 - Data tables: sortable/filterable where the view exposes controls; alternating rows and restrained separators.
 - Book lifecycle UI distinguishes an edition from a reading cycle. Re-reads append cycles and never overwrite earlier completion history.
 - Reading-plan controls expose start, target, selected reading weekdays, and paused state together; status text must explain the computed pace.
+- Plan adherence uses a compact 14-day actual-versus-target chart plus explicit Complete, Partial, Missed, Rest day, and Skipped wording. Skipping today never rewrites past reading activity.
+- Import Center is a confirmation surface: provider, valid/skipped counts, and a virtualized edition preview must be visible before the first write; the latest import remains undoable during the session.
+- Note rediscovery keeps random history local, visibly explains snoozed/excluded state, and never serves excluded or currently snoozed notes.
+- Backup history lists only app-owned archives and exposes time, size, app version, record counts, and readability without using color alone.
 - Charts: grayscale, subtle grid lines, exact-value tooltips, explicit empty states, readable units, and a maximum bar width so sparse data never becomes a giant block.
 - Heatmaps: five quantile-derived grayscale levels plus a labeled legend; cells expose exact date/time details.
 - Goals: progress uses white/gray only and includes a textual status such as Ahead, On track, Behind, Complete, or Not enough data.

@@ -23,6 +23,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly DateRangeService _ranges = new();
     private readonly GoalEngine _goalEngine = new();
     private readonly ReadingPlanEngine _readingPlanEngine = new();
+    private readonly PlanAdherenceEngine _planAdherenceEngine = new();
     private readonly LibraryImportService _libraryImport = new();
     private readonly InsightEngine _insightEngine = new();
     private readonly DataQualityEngine _dataQualityEngine = new();
@@ -35,6 +36,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly Func<string, string, string?> _chooseExport;
     private readonly Func<string?> _chooseBackupImport;
     private readonly Func<string, string, string?> _chooseImport;
+    private readonly Func<CatalogImportPreview, bool> _confirmImport;
     private readonly AppDataBackupService _backup;
     private readonly Action<string> _log;
     private readonly Action<string> _applyTheme;
@@ -85,6 +87,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private NoteRow? _dailyNote;
     private NoteRow? _randomNote;
     private string? _lastRandomNoteId;
+    private readonly Stack<string> _randomHistory = new();
     private string _noteSearch = "";
     private string _noteScope = "All notes";
     private string _notesStatus = "Readest notes are stored locally and never modified.";
@@ -115,9 +118,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private string _globalSearch = "";
     private GlobalSearchResult? _selectedGlobalSearchResult;
 
-    public MainViewModel(Func<string?> chooseDatabase, Func<string, string, string?> chooseExport, Action<string>? log = null, Action<string>? applyTheme = null, Func<string?>? chooseBackupImport = null, Func<string, string, string?>? chooseImport = null)
+    public MainViewModel(Func<string?> chooseDatabase, Func<string, string, string?> chooseExport, Action<string>? log = null, Action<string>? applyTheme = null, Func<string?>? chooseBackupImport = null, Func<string, string, string?>? chooseImport = null, Func<CatalogImportPreview, bool>? confirmImport = null)
     {
-        _chooseDatabase = chooseDatabase; _chooseExport = chooseExport; _chooseBackupImport = chooseBackupImport ?? (() => null); _chooseImport = chooseImport ?? ((_, _) => null); _log = log ?? (_ => { }); _applyTheme = applyTheme ?? (_ => { }); _store = new(_locator.SettingsPath);
+        _chooseDatabase = chooseDatabase; _chooseExport = chooseExport; _chooseBackupImport = chooseBackupImport ?? (() => null); _chooseImport = chooseImport ?? ((_, _) => null); _confirmImport = confirmImport ?? (_ => true); _log = log ?? (_ => { }); _applyTheme = applyTheme ?? (_ => { }); _store = new(_locator.SettingsPath);
         var manualPath = Path.Combine(Path.GetDirectoryName(_locator.SettingsPath)!, "manual-reading.json");
         _backup = new(_locator.SettingsPath, manualPath);
         Manual = new(new ManualReadingStore(manualPath), new BookMetadataService(googleApiKey: () => _settings.GoogleBooksApiKey), _log);
@@ -131,7 +134,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OpenSelectedNoteCommand = new RelayCommand(OpenSelectedNote, CanOpenSelectedNote);
         RandomNoteCommand = new RelayCommand(SelectRandomNote, () => Notes.Count > 0);
         RandomSameBookCommand = new RelayCommand(SelectRandomFromSameBook, () => SelectedNote is not null && Notes.Count(note => note.BookHash == SelectedNote.BookHash) > 1);
-        PreviousRandomNoteCommand = new RelayCommand(SelectPreviousRandomNote, () => _noteDiscovery.CanGoBack);
+        PreviousRandomNoteCommand = new RelayCommand(SelectPreviousRandomNote, () => _randomHistory.Count > 0);
+        SnoozeSelectedNoteCommand = new AsyncCommand(SnoozeSelectedNoteAsync, () => SelectedNote is not null);
+        ToggleRandomEligibilityCommand = new AsyncCommand(ToggleRandomEligibilityAsync, () => SelectedNote is not null);
         CopySelectedNoteCommand = new RelayCommand(CopySelectedNote, () => SelectedNote is not null);
         DailyNoteCommand = new RelayCommand(SelectDailyNote, () => _allNoteRows.Count > 0);
         SaveSelectedNoteCommand = new AsyncCommand(SaveSelectedNoteAsync, () => SelectedNote is not null);
@@ -145,6 +150,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ToggleReadingPlanPauseCommand = new AsyncCommand(ToggleReadingPlanPauseAsync, () => SelectedTracking?.Plan?.Enabled == true);
         StartRereadCommand = new AsyncCommand(StartRereadAsync, () => SelectedBook is not null && SelectedBookStatus == "Finished");
         OpenFocusBookCommand = new ParameterCommand<BookFocusItem>(OpenFocusBook, item => item is not null);
+        StartFocusSessionCommand = new ParameterCommand<BookFocusItem>(item => { if (item is not null) _ = StartFocusSessionAsync(item); }, item => item?.Book.Source is "Manual" or "Linked" && !Manual.HasActiveSession);
+        SkipTodayPlanCommand = new AsyncCommand(SkipTodayPlanAsync, () => SelectedTracking?.Plan is { Enabled: true, IsPaused: false });
         StartSelectedManualSessionCommand = new AsyncCommand(StartSelectedManualSessionAsync, () => SelectedManualBook is not null && !Manual.HasActiveSession);
         LinkSelectedEditionCommand = new AsyncCommand(LinkSelectedEditionAsync, () => SelectedBook is not null && LinkCandidate is not null && !IsSelectedBookLinked);
         UnlinkSelectedEditionCommand = new AsyncCommand(UnlinkSelectedEditionAsync, () => IsSelectedBookLinked);
@@ -217,6 +224,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<BookRow> Books { get; } = [];
     public ObservableCollection<BookFocusItem> ContinueReading { get; } = [];
     public ObservableCollection<BookFocusItem> ActiveReadingPlans { get; } = [];
+    public ObservableCollection<PaceDatum> SelectedPlanAdherence { get; } = [];
+    public ObservableCollection<ReadingCycleRow> SelectedBookCycles { get; } = [];
     public ObservableCollection<ChartPoint> BookTrend { get; } = [];
     public ObservableCollection<ChartPoint> BookHourly { get; } = [];
     public ObservableCollection<ChartPoint> BookWeekdays { get; } = [];
@@ -232,6 +241,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<ChartPoint> YearHeatmap { get; } = [];
     public ObservableCollection<BookSummary> YearTopBooks { get; } = [];
     public ObservableCollection<DataQualityCheck> DataQualityChecks { get; } = [];
+    public ObservableCollection<BackupHistoryItem> BackupHistory { get; } = [];
     public ObservableCollection<MatrixCell> WeekHourMatrix { get; } = [];
     public ObservableCollection<TimelineSpan> DayTimeline { get; } = [];
     public ObservableCollection<DotDatum> SessionDots { get; } = [];
@@ -266,6 +276,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public RelayCommand RandomNoteCommand { get; }
     public RelayCommand RandomSameBookCommand { get; }
     public RelayCommand PreviousRandomNoteCommand { get; }
+    public AsyncCommand SnoozeSelectedNoteCommand { get; }
+    public AsyncCommand ToggleRandomEligibilityCommand { get; }
     public RelayCommand CopySelectedNoteCommand { get; }
     public RelayCommand DailyNoteCommand { get; }
     public AsyncCommand SaveSelectedNoteCommand { get; }
@@ -279,6 +291,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public AsyncCommand ToggleReadingPlanPauseCommand { get; }
     public AsyncCommand StartRereadCommand { get; }
     public ParameterCommand<BookFocusItem> OpenFocusBookCommand { get; }
+    public ParameterCommand<BookFocusItem> StartFocusSessionCommand { get; }
+    public AsyncCommand SkipTodayPlanCommand { get; }
     public AsyncCommand StartSelectedManualSessionCommand { get; }
     public AsyncCommand LinkSelectedEditionCommand { get; }
     public AsyncCommand UnlinkSelectedEditionCommand { get; }
@@ -382,7 +396,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public DateOnly SelectedDate { get => _selectedDate; private set => Set(ref _selectedDate, value); }
     public DayDetails? SelectedDay { get => _selectedDay; private set => Set(ref _selectedDay, value); }
     public SessionDisplay? SelectedSession { get => _selectedSession; set { if (Set(ref _selectedSession, value)) BuildSessionDetail(); } }
-    public BookRow? SelectedBook { get => _selectedBook; set { if (Set(ref _selectedBook, value)) { BuildBookDetail(); UpdateOpenBookState(); Raise(nameof(IsSelectedBookPinned)); Raise(nameof(PinBookLabel)); Raise(nameof(SelectedBookOpenLabel)); Raise(nameof(SelectedManualBook)); Raise(nameof(LinkCandidate)); Raise(nameof(IsSelectedBookLinked)); Raise(nameof(LinkEditionLabel)); Raise(nameof(SelectedBookCycleSummary)); TogglePinnedBookCommand.Refresh(); SaveReadingPlanCommand.Refresh(); StartSelectedManualSessionCommand.Refresh(); StartRereadCommand.Refresh(); LinkSelectedEditionCommand.Refresh(); UnlinkSelectedEditionCommand.Refresh(); RefreshSelectedMetadataCommand.Refresh(); } } }
+    public BookRow? SelectedBook { get => _selectedBook; set { if (Set(ref _selectedBook, value)) { BuildBookDetail(); UpdateOpenBookState(); Raise(nameof(IsSelectedBookPinned)); Raise(nameof(PinBookLabel)); Raise(nameof(SelectedBookOpenLabel)); Raise(nameof(SelectedManualBook)); Raise(nameof(LinkCandidate)); Raise(nameof(IsSelectedBookLinked)); Raise(nameof(LinkEditionLabel)); Raise(nameof(SelectedBookCycleSummary)); TogglePinnedBookCommand.Refresh(); SaveReadingPlanCommand.Refresh(); StartSelectedManualSessionCommand.Refresh(); StartRereadCommand.Refresh(); SkipTodayPlanCommand.Refresh(); LinkSelectedEditionCommand.Refresh(); UnlinkSelectedEditionCommand.Refresh(); RefreshSelectedMetadataCommand.Refresh(); } } }
     public NoteRow? SelectedNote
     {
         get => _selectedNote;
@@ -399,6 +413,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OpenSelectedNoteCommand.Refresh();
             CopySelectedNoteCommand.Refresh();
             RandomSameBookCommand.Refresh();
+            SnoozeSelectedNoteCommand.Refresh();
+            ToggleRandomEligibilityCommand.Refresh();
         }
     }
     public NoteRow? DailyNote { get => _dailyNote; private set => Set(ref _dailyNote, value); }
@@ -553,6 +569,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     }
     public bool SelectedPlanIsPaused => SelectedTracking?.Plan?.IsPaused == true;
     public string ReadingPlanPauseLabel => SelectedPlanIsPaused ? "Resume plan" : "Pause plan";
+    public string SelectedPlanTodayLabel
+    {
+        get
+        {
+            var today = SelectedPlanAdherence.LastOrDefault();
+            return today is null ? "No plan for today" : today.Detail;
+        }
+    }
     public bool SelectedPlanMonday { get => IsPlanDay(DayOfWeek.Monday); set => SetPlanDay(DayOfWeek.Monday, value); }
     public bool SelectedPlanTuesday { get => IsPlanDay(DayOfWeek.Tuesday); set => SetPlanDay(DayOfWeek.Tuesday, value); }
     public bool SelectedPlanWednesday { get => IsPlanDay(DayOfWeek.Wednesday); set => SetPlanDay(DayOfWeek.Wednesday, value); }
@@ -604,7 +628,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync()
     {
-        _settings = await _store.LoadAsync(); _settings.BookTracking ??= []; _settings.BookLinks ??= []; _settings.PinnedBookKeys ??= []; _settings.NoteStates ??= []; if (_settings.AutomaticBackups) { try { _store.CreateAutomaticBackup(); } catch (Exception ex) { _log("Automatic backup error: " + ex); } } GoalEngine.Migrate(_settings); _settings.Theme = ThemeManager.Normalize(_settings.Theme); _applyTheme(_settings.Theme); _selectedRange = DateRangePresets.All.Contains(_settings.DefaultRangePreset) ? _settings.DefaultRangePreset : _settings.DefaultRangeDays switch { 1 => "Today", 7 => "7 days", 90 => "90 days", 183 => "6 months", 366 => "1 year", 365 => "This year", -1 => "All time", _ => "30 days" }; _selectedSource = SourceOptions.Contains(_settings.DefaultSourceFilter) ? _settings.DefaultSourceFilter : "All sources"; _customStart = _settings.CustomRangeStart?.ToDateTime(TimeOnly.MinValue) ?? _customStart; _customEnd = _settings.CustomRangeEnd?.ToDateTime(TimeOnly.MinValue) ?? _customEnd; _trendMetric = TrendMetrics.Contains(_settings.TrendMetric) ? _settings.TrendMetric : "Reading time"; _trendGranularity = Granularities.Contains(_settings.TrendGranularity) ? _settings.TrendGranularity : "Auto"; Manual.GoogleApiKeyState = _settings.GoogleBooksApiKey; await Manual.InitializeAsync(); if (_settings.AutomaticBackups) { try { _backup.CreateAutomatic(AppVersion); } catch (Exception ex) { _log("Complete automatic backup error: " + ex); } } RaiseSettings(); Raise(nameof(SelectedSource));
+        _settings = await _store.LoadAsync(); _settings.BookTracking ??= []; _settings.BookLinks ??= []; _settings.PinnedBookKeys ??= []; _settings.NoteStates ??= []; if (_settings.AutomaticBackups) { try { _store.CreateAutomaticBackup(); } catch (Exception ex) { _log("Automatic backup error: " + ex); } } GoalEngine.Migrate(_settings); _settings.Theme = ThemeManager.Normalize(_settings.Theme); _applyTheme(_settings.Theme); _selectedRange = DateRangePresets.All.Contains(_settings.DefaultRangePreset) ? _settings.DefaultRangePreset : _settings.DefaultRangeDays switch { 1 => "Today", 7 => "7 days", 90 => "90 days", 183 => "6 months", 366 => "1 year", 365 => "This year", -1 => "All time", _ => "30 days" }; _selectedSource = SourceOptions.Contains(_settings.DefaultSourceFilter) ? _settings.DefaultSourceFilter : "All sources"; _customStart = _settings.CustomRangeStart?.ToDateTime(TimeOnly.MinValue) ?? _customStart; _customEnd = _settings.CustomRangeEnd?.ToDateTime(TimeOnly.MinValue) ?? _customEnd; _trendMetric = TrendMetrics.Contains(_settings.TrendMetric) ? _settings.TrendMetric : "Reading time"; _trendGranularity = Granularities.Contains(_settings.TrendGranularity) ? _settings.TrendGranularity : "Auto"; Manual.GoogleApiKeyState = _settings.GoogleBooksApiKey; await Manual.InitializeAsync(); if (_settings.AutomaticBackups) { try { _backup.CreateAutomatic(AppVersion); } catch (Exception ex) { _log("Complete automatic backup error: " + ex); } } RefreshBackupHistory(); RaiseSettings(); Raise(nameof(SelectedSource));
         var path = await _locator.LocateAsync(_settings.DatabasePath);
         if (path is null) { Status = Manual.HasBooks ? "Manual library ready" : "No Readest data found"; Error = "Readest data was not found. Manual log remains available; choose statistics.db to connect digital reading."; RaiseConnectionState(); return; }
         await ConnectAsync(path);
@@ -937,6 +961,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         extraChecks.Add(new("Edition links", invalidLinks == 0 ? "Pass" : "Attention", invalidLinks == 0 ? "All linked editions resolve to both local books." : $"{invalidLinks} edition link(s) no longer resolve.", "App-owned edition map only; Readest remains read-only", invalidLinks > 0));
         var overlapping = Manual.Sessions.GroupBy(session => session.BookId).Sum(group => group.OrderBy(session => session.StartedAtUtc).Zip(group.OrderBy(session => session.StartedAtUtc).Skip(1), (left, right) => left.EndedAtUtc > right.StartedAtUtc ? 1 : 0).Sum());
         extraChecks.Add(new("Manual session timeline", overlapping == 0 ? "Pass" : "Attention", overlapping == 0 ? "No overlapping physical-reading sessions." : $"{overlapping} overlapping session pair(s) need review.", "Manual session start and end timestamps", overlapping > 0));
+        var pageOverflow = Manual.Sessions.Count(session => session.EndPage is { } page && Manual.FindBook(session.BookId)?.TotalPages is { } total && total > 0 && page > total);
+        extraChecks.Add(new("Physical page ranges", pageOverflow == 0 ? "Pass" : "Attention", pageOverflow == 0 ? "All logged pages fit their editions." : $"{pageOverflow} session(s) end beyond the book's page count.", "Manual session page validation", pageOverflow > 0));
+        var duplicateIsbns = Manual.Books.Select(book => string.IsNullOrWhiteSpace(book.Isbn13) ? book.Isbn10 : book.Isbn13).Where(isbn => !string.IsNullOrWhiteSpace(isbn)).GroupBy(isbn => isbn!.Replace("-", ""), StringComparer.OrdinalIgnoreCase).Count(group => group.Count() > 1);
+        extraChecks.Add(new("Duplicate physical editions", duplicateIsbns == 0 ? "Pass" : "Attention", duplicateIsbns == 0 ? "No duplicate ISBNs found." : $"{duplicateIsbns} duplicate ISBN group(s) found.", "Physical library ISBN comparison", duplicateIsbns > 0));
+        RefreshBackupHistory();
+        var newestBackup = BackupHistory.FirstOrDefault();
+        var backupOld = newestBackup is null || DateTimeOffset.Now - newestBackup.CreatedAt > TimeSpan.FromDays(8) || newestBackup.Status != "Ready";
+        extraChecks.Add(new("Complete backup", backupOld ? "Attention" : "Pass", newestBackup is null ? "No complete automatic backup found." : $"Latest backup: {newestBackup.Detail}.", "App-owned backup history", backupOld));
         if (extraChecks.Count > 0)
         {
             var checks = report.Checks.Concat(extraChecks).ToArray();
@@ -1079,7 +1111,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private NoteRow? ChooseRandomNote()
     {
-        var candidates = Notes.Where(note => note.Id != _lastRandomNoteId).ToArray();
+        var candidates = Notes.Where(note => note.Id != _lastRandomNoteId && !note.ExcludeFromRandom && !note.IsSnoozed).ToArray();
         if (candidates.Length == 0) candidates = Notes.ToArray();
         if (candidates.Length == 0) return null;
         var poolSize = Math.Max(1, (int)Math.Ceiling(candidates.Length * 0.4));
@@ -1096,6 +1128,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         var selected = ChooseRandomNote();
         if (selected is null) return;
+        if (!string.IsNullOrWhiteSpace(_lastRandomNoteId) && _lastRandomNoteId != selected.Id)
+        {
+            _randomHistory.Push(_lastRandomNoteId);
+            if (_randomHistory.Count > 20) { var recent = _randomHistory.Take(20).Reverse().ToArray(); _randomHistory.Clear(); foreach (var id in recent) _randomHistory.Push(id); }
+        }
         RandomNote = selected;
         _lastRandomNoteId = selected.Id;
         SelectedNote = selected;
@@ -1104,7 +1141,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private void SelectPreviousRandomNote()
     {
-        var id = _noteDiscovery.Previous();
+        var id = _randomHistory.TryPop(out var previous) ? previous : null;
         var note = id is null ? null : _allNoteRows.FirstOrDefault(item => item.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
         if (note is not null) { RandomNote = note; _lastRandomNoteId = note.Id; SelectedNote = note; }
         PreviousRandomNoteCommand.Refresh();
@@ -1134,6 +1171,19 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (note is null) return;
         note.IsFavorite = !note.IsFavorite;
         Raise(nameof(FavoriteNotesCount));
+    }
+
+    private async Task SnoozeSelectedNoteAsync()
+    {
+        if (SelectedNote is null) return;
+        SelectedNote.Snooze(7); await SaveNoteStateAsync(SelectedNote); NotesStatus = "This note will stay out of Random Note for 7 days."; SelectRandomNote();
+    }
+
+    private async Task ToggleRandomEligibilityAsync()
+    {
+        if (SelectedNote is null) return;
+        SelectedNote.ToggleRandomEligibility(); await SaveNoteStateAsync(SelectedNote); NotesStatus = SelectedNote.ExcludeFromRandom ? "This note stays searchable but will not appear randomly." : "This note can appear randomly again.";
+        if (SelectedNote.ExcludeFromRandom) SelectRandomNote();
     }
 
     private async Task SaveSelectedNoteAsync()
@@ -1323,18 +1373,41 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         var query = GlobalSearch.Trim();
         var results = new List<GlobalSearchResult>();
+        results.AddRange(new[]
+        {
+            new GlobalSearchResult("COMMAND", "Add physical book", "Open the edition search and book editor", "Manual log", "command:add-book"),
+            new GlobalSearchResult("COMMAND", "Start physical session", "Choose a physical book and start the timer", "Manual log", "command:start-session"),
+            new GlobalSearchResult("COMMAND", "Random note", "Rediscover a note now", "Notes", "command:random-note"),
+            new GlobalSearchResult("COMMAND", "Back up all app data", "Create a complete local backup", "Settings", "command:backup"),
+            new GlobalSearchResult("COMMAND", "Open Data Health", "Review source and app-owned data checks", "Settings", "command:data-health")
+        });
         results.AddRange(Pages.Select(page => new GlobalSearchResult("PAGE", page, PageSubtitleFor(page), page)));
         results.AddRange(_bookModels.Select(book => new GlobalSearchResult("BOOK", book.Title, book.Authors, "Books", book.Id.ToString())));
+        results.AddRange(Manual.Books.Where(book => !string.IsNullOrWhiteSpace(book.Isbn13)).Select(book => new GlobalSearchResult("BOOK", book.Title, $"{book.Authors} · ISBN {book.Isbn13}", "Books", book.Id.ToString())));
         results.AddRange(_allNoteRows.Select(note => new GlobalSearchResult("NOTE", string.IsNullOrWhiteSpace(note.Text) ? note.Note : note.Text, note.BookTitle, "Notes", note.Id)));
         results.AddRange(Manual.RecentSessions.Select(session => new GlobalSearchResult("SESSION", session.BookTitle, $"{session.DateLabel} · {session.DurationLabel} · {session.PageRangeLabel}", "Manual log", session.Id)));
-        if (!string.IsNullOrWhiteSpace(query)) results = results.Where(item => item.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase) || item.Detail.Contains(query, StringComparison.CurrentCultureIgnoreCase) || item.Kind.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
-        Replace(GlobalSearchResults, results.Take(40));
+        results = results.GroupBy(item => $"{item.Kind}:{item.Key}:{item.Title}", StringComparer.OrdinalIgnoreCase).Select(group => group.First()).ToList();
+        if (!string.IsNullOrWhiteSpace(query)) results = results.Select(item => (Item: item, Score: SearchRanking.Score(query, item.Title, item.Detail, item.Kind))).Where(item => item.Score > 0).OrderByDescending(item => item.Score).ThenBy(item => item.Item.Title).Select(item => item.Item).ToList();
+        else results = results.OrderBy(item => item.Kind == "COMMAND" ? 0 : item.Kind == "PAGE" ? 1 : 2).ThenBy(item => item.Title).ToList();
+        Replace(GlobalSearchResults, results.Take(50));
         SelectedGlobalSearchResult = GlobalSearchResults.FirstOrDefault();
     }
 
     private void OpenGlobalSearchResult(GlobalSearchResult? result)
     {
         if (result is null) return;
+        if (result.Key?.StartsWith("command:", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            switch (result.Key)
+            {
+                case "command:add-book": SelectedPage = "Manual log"; Manual.AddBookCommand.Execute(null); break;
+                case "command:start-session": SelectedPage = "Manual log"; break;
+                case "command:random-note": SelectedPage = "Notes"; SelectRandomNote(); break;
+                case "command:backup": SelectedPage = "Settings"; _ = BackupSettingsAsync(); break;
+                case "command:data-health": SelectedPage = "Settings"; BuildDataQuality(); break;
+            }
+            CloseCommandPalette(); return;
+        }
         if (result.Kind == "BOOK" && long.TryParse(result.Key, out var bookId))
         {
             _bookFilter = "All"; Raise(nameof(BookFilter)); ApplyBookFilters();
@@ -1533,11 +1606,16 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             if (Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
             {
                 var preview = await _libraryImport.PreviewCsvAsync(path);
+                if (!_confirmImport(preview)) { Status = "Import canceled; no data was changed."; return; }
                 var added = await Manual.ImportCatalogAsync(preview.Books);
                 Status = $"Import Center · {preview.Provider}: imported {Formatters.Count(added, "new book")}; {preview.SkippedRows} row(s) skipped.";
             }
             else
             {
+                var incoming = await ManualReadingStore.LoadPortableFileAsync(path);
+                var preview = new CatalogImportPreview($"Readest Stats · {Formatters.Count(incoming.Sessions.Count, "session")}", incoming.Books.Count, incoming.Books.Count, 0,
+                    incoming.Books.Select(book => new CatalogImportBook(book.Title, book.Authors, book.Isbn13, book.TotalPages, book.CompletedAtUtc)).ToArray());
+                if (!_confirmImport(preview)) { Status = "Import canceled; no data was changed."; return; }
                 var result = await Manual.ImportLibraryAsync(path);
                 Status = $"Import Center · Readest Stats: imported {Formatters.Count(result.Books, "new book")} and {Formatters.Count(result.Sessions, "new session")}";
             }
@@ -1578,8 +1656,31 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private void BuildSelectedPlan()
     {
         SelectedBookPlan = SelectedBook is null ? _readingPlanEngine.Evaluate(null, null, null, 0, DateOnly.FromDateTime(DateTime.Today)) : PlanFor(SelectedBook);
+        BuildSelectedPlanAdherence();
+        BuildSelectedCycles();
         Raise(nameof(SelectedPlanStartDate)); Raise(nameof(SelectedPlanTargetDate)); Raise(nameof(SelectedPlanDailyMinutes)); Raise(nameof(SelectedPlanDailyPages)); Raise(nameof(SelectedPlanIncludeWeekends)); Raise(nameof(SelectedPlanPriority)); Raise(nameof(SelectedPlanUsesPages)); Raise(nameof(SelectedBookPlanGoal)); Raise(nameof(SelectedPlanIsPaused)); Raise(nameof(ReadingPlanPauseLabel));
         Raise(nameof(SelectedPlanMonday)); Raise(nameof(SelectedPlanTuesday)); Raise(nameof(SelectedPlanWednesday)); Raise(nameof(SelectedPlanThursday)); Raise(nameof(SelectedPlanFriday)); Raise(nameof(SelectedPlanSaturday)); Raise(nameof(SelectedPlanSunday));
+        Raise(nameof(SelectedPlanTodayLabel)); SkipTodayPlanCommand.Refresh();
+    }
+
+    private void BuildSelectedPlanAdherence()
+    {
+        SelectedPlanAdherence.Clear();
+        if (SelectedBook is null || SelectedTracking?.Plan is not { Enabled: true } plan) return;
+        var today = DateOnly.FromDateTime(DateTime.Today); var start = today.AddDays(-13);
+        if (plan.StartDate is { } planStart && planStart > start) start = planStart;
+        Dictionary<DateOnly, double> actual;
+        if (plan.DailyPages > 0 && SelectedManualBook is { } manual)
+            actual = Manual.Sessions.Where(session => session.BookId == manual.Id).GroupBy(session => DateOnly.FromDateTime(session.StartedAtUtc.ToLocalTime().DateTime)).ToDictionary(group => group.Key, group => group.Sum(session => (double)(session.PagesRead ?? 0)));
+        else
+            actual = _events.Where(item => item.BookId == SelectedBook.Id).GroupBy(item => DateOnly.FromDateTime(_statistics.ToLocal(item.Start).DateTime)).ToDictionary(group => group.Key, group => group.Sum(item => item.DurationSeconds) / 60d);
+        Replace(SelectedPlanAdherence, _planAdherenceEngine.Build(plan, start, today, actual).Select(day => new PaceDatum(day.Label, day.Actual, day.Planned, day.Detail)));
+    }
+
+    private void BuildSelectedCycles()
+    {
+        var tracking = SelectedTracking;
+        Replace(SelectedBookCycles, (tracking?.Cycles ?? []).OrderByDescending(cycle => cycle.Number).Select(cycle => new ReadingCycleRow(cycle.Id, cycle.Label, cycle.StartedAtUtc, cycle.CompletedAtUtc, cycle.Id == tracking?.CurrentCycleId)));
     }
 
     private void BuildContinueReading()
@@ -1612,6 +1713,21 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (item is null) return;
         SelectedBook = Books.FirstOrDefault(book => book.Id == item.Book.Id) ?? item.Book;
         SelectedPage = "Books";
+    }
+
+    private async Task StartFocusSessionAsync(BookFocusItem item)
+    {
+        SelectedBook = Books.FirstOrDefault(book => book.Id == item.Book.Id) ?? item.Book;
+        if (SelectedManualBook is null) { SelectedPage = "Books"; return; }
+        await StartSelectedManualSessionAsync();
+    }
+
+    private async Task SkipTodayPlanAsync()
+    {
+        if (SelectedTracking?.Plan is not { Enabled: true } plan) return;
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        if (!plan.SkippedDates.Contains(today)) plan.SkippedDates.Add(today);
+        await _store.SaveAsync(_settings); BuildSelectedPlan(); BuildContinueReading(); Status = "Today's plan was skipped; history remains intact.";
     }
 
     private async Task SaveReadingPlanAsync()
@@ -1793,8 +1909,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (path is null) return;
         await _store.SaveAsync(_settings);
         _backup.Create(path, AppVersion);
+        RefreshBackupHistory();
         Status = "Complete backup created · settings, goals, physical books, sessions and notes included";
     }
+
+    private void RefreshBackupHistory() => Replace(BackupHistory, _backup.ListAutomatic());
 
     private async Task RestoreBackupAsync()
     {

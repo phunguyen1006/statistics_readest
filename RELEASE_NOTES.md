@@ -1,3 +1,28 @@
+# Readest Stats v2.1.0
+
+Version 2.1.0 makes the daily workflow more actionable and every risky library operation easier to understand or reverse.
+
+## Daily focus and planning
+
+- Adds a Today reading-plan queue with direct session start for physical editions.
+- Adds a 14-day planned-versus-actual chart, an explicit Skip today action, and preserved skipped-day history.
+- Shows every reading cycle with its date range and current/completed state instead of collapsing re-reads into one status.
+
+## Import, rediscovery, and search
+
+- Adds a large Import Center preview for Goodreads, StoryGraph, generic CSV, and Readest Stats JSON before anything is saved.
+- Adds one-step undo for the latest import and for a deleted physical book with its sessions.
+- Adds seven-day note snooze, permanent random-pick exclusion, and a 20-note random history.
+- Makes Ctrl+K accent-insensitive, adds useful actions, and supports Up, Down, Home, End, and Enter entirely from the keyboard.
+
+## Data confidence
+
+- Shows automatic backup history with size, version, and record counts.
+- Extends Data Health with backup age, duplicate ISBN, page-overflow, edition-link, database-integrity, and overlapping-session checks.
+- Adds v2.1 regression tests for adherence states, Vietnamese search, persisted rediscovery preferences, and backup inspection.
+
+---
+
 # Readest Stats v2.0.0
 
 Version 2.0.0 is the new local-first foundation for Readest Stats, connecting daily focus, physical reading, book planning, note rediscovery, and data safety into one workflow.

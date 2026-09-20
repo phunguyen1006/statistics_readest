@@ -61,6 +61,7 @@ public sealed class AppSettings
     public int LibrarySchemaVersion { get; set; } = 2;
     public List<string> PinnedBookKeys { get; set; } = [];
     public bool AutomaticBackups { get; set; } = true;
+    public string Language { get; set; } = "System";
     /// <summary>Statistics-owned note curation. Readest source files remain read-only.</summary>
     public Dictionary<string, NoteUserState> NoteStates { get; set; } = [];
     public int NoteStateSchemaVersion { get; set; } = 3;
@@ -95,6 +96,7 @@ public sealed class ReadingPlan
     public int DailyPages { get; set; }
     public bool IncludeWeekends { get; set; } = true;
     public List<DayOfWeek> ReadingDays { get; set; } = [];
+    public List<DateOnly> SkippedDates { get; set; } = [];
     public int Priority { get; set; } = 2;
     public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 }

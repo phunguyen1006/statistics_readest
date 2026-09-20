@@ -40,6 +40,10 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
     private DateTimeOffset _lastTimerHeartbeatUtc;
     private long? _editingBookId;
     private ManualReadingSession? _lastDeletedSession;
+    private ManualBook? _lastDeletedBook;
+    private List<ManualReadingSession> _lastDeletedBookSessions = [];
+    private readonly List<long> _lastImportedBookIds = [];
+    private readonly List<string> _lastImportedSessionIds = [];
 
     public ManualLogViewModel(ManualReadingStore store, BookMetadataService metadata, Action<string>? log = null, CoverCacheService? coverCache = null)
     {
@@ -61,6 +65,8 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
         DiscardSessionCommand = new AsyncCommand(DiscardSessionAsync, () => HasActiveSession);
         DeleteSessionCommand = new ParameterCommand<ManualSessionRow>(row => { if (row is not null) _ = DeleteSessionAsync(row.Id); });
         UndoDeleteSessionCommand = new AsyncCommand(UndoDeleteSessionAsync, () => _lastDeletedSession is not null);
+        UndoDeleteBookCommand = new AsyncCommand(UndoDeleteBookAsync, () => _lastDeletedBook is not null);
+        UndoLastImportCommand = new AsyncCommand(UndoLastImportAsync, () => _lastImportedBookIds.Count > 0 || _lastImportedSessionIds.Count > 0);
         DeleteBookCommand = new ParameterCommand<ManualBook>(book => { if (book is not null) _ = DeleteBookAsync(book.Id); });
         EditBookCommand = new ParameterCommand<ManualBook>(BeginEditBook, book => book is not null && !HasActiveSession);
         OpenMetadataCommand = new RelayCommand(OpenMetadata, () => SelectedSearchResult?.InfoUrl is not null);
@@ -84,6 +90,8 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
     public AsyncCommand DiscardSessionCommand { get; }
     public ParameterCommand<ManualSessionRow> DeleteSessionCommand { get; }
     public AsyncCommand UndoDeleteSessionCommand { get; }
+    public AsyncCommand UndoDeleteBookCommand { get; }
+    public AsyncCommand UndoLastImportCommand { get; }
     public ParameterCommand<ManualBook> DeleteBookCommand { get; }
     public ParameterCommand<ManualBook> EditBookCommand { get; }
     public RelayCommand OpenMetadataCommand { get; }
@@ -161,6 +169,8 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
     public bool HasBooks => Books.Count > 0;
     public bool HasSessions => RecentSessions.Count > 0;
     public bool CanUndoDeleteSession => _lastDeletedSession is not null;
+    public bool CanUndoDeleteBook => _lastDeletedBook is not null;
+    public bool CanUndoLastImport => _lastImportedBookIds.Count > 0 || _lastImportedSessionIds.Count > 0;
     public bool HasActiveSession => _data.ActiveSession is not null;
     public bool CanSelectBook => !HasActiveSession;
     public bool IsSessionPaused => _data.ActiveSession?.IsPaused == true;
@@ -290,6 +300,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
 
     public async Task<(int Books, int Sessions)> ImportLibraryAsync(string path)
     {
+        _lastImportedBookIds.Clear(); _lastImportedSessionIds.Clear();
         var incoming = await ManualReadingStore.LoadPortableFileAsync(path);
         var idMap = new Dictionary<long, long>();
         var booksAdded = 0;
@@ -302,6 +313,7 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
                 var originalId = source.Id;
                 source.Id = ManualReadingStore.NextBookId(_data.Books.Select(book => book.Id));
                 _data.Books.Add(source);
+                _lastImportedBookIds.Add(source.Id);
                 idMap[originalId] = source.Id;
                 booksAdded++;
             }
@@ -313,33 +325,46 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
             if (!idMap.TryGetValue(session.BookId, out var mappedId)) continue;
             session.BookId = mappedId;
             _data.Sessions.Add(session);
+            _lastImportedSessionIds.Add(session.Id);
             sessionsAdded++;
         }
         foreach (var id in idMap.Values.Distinct()) RecalculateBookProgress(id);
         await SaveAndPublishAsync();
         RebuildCollections();
+        RaiseImportUndo();
         return (booksAdded, sessionsAdded);
     }
 
     public async Task<int> ImportCatalogAsync(IEnumerable<CatalogImportBook> incoming)
     {
+        _lastImportedBookIds.Clear(); _lastImportedSessionIds.Clear();
         var added = 0;
         foreach (var source in incoming)
         {
             var existing = _data.Books.FirstOrDefault(book => source.Isbn13 is not null && book.Isbn13 == source.Isbn13)
                 ?? _data.Books.FirstOrDefault(book => book.Title.Equals(source.Title, StringComparison.CurrentCultureIgnoreCase) && book.Authors.Equals(source.Authors, StringComparison.CurrentCultureIgnoreCase));
             if (existing is not null) continue;
-            _data.Books.Add(new ManualBook
+            var imported = new ManualBook
             {
                 Id = ManualReadingStore.NextBookId(_data.Books.Select(book => book.Id)), Title = source.Title, Authors = source.Authors,
                 Isbn13 = source.Isbn13, TotalPages = source.Pages, CompletedAtUtc = source.FinishedAtUtc,
                 CurrentPage = source.FinishedAtUtc is not null ? source.Pages : null, ExternalSource = "CSV import"
-            });
+            };
+            _data.Books.Add(imported); _lastImportedBookIds.Add(imported.Id);
             added++;
         }
         await SaveAndPublishAsync();
         RebuildCollections();
+        RaiseImportUndo();
         return added;
+    }
+
+    private async Task UndoLastImportAsync()
+    {
+        _data.Sessions.RemoveAll(session => _lastImportedSessionIds.Contains(session.Id));
+        _data.Books.RemoveAll(book => _lastImportedBookIds.Contains(book.Id) && !_data.Sessions.Any(session => session.BookId == book.Id));
+        _lastImportedBookIds.Clear(); _lastImportedSessionIds.Clear();
+        await SaveAndPublishAsync(); RebuildCollections(); RaiseImportUndo(); Status = "The last import was undone.";
     }
 
     public async Task<string?> SaveHistoricalSessionAsync(string? id, long bookId, DateTimeOffset startedAt, double durationMinutes, int startPage, int endPage, string note)
@@ -675,12 +700,28 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
         if (_data.ActiveSession?.BookId == id) { Status = "Finish or discard the active session before deleting this book."; return; }
         var book = _data.Books.FirstOrDefault(item => item.Id == id);
         if (book is null) return;
+        _lastDeletedBook = CloneBook(book);
+        _lastDeletedBookSessions = _data.Sessions.Where(session => session.BookId == id).Select(CloneSession).ToList();
         _data.Sessions.RemoveAll(session => session.BookId == id);
         _data.Books.Remove(book);
         await SaveAndPublishAsync();
         RebuildCollections();
         Status = $"Deleted {book.Title} and its manual sessions.";
+        Raise(nameof(CanUndoDeleteBook)); UndoDeleteBookCommand.Refresh();
     }
+
+    private async Task UndoDeleteBookAsync()
+    {
+        if (_lastDeletedBook is not { } book || _data.Books.Any(item => item.Id == book.Id)) return;
+        _data.Books.Add(CloneBook(book));
+        foreach (var session in _lastDeletedBookSessions.Where(session => !_data.Sessions.Any(item => item.Id == session.Id))) _data.Sessions.Add(CloneSession(session));
+        _lastDeletedBook = null; _lastDeletedBookSessions = [];
+        await SaveAndPublishAsync(); RebuildCollections(); Raise(nameof(CanUndoDeleteBook)); UndoDeleteBookCommand.Refresh(); Status = "Deleted book and sessions restored.";
+    }
+
+    private void RaiseImportUndo() { Raise(nameof(CanUndoLastImport)); UndoLastImportCommand.Refresh(); }
+
+    private static ManualBook CloneBook(ManualBook source) => JsonSerializer.Deserialize<ManualBook>(JsonSerializer.Serialize(source))!;
 
     private void RecalculateBookProgress(long bookId)
     {

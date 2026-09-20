@@ -41,7 +41,7 @@ public sealed class ReadingPlanEngine
     {
         if (end < start) return 0;
         var count = 0;
-        for (var date = start; date <= end; date = date.AddDays(1)) if (IsReadingDay(date.DayOfWeek, plan)) count++;
+        for (var date = start; date <= end; date = date.AddDays(1)) if (IsReadingDay(date, plan)) count++;
         return count;
     }
 
@@ -64,7 +64,7 @@ public sealed class ReadingPlanEngine
         while (remaining > 0)
         {
             date = date.AddDays(1);
-            if (IsReadingDay(date.DayOfWeek, plan)) remaining--;
+            if (IsReadingDay(date, plan)) remaining--;
         }
         return date;
     }
@@ -72,4 +72,6 @@ public sealed class ReadingPlanEngine
     private static bool IsReadingDay(DayOfWeek day, ReadingPlan plan) => plan.ReadingDays.Count > 0
         ? plan.ReadingDays.Contains(day)
         : plan.IncludeWeekends || day is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
+
+    private static bool IsReadingDay(DateOnly date, ReadingPlan plan) => !plan.SkippedDates.Contains(date) && IsReadingDay(date.DayOfWeek, plan);
 }

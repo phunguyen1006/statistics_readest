@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using ReadestStats.ViewModels;
 
@@ -56,7 +57,24 @@ public partial class MainWindow : Window
 
     private void CommandSearchBox_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || DataContext is not MainViewModel viewModel || viewModel.SelectedGlobalSearchResult is null) return;
+        if (DataContext is not MainViewModel viewModel) return;
+        var resultList = (CommandSearchBox.Parent as Panel)?.Children.OfType<ListBox>().FirstOrDefault();
+        if (resultList is not null && e.Key is Key.Down or Key.Up or Key.Home or Key.End)
+        {
+            var count = resultList.Items.Count;
+            if (count == 0) return;
+            resultList.SelectedIndex = e.Key switch
+            {
+                Key.Home => 0,
+                Key.End => count - 1,
+                Key.Down => Math.Min(count - 1, Math.Max(0, resultList.SelectedIndex + 1)),
+                _ => Math.Max(0, resultList.SelectedIndex - 1)
+            };
+            resultList.ScrollIntoView(resultList.SelectedItem);
+            e.Handled = true;
+            return;
+        }
+        if (e.Key != Key.Enter || viewModel.SelectedGlobalSearchResult is null) return;
         viewModel.OpenGlobalSearchResultCommand.Execute(viewModel.SelectedGlobalSearchResult);
         e.Handled = true;
     }

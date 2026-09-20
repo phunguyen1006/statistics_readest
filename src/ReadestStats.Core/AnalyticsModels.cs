@@ -25,6 +25,17 @@ public sealed record DotDatum(string Label, double Value, double Secondary, stri
 public sealed record CompositionPart(string Label, double Value, string Detail, int Index);
 public sealed record DumbbellDatum(string Label, double Current, double Previous, string CurrentLabel, string PreviousLabel);
 public sealed record PaceDatum(string Label, double Actual, double Required, string Detail);
+public sealed record PlanAdherenceDay(DateOnly Date, double Planned, double Actual, string Status, string Unit)
+{
+    public double Percent => Planned <= 0 ? 0 : Math.Min(100, Actual * 100d / Planned);
+    public string Label => Date.ToString("ddd d");
+    public string Detail => $"{Date:MMM d} · {Actual:0.#} / {Planned:0.#} {Unit} · {Status}";
+}
+public sealed record ReadingCycleRow(string Id, string Label, DateTimeOffset StartedAtUtc, DateTimeOffset? CompletedAtUtc, bool IsCurrent)
+{
+    public string DateRange => CompletedAtUtc is { } completed ? $"{StartedAtUtc.ToLocalTime():MMM d, yyyy} – {completed.ToLocalTime():MMM d, yyyy}" : $"Started {StartedAtUtc.ToLocalTime():MMM d, yyyy}";
+    public string Status => CompletedAtUtc is null ? "In progress" : "Completed";
+}
 public sealed record BookFocusItem(BookRow Book, string Reason, string ActionLabel, ReadingPlanProgress Plan)
 {
     public string Title => Book.Title;
