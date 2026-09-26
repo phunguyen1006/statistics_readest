@@ -44,7 +44,7 @@ public sealed class AppDatabase
         Initialize();
         using var connection = Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT EXISTS(SELECT 1 FROM manual_books) OR EXISTS(SELECT 1 FROM manual_sessions) OR EXISTS(SELECT 1 FROM active_manual_session)";
+        command.CommandText = "SELECT EXISTS(SELECT 1 FROM manual_books) OR EXISTS(SELECT 1 FROM manual_sessions) OR EXISTS(SELECT 1 FROM active_manual_session) OR EXISTS(SELECT 1 FROM app_meta WHERE key='last_write_utc')";
         return Convert.ToInt32(command.ExecuteScalar()) != 0;
     }
 
@@ -53,6 +53,8 @@ public sealed class AppDatabase
         Initialize();
         using var connection = Open();
         var data = new ManualReadingData { SchemaVersion = 3 };
+        var references = ScalarString(connection, "SELECT value FROM app_meta WHERE key='recovery_references'");
+        if (references is not null) data.RecoveryReferences = JsonSerializer.Deserialize<LibraryReferenceSnapshot>(references);
         using (var command = connection.CreateCommand())
         {
             command.CommandText = "SELECT payload FROM manual_books ORDER BY id";
@@ -78,6 +80,12 @@ public sealed class AppDatabase
         Initialize();
         using var connection = Open();
         using var transaction = connection.BeginTransaction();
+        WriteManualData(connection, transaction, data);
+        transaction.Commit();
+    }
+
+    private static void WriteManualData(SqliteConnection connection, SqliteTransaction transaction, ManualReadingData data)
+    {
         Execute(connection, transaction, "DELETE FROM manual_books");
         Execute(connection, transaction, "DELETE FROM manual_sessions");
         Execute(connection, transaction, "DELETE FROM active_manual_session");
@@ -118,7 +126,8 @@ public sealed class AppDatabase
         }
         SetMeta(connection, transaction, "schema_version", CurrentSchemaVersion.ToString());
         SetMeta(connection, transaction, "last_write_utc", DateTimeOffset.UtcNow.ToString("O"));
-        transaction.Commit();
+        if (data.RecoveryReferences is not null) SetMeta(connection, transaction, "recovery_references", JsonSerializer.Serialize(data.RecoveryReferences));
+        else Execute(connection, transaction, "DELETE FROM app_meta WHERE key='recovery_references'");
     }
 
     public AppDatabaseHealth Inspect()
@@ -165,6 +174,8 @@ public sealed class AppDatabase
     {
         Initialize(); using var connection = Open(); using var transaction = connection.BeginTransaction(); long id; string json;
         using (var command = connection.CreateCommand()) { command.Transaction = transaction; command.CommandText = "SELECT id,snapshot FROM operation_journal ORDER BY id DESC LIMIT 1"; using var reader = command.ExecuteReader(); if (!reader.Read()) return null; id = reader.GetInt64(0); json = reader.GetString(1); }
+        var restored = JsonSerializer.Deserialize<ManualReadingData>(json, JsonOptions) ?? throw new InvalidDataException("The undo snapshot is invalid.");
+        WriteManualData(connection, transaction, restored);
         using (var command = connection.CreateCommand()) { command.Transaction = transaction; command.CommandText = "DELETE FROM operation_journal WHERE id=$id"; command.Parameters.AddWithValue("$id", id); command.ExecuteNonQuery(); }
         transaction.Commit(); return Deserialize<ManualReadingData>(json);
     }

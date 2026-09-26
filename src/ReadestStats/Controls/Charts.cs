@@ -23,7 +23,7 @@ public sealed class BarChart : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         base.OnRender(dc); _hits.Clear(); var items = ItemsSource?.ToArray() ?? []; var textBrush = (Brush)FindResource("TextMuted"); var gridBrush = (Brush)FindResource("ChartGrid"); var primary = (Brush)FindResource("Primary"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        if (items.Length == 0 || items.All(x => x.Value <= 0)) { DrawText(dc, "No activity in this period", new Point(12, Math.Max(12, ActualHeight / 2 - 8)), 12, textBrush, dpi); return; }
+        if (items.Length == 0 || items.All(x => x.Value <= 0)) { DrawText(dc, Localization.Localizer.Instance.Translate("No activity in this period"), new Point(12, Math.Max(12, ActualHeight / 2 - 8)), 12, textBrush, dpi); return; }
         var plot = new Rect(43, 12, Math.Max(1, ActualWidth - 51), Math.Max(1, ActualHeight - 42)); var max = Math.Max(1, items.Max(x => x.Value));
         var unit = items.Select(item => item.Unit).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
         for (var i = 0; i <= 3; i++) { var y = plot.Top + plot.Height * i / 3; dc.DrawLine(new Pen(gridBrush, 1), new(plot.Left, y), new(plot.Right, y)); DrawText(dc, FormatValue(max * (3 - i) / 3, unit), new(1, y - 7), 10, textBrush, dpi); }
@@ -59,14 +59,14 @@ public sealed class HeatmapChart : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         _hits.Clear(); var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var positive = items.Where(x => x.Value > 0).Select(x => x.Value).Order().ToArray(); var levels = Enumerable.Range(0, 5).Select(i => (Brush)FindResource($"Heatmap{i}")).ToArray(); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip; var muted = (Brush)FindResource("TextMuted"); var first = DateOnly.TryParse(items[0].Label, out var parsed) ? parsed : new DateOnly(2026, 1, 5); var shift = ((int)first.DayOfWeek + 6) % 7; var columns = (int)Math.Ceiling((shift + items.Length) / 7d); var left = 31d; var top = 20d; var gap = 3d; var cell = Math.Clamp((ActualWidth - left - 10 - gap * columns) / Math.Max(1, columns), 6, 13);
-        DrawText(dc, "Mon", new(0, top + 0 * (cell + gap) - 1), 9, muted, dpi); DrawText(dc, "Wed", new(0, top + 2 * (cell + gap) - 1), 9, muted, dpi); DrawText(dc, "Fri", new(0, top + 4 * (cell + gap) - 1), 9, muted, dpi);
+        DrawText(dc, Localization.Localizer.Instance.Translate("Mon"), new(0, top + 0 * (cell + gap) - 1), 9, muted, dpi); DrawText(dc, Localization.Localizer.Instance.Translate("Wed"), new(0, top + 2 * (cell + gap) - 1), 9, muted, dpi); DrawText(dc, Localization.Localizer.Instance.Translate("Fri"), new(0, top + 4 * (cell + gap) - 1), 9, muted, dpi);
         string? lastMonth = null;
         for (var i = 0; i < items.Length; i++)
         {
             var index = shift + i; var col = index / 7; var row = index % 7; var level = Bucket(items[i].Value, positive); var rect = new Rect(left + col * (cell + gap), top + row * (cell + gap), cell, cell); dc.DrawRoundedRectangle(levels[level], IsKeyboardFocused && i == _selectedIndex ? new Pen((Brush)FindResource("Focus"), 2) : null, rect, 2, 2); _hits.Add((rect, items[i]));
             if (DateOnly.TryParse(items[i].Label, out var date) && date.Day <= 7 && date.ToString("MMM") != lastMonth) { lastMonth = date.ToString("MMM"); DrawText(dc, lastMonth, new(rect.X, 1), 9, muted, dpi); }
         }
-        var legendY = top + 7 * (cell + gap) + 5; DrawText(dc, "Less", new(left, legendY), 9, muted, dpi); var legendX = left + 27; for (var i = 0; i < levels.Length; i++) dc.DrawRoundedRectangle(levels[i], null, new(legendX + i * 14, legendY, 10, 10), 2, 2); DrawText(dc, "More", new(legendX + 73, legendY), 9, muted, dpi);
+        var legendY = top + 7 * (cell + gap) + 5; DrawText(dc, Localization.Localizer.Instance.Translate("Less"), new(left, legendY), 9, muted, dpi); var legendX = left + 27; for (var i = 0; i < levels.Length; i++) dc.DrawRoundedRectangle(levels[i], null, new(legendX + i * 14, legendY, 10, 10), 2, 2); DrawText(dc, Localization.Localizer.Instance.Translate("More"), new(legendX + 73, legendY), 9, muted, dpi);
     }
     protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(x => x.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : hit.Item.Detail ?? $"{hit.Item.Label}\n{hit.Item.Value:0.#} min"; Cursor = hit.Item is null ? Cursors.Arrow : Cursors.Hand; }
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e) { var hit = _hits.Select((value, index) => (value, index)).FirstOrDefault(x => x.value.Rect.Contains(e.GetPosition(this))); if (hit.value.Item is null) return; _selectedIndex = hit.index; Focus(); InvalidateVisual(); if (ItemClickCommand?.CanExecute(hit.value.Item) == true) ItemClickCommand.Execute(hit.value.Item); }
@@ -101,7 +101,7 @@ public sealed class LineChart : FrameworkElement
         var items = ItemsSource?.ToArray() ?? [];
         var comparison = ComparisonItemsSource?.ToArray() ?? [];
         var muted = (Brush)FindResource("TextMuted"); var grid = (Brush)FindResource("ChartGrid"); var primary = (Brush)FindResource("Primary"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        if (items.Length == 0 || items.All(item => item.Value <= 0) && comparison.All(item => item.Value <= 0)) { DrawText(dc, "Not enough reading history yet", new(8, Math.Max(8, ActualHeight / 2 - 8)), 12, muted, dpi); return; }
+        if (items.Length == 0 || items.All(item => item.Value <= 0) && comparison.All(item => item.Value <= 0)) { DrawText(dc, Localization.Localizer.Instance.Translate("Not enough reading history yet"), new(8, Math.Max(8, ActualHeight / 2 - 8)), 12, muted, dpi); return; }
         var plot = new Rect(42, 13, Math.Max(1, ActualWidth - 54), Math.Max(1, ActualHeight - 44)); var max = Math.Max(1, items.Concat(comparison).Max(item => item.Value));
         var unit = items.Select(item => item.Unit).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
         for (var i = 0; i <= 2; i++) { var y = plot.Top + plot.Height * i / 2; dc.DrawLine(new Pen(grid, 1), new(plot.Left, y), new(plot.Right, y)); DrawText(dc, FormatValue(max * (2 - i) / 2, unit), new(1, y - 7), 10, muted, dpi); }
@@ -116,20 +116,27 @@ public sealed class LineChart : FrameworkElement
             var comparePoints = new List<Point>(); var compareSlot = comparison.Length == 1 ? 0d : plot.Width / (comparison.Length - 1);
             for (var i = 0; i < comparison.Length; i++) comparePoints.Add(new Point(comparison.Length == 1 ? plot.Left + plot.Width / 2 : plot.Left + compareSlot * i, plot.Bottom - plot.Height * Math.Max(0, comparison[i].Value) / max));
             if (comparePoints.Count > 1) dc.DrawGeometry(null, new Pen(muted, 1.6) { DashStyle = DashStyles.Dash, LineJoin = PenLineJoin.Round }, new StreamGeometryBuilder(comparePoints).Geometry);
+            else dc.DrawEllipse(null, new Pen(muted, 1.6), comparePoints[0], 4, 4);
         }
         if (points.Count > 1) dc.DrawGeometry(null, new Pen(primary, 2) { LineJoin = PenLineJoin.Round }, new StreamGeometryBuilder(points).Geometry);
         var bestIndex = Array.FindIndex(items, item => item == items.MaxBy(value => value.Value));
         for (var i = 0; i < points.Count; i++) dc.DrawEllipse(i == bestIndex ? primary : (Brush)FindResource("Surface"), new Pen(IsKeyboardFocused && i == _selectedIndex ? (Brush)FindResource("Focus") : primary, IsKeyboardFocused && i == _selectedIndex ? 3 : i == bestIndex ? 2 : 1), points[i], i == bestIndex || IsKeyboardFocused && i == _selectedIndex ? 4 : 2.5, i == bestIndex || IsKeyboardFocused && i == _selectedIndex ? 4 : 2.5);
         var labelStep = Math.Max(1, (int)Math.Ceiling(items.Length / 6d));
         for (var i = 0; i < items.Length; i++) if (i == 0 || i == items.Length - 1 || i % labelStep == 0) DrawText(dc, items[i].Label, new(points[i].X - 10, plot.Bottom + 8), 10, muted, dpi);
-        if (bestIndex >= 0) DrawText(dc, $"Peak · {items[bestIndex].Label}", new(Math.Min(plot.Right - 70, points[bestIndex].X + 7), Math.Max(0, points[bestIndex].Y - 20)), 10, primary, dpi);
+        if (bestIndex >= 0) DrawText(dc, Localization.Localizer.Instance.Translate($"Peak · {items[bestIndex].Label}"), new(Math.Min(plot.Right - 70, points[bestIndex].X + 7), Math.Max(0, points[bestIndex].Y - 20)), 10, primary, dpi);
     }
 
-    protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this))); if (hit.Item is null) { ToolTip = null; return; } var index = _hits.IndexOf(hit); var compare = ComparisonItemsSource?.ElementAtOrDefault(index); ToolTip = compare is null ? $"{hit.Item.Label}\n{hit.Item.Detail ?? Compact(hit.Item.Value)}" : $"{hit.Item.Label}\nCurrent: {hit.Item.Detail ?? Compact(hit.Item.Value)}\nComparison: {compare.Detail ?? Compact(compare.Value)}"; }
+    protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : Describe(hit.Item, _hits.IndexOf(hit)); }
     protected override void OnKeyDown(KeyEventArgs e) { var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var old = _selectedIndex; _selectedIndex = e.Key switch { Key.Left => Math.Max(0, _selectedIndex - 1), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 1), Key.Home => 0, Key.End => items.Length - 1, _ => _selectedIndex }; if (old == _selectedIndex) return; Announce(items[_selectedIndex]); InvalidateVisual(); e.Handled = true; }
     protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) { _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); Announce(items[_selectedIndex]); } InvalidateVisual(); }
     protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); InvalidateVisual(); }
-    private void Announce(ChartPoint item) { var text = $"{item.Label}. {item.Detail ?? FormatValue(item.Value, item.Unit)}"; ToolTip = text; AutomationProperties.SetHelpText(this, text); }
+    private string Describe(ChartPoint item, int index)
+    {
+        var text = $"{item.Label}: {item.Detail ?? FormatValue(item.Value, item.Unit)}";
+        var baseline = ComparisonItemsSource?.ElementAtOrDefault(index);
+        return baseline is null ? text : text + "\n" + Localization.Localizer.Instance.Translate("Comparison") + $" · {baseline.Label}: {baseline.Detail ?? FormatValue(baseline.Value, baseline.Unit)}";
+    }
+    private void Announce(ChartPoint item) { var text = Describe(item, _selectedIndex); ToolTip = text; AutomationProperties.SetHelpText(this, text); }
     private static void DrawText(DrawingContext dc, string text, Point point, double size, Brush brush, double dpi) => dc.DrawText(new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size, brush, dpi), point);
     private static string Compact(double value) => value >= 1000 ? $"{value / 1000:0.#}k" : value >= 100 ? $"{value:0}" : $"{value:0.#}";
     private static string FormatValue(double value, string? unit) => $"{Compact(value)}{(string.IsNullOrWhiteSpace(unit) ? "" : " " + unit)}";
@@ -149,7 +156,7 @@ public sealed class RadialClockChart : FrameworkElement
         var muted = (Brush)FindResource("TextMuted"); var grid = (Brush)FindResource("ChartGrid"); var primary = (Brush)FindResource("Primary"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var center = new Point(ActualWidth / 2, ActualHeight / 2); var outer = Math.Max(20, Math.Min(ActualWidth, ActualHeight) / 2 - 24); var inner = outer * .56;
         dc.DrawEllipse(null, new Pen(grid, 1), center, inner, inner); dc.DrawEllipse(null, new Pen(grid, 1), center, outer, outer);
-        if (items.Length == 0 || items.All(item => item.Value <= 0)) { DrawCentered(dc, "NO ACTIVITY", center, 11, muted, dpi); return; }
+        if (items.Length == 0 || items.All(item => item.Value <= 0)) { DrawCentered(dc, Localization.Localizer.Instance.Translate("NO ACTIVITY"), center, 11, muted, dpi); return; }
         var max = items.Max(item => item.Value);
         for (var i = 0; i < items.Length; i++)
         {
@@ -157,7 +164,7 @@ public sealed class RadialClockChart : FrameworkElement
             var start = new Point(center.X + Math.Cos(angle) * inner, center.Y + Math.Sin(angle) * inner); var end = new Point(center.X + Math.Cos(angle) * endRadius, center.Y + Math.Sin(angle) * endRadius);
             var brush = primary.Clone(); brush.Opacity = .22 + .78 * normalized; brush.Freeze(); dc.DrawLine(new Pen(brush, 5) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, start, end); _hits.Add((end, items[i]));
         }
-        DrawCentered(dc, "24H", new(center.X, center.Y - 7), 17, primary, dpi); DrawCentered(dc, "READING", new(center.X, center.Y + 12), 9, muted, dpi);
+        DrawCentered(dc, Localization.Localizer.Instance.Translate("24H"), new(center.X, center.Y - 7), 17, primary, dpi); DrawCentered(dc, Localization.Localizer.Instance.Translate("READING"), new(center.X, center.Y + 12), 9, muted, dpi);
         foreach (var (label, hour) in new[] { ("00", 0), ("06", 6), ("12", 12), ("18", 18) }) { var angle = (hour * 15 - 90) * Math.PI / 180; DrawCentered(dc, label, new(center.X + Math.Cos(angle) * (outer + 13), center.Y + Math.Sin(angle) * (outer + 13)), 9, muted, dpi); }
     }
 
@@ -183,7 +190,7 @@ public sealed class StreakStripChart : FrameworkElement
         var primary = (Brush)FindResource("Primary"); var border = (Brush)FindResource("BorderStrong"); var muted = (Brush)FindResource("TextMuted"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var gap = 4d; var width = Math.Clamp((ActualWidth - gap * (items.Length - 1)) / items.Length, 5, 16); var total = width * items.Length + gap * (items.Length - 1); var left = Math.Max(0, (ActualWidth - total) / 2);
         for (var i = 0; i < items.Length; i++) { var rect = new Rect(left + i * (width + gap), 8, width, width); dc.DrawRoundedRectangle(items[i].Value > 0 ? primary : null, new Pen(border, 1), rect, 2, 2); _hits.Add((rect, items[i])); }
-        DrawText(dc, "30 days ago", new(left, Math.Min(ActualHeight - 15, 31)), 9, muted, dpi); var today = new FormattedText("Today", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9, muted, dpi); dc.DrawText(today, new(left + total - today.Width, Math.Min(ActualHeight - 15, 31)));
+        DrawText(dc, Localization.Localizer.Instance.Translate("30 days ago"), new(left, Math.Min(ActualHeight - 15, 31)), 9, muted, dpi); var today = new FormattedText(Localization.Localizer.Instance.Translate("Today"), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9, muted, dpi); dc.DrawText(today, new(left + total - today.Width, Math.Min(ActualHeight - 15, 31)));
     }
     protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : hit.Item.Detail; }
     private static void DrawText(DrawingContext dc, string text, Point point, double size, Brush brush, double dpi) => dc.DrawText(new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size, brush, dpi), point);

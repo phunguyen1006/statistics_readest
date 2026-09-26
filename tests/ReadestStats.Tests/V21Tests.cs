@@ -73,7 +73,7 @@ public sealed class V21Tests
         service.CreateAutomatic("2.1.0");
         var item = Assert.Single(service.ListAutomatic());
 
-        Assert.Equal("Ready", item.Status);
+        Assert.Equal("Verified", item.Status);
         Assert.Equal("2.1.0", item.Version);
     }
 }

@@ -1,8 +1,8 @@
 <UserControl x:Class="ReadestStats.Views.NotesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:ReadestStats.Localization" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:charts="clr-namespace:ReadestStats.Controls"
-             AutomationProperties.Name="Notes library page">
+             AutomationProperties.Name="{loc:Loc Key=s101012A8481F9238}">
   <UserControl.InputBindings>
     <KeyBinding Key="N" Modifiers="Control" Command="{Binding RandomNoteCommand}"/>
   </UserControl.InputBindings>
@@ -72,17 +72,17 @@
     <StackPanel Margin="26,22,26,30" MaxWidth="1380">
       <DockPanel Margin="0,0,0,18">
         <Button DockPanel.Dock="Right"
-                Content="Refresh"
+                Content="{loc:Loc Key=sD6CC0A088C07683C}"
                 Command="{Binding RefreshNotesCommand}"
                 Padding="9,4"
                 MinHeight="30"
                 FontSize="12"
                 VerticalAlignment="Top"
-                AutomationProperties.Name="Refresh Readest notes"/>
+                AutomationProperties.Name="{loc:Loc Key=sDC7CABBA4126A5EF}"/>
         <StackPanel>
-          <TextBlock Text="NOTES LIBRARY" Style="{StaticResource Eyebrow}"/>
-          <TextBlock Text="Your reading, remembered" Style="{StaticResource PageTitle}" Margin="0,3,0,0"/>
-          <TextBlock Text="{Binding NotesSummary}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+          <TextBlock Text="{loc:Loc Key=sDBA44BA0BC90C9B8}" Style="{StaticResource Eyebrow}"/>
+          <TextBlock Text="{loc:Loc Key=sB0CD210809CC1FDF}" Style="{StaticResource PageTitle}" Margin="0,3,0,0"/>
+          <TextBlock Text="{Binding NotesSummary,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
         </StackPanel>
       </DockPanel>
 
@@ -102,21 +102,21 @@
             </Grid.RowDefinitions>
             <DockPanel>
               <TextBlock DockPanel.Dock="Right" Text="{Binding DailyNote.DisplayDate}" Style="{StaticResource Muted}"/>
-              <TextBlock Text="DAILY NOTE" Style="{StaticResource Eyebrow}"/>
+              <TextBlock Text="{loc:Loc Key=s7713FBD0D7A6630D}" Style="{StaticResource Eyebrow}"/>
             </DockPanel>
             <StackPanel Grid.Row="1" Margin="0,10,0,8">
               <TextBlock Text="{Binding DailyNote.BookTitle}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
               <TextBlock Text="{Binding DailyNote.Text}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="42" Margin="0,6,0,0"/>
-              <TextBlock Text="{Binding DailyNote.PageLabel}" Style="{StaticResource Muted}" Margin="0,5,0,0"/>
+              <TextBlock Text="{Binding DailyNote.PageLabel,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,5,0,0"/>
             </StackPanel>
             <Button Grid.Row="2"
-                    Content="Show daily note"
+                    Content="{loc:Loc Key=s9FB0883938A1CFA9}"
                     Command="{Binding DailyNoteCommand}"
                     HorizontalAlignment="Left"
                     Padding="10,5"
                     MinHeight="30"
                     FontSize="12"
-                    AutomationProperties.Name="Show today's note"/>
+                    AutomationProperties.Name="{loc:Loc Key=s54D85420C545DB90}"/>
           </Grid>
         </Border>
 
@@ -127,18 +127,18 @@
               <RowDefinition/>
               <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="RANDOM STUDIO" Style="{StaticResource Eyebrow}"/><ComboBox Grid.Column="1" ItemsSource="{Binding RandomNotePools}" SelectedItem="{Binding RandomNotePool}" Width="154" MinHeight="28" AutomationProperties.Name="Random note pool"/></Grid>
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{loc:Loc Key=s6DEC531AE4573E4A}" Style="{StaticResource Eyebrow}"/><ComboBox ItemTemplate="{StaticResource LocalizedOption}" Grid.Column="1" ItemsSource="{Binding RandomNotePools}" SelectedItem="{Binding RandomNotePool}" Width="154" MinHeight="28" AutomationProperties.Name="{loc:Loc Key=s2A7925ED02578904}"/></Grid>
             <StackPanel Grid.Row="1" Margin="0,10,0,8">
               <TextBlock Text="{Binding RandomNote.BookTitle}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
               <TextBlock Text="{Binding RandomNote.Text}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="42" Margin="0,6,0,0"/>
-              <TextBlock Text="{Binding RandomNote.PageLabel}" Style="{StaticResource Muted}" Margin="0,5,0,0"/>
+              <TextBlock Text="{Binding RandomNote.PageLabel,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,5,0,0"/>
             </StackPanel>
-            <StackPanel Grid.Row="2" Orientation="Horizontal"><Button Content="Another random note" Command="{Binding RandomNoteCommand}" HorizontalAlignment="Left" Padding="10,5" MinHeight="30" FontSize="12" ToolTip="Another random note (Ctrl+N)" AutomationProperties.Name="Show another random note"/><Button Content="Back" Command="{Binding PreviousRandomNoteCommand}" Padding="10,5" MinHeight="30" FontSize="12" Margin="6,0,0,0" AutomationProperties.Name="Previous random note"/></StackPanel>
+            <StackPanel Grid.Row="2" Orientation="Horizontal"><Button Content="{loc:Loc Key=s37377C6D3A432F8A}" Command="{Binding RandomNoteCommand}" HorizontalAlignment="Left" Padding="10,5" MinHeight="30" FontSize="12" ToolTip="{loc:Loc Key=s7D0857E4AF3A0BA1}" AutomationProperties.Name="{loc:Loc Key=sBBAD0110868D0A25}"/><Button Content="{loc:Loc Key=s3C482346F3750276}" Command="{Binding PreviousRandomNoteCommand}" Padding="10,5" MinHeight="30" FontSize="12" Margin="6,0,0,0" AutomationProperties.Name="{loc:Loc Key=s7097182C7174D7FC}"/></StackPanel>
           </Grid>
         </Border>
       </Grid>
 
-      <Border Style="{StaticResource EditorialSection}" Margin="0,0,0,20"><StackPanel><TextBlock Text="RECENTLY REDISCOVERED" Style="{StaticResource Eyebrow}"/><ItemsControl ItemsSource="{Binding RandomNoteHistory}" Margin="0,8,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Command="{Binding DataContext.SelectNoteCommand,RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" HorizontalContentAlignment="Stretch" Margin="0,0,8,0" Padding="10,7"><StackPanel><TextBlock Text="{Binding BookTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Text}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+      <Border Style="{StaticResource EditorialSection}" Margin="0,0,0,20"><StackPanel><TextBlock Text="{loc:Loc Key=sEDBC19F22446EFBF}" Style="{StaticResource Eyebrow}"/><ItemsControl ItemsSource="{Binding RandomNoteHistory}" Margin="0,8,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Command="{Binding DataContext.SelectNoteCommand,RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" HorizontalContentAlignment="Stretch" Margin="0,0,8,0" Padding="10,7"><StackPanel><TextBlock Text="{Binding BookTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Text}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
 
       <Grid Margin="0,0,0,20">
         <Grid.ColumnDefinitions>
@@ -148,25 +148,25 @@
         </Grid.ColumnDefinitions>
         <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0" Padding="0,2,22,4">
           <StackPanel>
-            <TextBlock Text="TOTAL NOTES" Style="{StaticResource Eyebrow}"/>
+            <TextBlock Text="{loc:Loc Key=s5D1F81FA6E2A53B5}" Style="{StaticResource Eyebrow}"/>
             <TextBlock Text="{Binding TotalNotes}" FontSize="22" FontWeight="SemiBold" Margin="0,5,0,0"/>
           </StackPanel>
         </Border>
         <Border Grid.Column="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0" Padding="22,2,22,4">
           <StackPanel>
-            <TextBlock Text="FAVORITES" Style="{StaticResource Eyebrow}"/>
+            <TextBlock Text="{loc:Loc Key=sF42D0F9E4B0EC07D}" Style="{StaticResource Eyebrow}"/>
             <TextBlock Text="{Binding FavoriteNotesCount}" FontSize="22" FontWeight="SemiBold" Margin="0,5,0,0"/>
           </StackPanel>
         </Border>
         <Border Grid.Column="2" Padding="22,2,0,4">
           <StackPanel>
-            <TextBlock Text="UNIQUE NOTES SEEN" Style="{StaticResource Eyebrow}"/>
+            <TextBlock Text="{loc:Loc Key=s32D87DC12BDAB85E}" Style="{StaticResource Eyebrow}"/>
             <TextBlock Text="{Binding NotesReadCount}" FontSize="22" FontWeight="SemiBold" Margin="0,5,0,0"/>
           </StackPanel>
         </Border>
       </Grid>
 
-      <Expander Header="Find and filter notes" Margin="0,0,0,10" AutomationProperties.Name="Find notes"><Grid Margin="0,8,0,2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions><TextBox Text="{Binding NoteSearch,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Search note text, book, or author"/><ComboBox Grid.Column="1" ItemsSource="{Binding NoteScopeOptions}" SelectedItem="{Binding NoteScope}" Margin="8,0,0,0" AutomationProperties.Name="Note source filter"/></Grid></Expander>
+      <Expander Header="{loc:Loc Key=s35652C0294E70E37}" Margin="0,0,0,10" AutomationProperties.Name="{loc:Loc Key=sC87CA0A79B80F16C}"><Grid Margin="0,8,0,2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions><TextBox Text="{Binding NoteSearch,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{loc:Loc Key=sE3141B03AFB003AF}"/><ComboBox ItemTemplate="{StaticResource LocalizedOption}" Grid.Column="1" ItemsSource="{Binding NoteScopeOptions}" SelectedItem="{Binding NoteScope}" Margin="8,0,0,0" AutomationProperties.Name="{loc:Loc Key=s3EB55F19C21505B3}"/></Grid></Expander>
       <Grid Height="430" Margin="0,0,0,26">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="1.35*"/>
@@ -183,7 +183,7 @@
                    ScrollViewer.CanContentScroll="True"
                    VirtualizingStackPanel.IsVirtualizing="True"
                    VirtualizingStackPanel.VirtualizationMode="Recycling"
-                   AutomationProperties.Name="Readest notes">
+                   AutomationProperties.Name="{loc:Loc Key=s01DEDE4E0AE0B238}">
             <ListBox.ItemContainerStyle>
               <Style TargetType="ListBoxItem">
                 <Setter Property="Padding" Value="12,12,10,13"/>
@@ -229,8 +229,8 @@
                     <ColumnDefinition Width="92"/>
                   </Grid.ColumnDefinitions>
                   <StackPanel>
-                    <TextBlock Text="{Binding TypeLabel}" Style="{StaticResource Eyebrow}"/>
-                    <TextBlock Text="{Binding PageLabel}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                    <TextBlock Text="{Binding TypeLabel,Converter={StaticResource UiText}}" Style="{StaticResource Eyebrow}"/>
+                    <TextBlock Text="{Binding PageLabel,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
                   </StackPanel>
                   <StackPanel Grid.Column="1" Margin="12,0,16,0">
                     <TextBlock Text="{Binding BookTitle}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding BookTitle}"/>
@@ -259,57 +259,57 @@
                       VerticalAlignment="Center"
                       Visibility="{Binding HasNoVisibleNotes,Converter={StaticResource BoolVis}}"
                       IsHitTestVisible="False">
-            <TextBlock Text="{Binding NotesEmptyMessage}" Style="{StaticResource SectionTitle}" HorizontalAlignment="Center"/>
-            <TextBlock Text="Refresh the Readest library to look for notes." Style="{StaticResource Muted}" Margin="0,6,0,0" HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding NotesEmptyMessage,Converter={StaticResource UiText}}" Style="{StaticResource SectionTitle}" HorizontalAlignment="Center"/>
+            <TextBlock Text="{loc:Loc Key=sF11BBE4DC5987021}" Style="{StaticResource Muted}" Margin="0,6,0,0" HorizontalAlignment="Center"/>
           </StackPanel>
         </Grid>
 
         <Border Grid.Column="1" Style="{StaticResource EditorialAside}" Margin="20,0,0,0">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
-              <TextBlock Text="NOTE DETAIL" Style="{StaticResource Eyebrow}"/>
+              <TextBlock Text="{loc:Loc Key=s75986CAECFDF887A}" Style="{StaticResource Eyebrow}"/>
               <TextBlock Text="{Binding SelectedNote.BookTitle}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,5,0,2"/>
               <TextBlock Text="{Binding SelectedNote.Authors}" Style="{StaticResource Muted}" Margin="0,0,0,14"/>
               <WrapPanel Margin="0,0,0,12">
-                <TextBlock Text="{Binding SelectedNote.PageLabel}" Foreground="{DynamicResource TextSecondary}"/>
+                <TextBlock Text="{Binding SelectedNote.PageLabel,Converter={StaticResource UiText}}" Foreground="{DynamicResource TextSecondary}"/>
                 <TextBlock Text="  ·  " Style="{StaticResource Muted}"/>
-                <TextBlock Text="{Binding SelectedNote.TypeLabel}" Foreground="{DynamicResource TextSecondary}"/>
+                <TextBlock Text="{Binding SelectedNote.TypeLabel,Converter={StaticResource UiText}}" Foreground="{DynamicResource TextSecondary}"/>
                 <TextBlock Text="  ·  " Style="{StaticResource Muted}"/>
                 <TextBlock Text="{Binding SelectedNote.ColorLabel}" Foreground="{DynamicResource TextSecondary}"/>
               </WrapPanel>
-              <TextBlock Text="HIGHLIGHT" Style="{StaticResource Eyebrow}"/>
+              <TextBlock Text="{loc:Loc Key=sDC2C5BE187F6F31E}" Style="{StaticResource Eyebrow}"/>
               <TextBlock Text="{Binding SelectedNote.Text}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" Margin="0,5,0,12"/>
-              <TextBlock Text="READEST NOTE" Style="{StaticResource Eyebrow}" Visibility="{Binding SelectedNote.IsReadest,Converter={StaticResource BoolVis}}"/>
+              <TextBlock Text="{loc:Loc Key=s658374D5B52B8468}" Style="{StaticResource Eyebrow}" Visibility="{Binding SelectedNote.IsReadest,Converter={StaticResource BoolVis}}"/>
               <TextBlock Text="{Binding SelectedNote.Note}" TextWrapping="Wrap" Margin="0,5,0,14" Visibility="{Binding SelectedNote.IsReadest,Converter={StaticResource BoolVis}}"/>
-              <TextBlock Text="SESSION NOTE" Style="{StaticResource Eyebrow}" Visibility="{Binding SelectedNote.IsManual,Converter={StaticResource BoolVis}}"/>
+              <TextBlock Text="{loc:Loc Key=s1D23F8062C74779D}" Style="{StaticResource Eyebrow}" Visibility="{Binding SelectedNote.IsManual,Converter={StaticResource BoolVis}}"/>
               <TextBox Text="{Binding SelectedNote.Note,UpdateSourceTrigger=LostFocus}"
                        AcceptsReturn="True"
                        TextWrapping="Wrap"
                        MinHeight="62"
                        Margin="0,5,0,14"
                        Visibility="{Binding SelectedNote.IsManual,Converter={StaticResource BoolVis}}"
-                       AutomationProperties.Name="Physical session note"/>
+                       AutomationProperties.Name="{loc:Loc Key=sB424B2C4D6E21E54}"/>
               <Separator Background="{DynamicResource Border}" Margin="0,0,0,14"/>
-              <TextBlock Text="MY NOTE" Style="{StaticResource Eyebrow}"/>
+              <TextBlock Text="{loc:Loc Key=sCEC25C1AF6F55332}" Style="{StaticResource Eyebrow}"/>
               <TextBox Text="{Binding SelectedNote.PersonalNote,UpdateSourceTrigger=LostFocus}"
                        AcceptsReturn="True"
                        TextWrapping="Wrap"
                        MinHeight="62"
                        Margin="0,5,0,12"
-                       AutomationProperties.Name="Personal note"/>
+                       AutomationProperties.Name="{loc:Loc Key=s14F7491B4452D088}"/>
               <WrapPanel>
-                <Button Content="Open in Readest" Command="{Binding OpenSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Open note book in Readest"/>
-                <Button Content="Another from this book" Command="{Binding RandomSameBookCommand}" Margin="0,0,6,6" AutomationProperties.Name="Show another note from this book"/>
-                <Button Content="Copy" Command="{Binding CopySelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Copy selected note"/>
-                <Button Content="Copy citation" Command="{Binding CopyNoteCitationCommand}" Margin="0,0,6,6" AutomationProperties.Name="Copy note with book citation"/>
-                <Button Content="Save" Command="{Binding SaveSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="Save personal note"/>
-                <Button Content="Tomorrow" Command="{Binding SnoozeNoteForCommand}" CommandParameter="1" Margin="0,0,6,6" ToolTip="Hide from random picks until tomorrow"/>
-                <Button Content="Snooze 7 days" Command="{Binding SnoozeNoteForCommand}" CommandParameter="7" Margin="0,0,6,6" ToolTip="Hide this note from random picks for seven days"/>
-                <Button Content="Snooze 30 days" Command="{Binding SnoozeNoteForCommand}" CommandParameter="30" Margin="0,0,6,6" ToolTip="Hide this note from random picks for thirty days"/>
-                <Button Content="{Binding SelectedNote.RandomEligibilityLabel}" Command="{Binding ToggleRandomEligibilityCommand}" Margin="0,0,6,6" ToolTip="Include or exclude this note from random picks"/>
+                <Button Content="{loc:Loc Key=s726F030F4F9885DD}" Command="{Binding OpenSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="{loc:Loc Key=s3D6AF5C4ADCB9543}"/>
+                <Button Content="{loc:Loc Key=s0C747FC31800DFD6}" Command="{Binding RandomSameBookCommand}" Margin="0,0,6,6" AutomationProperties.Name="{loc:Loc Key=sCB7F9FCAF8606D44}"/>
+                <Button Content="{loc:Loc Key=s6F5A6034E770ACBF}" Command="{Binding CopySelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="{loc:Loc Key=s49001AA2BCCCD29D}"/>
+                <Button Content="{loc:Loc Key=sC6CC81218590503A}" Command="{Binding CopyNoteCitationCommand}" Margin="0,0,6,6" AutomationProperties.Name="{loc:Loc Key=s50FB10BBFC2F8ED7}"/>
+                <Button Content="{loc:Loc Key=s157DCA92E4250458}" Command="{Binding SaveSelectedNoteCommand}" Margin="0,0,6,6" AutomationProperties.Name="{loc:Loc Key=s79C53F5281DD4174}"/>
+                <Button Content="{loc:Loc Key=sBAFD151A86F9A573}" Command="{Binding SnoozeNoteForCommand}" CommandParameter="1" Margin="0,0,6,6" ToolTip="{loc:Loc Key=sF0D4682C1E85C59E}"/>
+                <Button Content="{loc:Loc Key=s28FA44AFA0899BD5}" Command="{Binding SnoozeNoteForCommand}" CommandParameter="7" Margin="0,0,6,6" ToolTip="{loc:Loc Key=sC1A30E72ACC5B238}"/>
+                <Button Content="{loc:Loc Key=sCF13AE5171A6EBDA}" Command="{Binding SnoozeNoteForCommand}" CommandParameter="30" Margin="0,0,6,6" ToolTip="{loc:Loc Key=s79BF8513B3570F0D}"/>
+                <Button Content="{Binding SelectedNote.RandomEligibilityLabel,Converter={StaticResource UiText}}" Command="{Binding ToggleRandomEligibilityCommand}" Margin="0,0,6,6" ToolTip="{loc:Loc Key=s26B2FD4FD470CE35}"/>
               </WrapPanel>
-              <TextBlock Text="{Binding SelectedNote.SnoozeLabel}" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
-              <TextBlock Text="{Binding NotesStatus}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+              <TextBlock Text="{Binding SelectedNote.SnoozeLabel,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+              <TextBlock Text="{Binding NotesStatus,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,5,0,0"/>
             </StackPanel>
           </ScrollViewer>
         </Border>
@@ -319,13 +319,13 @@
         <StackPanel>
           <DockPanel Margin="0,0,0,10">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-              <Button Content="Markdown" Command="{Binding ExportNotesMarkdownCommand}" Margin="0,0,6,0" AutomationProperties.Name="Export notes as Markdown"/>
-              <Button Content="JSON" Command="{Binding ExportNotesJsonCommand}" Margin="0,0,6,0" AutomationProperties.Name="Export notes as JSON"/>
-              <Button Content="CSV" Command="{Binding ExportNotesCsvCommand}" AutomationProperties.Name="Export notes as CSV"/>
+              <Button Content="Markdown" Command="{Binding ExportNotesMarkdownCommand}" Margin="0,0,6,0" AutomationProperties.Name="{loc:Loc Key=s3AE36E209BD6D651}"/>
+              <Button Content="JSON" Command="{Binding ExportNotesJsonCommand}" Margin="0,0,6,0" AutomationProperties.Name="{loc:Loc Key=s978204DCEDEA696C}"/>
+              <Button Content="CSV" Command="{Binding ExportNotesCsvCommand}" AutomationProperties.Name="{loc:Loc Key=s215B272CB8370F4F}"/>
             </StackPanel>
             <StackPanel>
-              <TextBlock Text="NOTE ANALYTICS" Style="{StaticResource Eyebrow}"/>
-              <TextBlock Text="What your saved reading is concentrating on" Style="{StaticResource SectionTitle}" Margin="0,3,0,0"/>
+              <TextBlock Text="{loc:Loc Key=sB2CB52CD2953ED94}" Style="{StaticResource Eyebrow}"/>
+              <TextBlock Text="{loc:Loc Key=s8D66A8F64CF06CAC}" Style="{StaticResource SectionTitle}" Margin="0,3,0,0"/>
             </StackPanel>
           </DockPanel>
           <Grid>
@@ -335,16 +335,16 @@
               <ColumnDefinition/>
             </Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,22,0">
-              <TextBlock Text="NOTES BY BOOK" Style="{StaticResource Eyebrow}"/>
-              <charts:BarChart ItemsSource="{Binding NotesByBook}" Height="150" MaxBarWidth="22" AutomationProperties.Name="Notes by book"/>
+              <TextBlock Text="{loc:Loc Key=sA1E8237E6D8CD835}" Style="{StaticResource Eyebrow}"/>
+              <charts:BarChart ItemsSource="{Binding NotesByBook}" Height="150" MaxBarWidth="22" AutomationProperties.Name="{loc:Loc Key=sA1E8237E6D8CD835}"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Margin="0,0,22,0">
-              <TextBlock Text="NOTES OVER TIME" Style="{StaticResource Eyebrow}"/>
-              <charts:LineChart ItemsSource="{Binding NotesByMonth}" Height="150" AutomationProperties.Name="Notes over time"/>
+              <TextBlock Text="{loc:Loc Key=sD27050A07E3D5B9A}" Style="{StaticResource Eyebrow}"/>
+              <charts:LineChart ItemsSource="{Binding NotesByMonth}" Height="150" AutomationProperties.Name="{loc:Loc Key=sD27050A07E3D5B9A}"/>
             </StackPanel>
             <StackPanel Grid.Column="2">
-              <TextBlock Text="NOTE TYPES" Style="{StaticResource Eyebrow}"/>
-              <charts:BarChart ItemsSource="{Binding NotesByType}" Height="150" MaxBarWidth="18" AutomationProperties.Name="Notes by type"/>
+              <TextBlock Text="{loc:Loc Key=s7BC86827AB5F89B2}" Style="{StaticResource Eyebrow}"/>
+              <charts:BarChart ItemsSource="{Binding NotesByType}" Height="150" MaxBarWidth="18" AutomationProperties.Name="{loc:Loc Key=s75F3D889DA9C7B1E}"/>
             </StackPanel>
           </Grid>
         </StackPanel>

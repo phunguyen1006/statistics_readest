@@ -8,11 +8,15 @@ namespace ReadestStats;
 
 public partial class App : Application
 {
+    private readonly bool _startWorkspace;
+    public App() : this(true) { }
+    public App(bool startWorkspace) => _startWorkspace = startWorkspace;
     private static readonly HashSet<string> ReportedDispatcherErrors = [];
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (!_startWorkspace) return;
         Log("Application starting");
         DispatcherUnhandledException += (_, args) =>
         {
@@ -21,7 +25,7 @@ public partial class App : Application
             var errorKey = $"{args.Exception.GetType().FullName}:{args.Exception.Message}";
             if (ReportedDispatcherErrors.Add(errorKey))
             {
-                MessageBox.Show(fatal ? "Readest Stats encountered a fatal error and must restart. Your Readest library was not modified.\n\n" + args.Exception.Message : args.Exception.Message, "Readest Stats", MessageBoxButton.OK, fatal ? MessageBoxImage.Error : MessageBoxImage.Warning);
+                ReadestStats.Localization.UiDialog.Show(fatal ? "Readest Stats encountered a fatal error and must restart. Your Readest library was not modified.\n\n" + args.Exception.Message : args.Exception.Message, "Readest Stats", MessageBoxButton.OK, fatal ? MessageBoxImage.Error : MessageBoxImage.Warning);
             }
             args.Handled = !fatal;
             if (fatal) Shutdown(1);
@@ -45,7 +49,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             Log("Startup error: " + ex);
-            MessageBox.Show("Readest Stats could not start. See the diagnostic log for details.\n\n" + ex.Message, "Readest Stats", MessageBoxButton.OK, MessageBoxImage.Error);
+            ReadestStats.Localization.UiDialog.Show("Readest Stats could not start. See the diagnostic log for details.\n\n" + ex.Message, "Readest Stats", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
     }

@@ -23,7 +23,7 @@ public sealed class DataQualityEngine
         var incompleteBooks = books.Count(book => string.IsNullOrWhiteSpace(book.Title) || string.IsNullOrWhiteSpace(book.Authors));
         Add(checks, "Book metadata", incompleteBooks == 0, incompleteBooks == 0 ? "All books have a title and author." : $"{incompleteBooks} books have a missing title or author.", $"{books.Count - incompleteBooks} of {books.Count} books complete");
 
-        var missingFiles = books.Count(book => !string.IsNullOrWhiteSpace(book.Hash) && ReadestLibraryLocator.FindBookFile(diagnostics?.Path, book.Hash) is null);
+        var missingFiles = books.Count(book => book.Source != "Manual" && !string.IsNullOrWhiteSpace(book.Hash) && ReadestLibraryLocator.FindBookFile(diagnostics?.Path, book.Hash) is null);
         Add(checks, "Local book files", missingFiles == 0, missingFiles == 0 ? "All mapped library files are available locally." : $"{missingFiles} books have no readable local file.", $"{Math.Max(0, books.Count - missingFiles)} of {books.Count} files located");
 
         var latest = events.Count == 0 ? (DateTimeOffset?)null : events.Max(e => e.Start);

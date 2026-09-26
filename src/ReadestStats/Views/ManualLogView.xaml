@@ -1,6 +1,6 @@
 <UserControl x:Class="ReadestStats.Views.ManualLogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:ReadestStats.Localization" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:core="clr-namespace:ReadestStats.Core;assembly=ReadestStats.Core"
              UseLayoutRounding="True">
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -8,11 +8,11 @@
       <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel>
-          <TextBlock Text="PHYSICAL READING" Style="{StaticResource Eyebrow}"/>
-          <TextBlock Text="A focused timer for books away from Readest" Style="{StaticResource SectionTitle}" Margin="0,5,0,3"/>
-          <TextBlock Text="{Binding Status}" Style="{StaticResource Muted}"/>
+          <TextBlock Text="{loc:Loc Key=sCD9872C42A31A859}" Style="{StaticResource Eyebrow}"/>
+          <TextBlock Text="{loc:Loc Key=sDBFD9399B9A7EDAF}" Style="{StaticResource SectionTitle}" Margin="0,5,0,3"/>
+          <TextBlock Text="{Binding Status,Converter={StaticResource UiText}}" Style="{StaticResource Muted}"/>
         </StackPanel>
-        <Button Grid.Column="1" Content="Add book" Click="AddBook_Click" VerticalAlignment="Top" AutomationProperties.Name="Add a physical book"/>
+        <Button Grid.Column="1" Content="{loc:Loc Key=s43A9355D0E0F994F}" Click="AddBook_Click" VerticalAlignment="Top" AutomationProperties.Name="{loc:Loc Key=s58C93ADBB6B5CE27}"/>
       </Grid>
 
       <Separator Background="{DynamicResource Border}" Margin="0,20,0,18"/>
@@ -20,62 +20,62 @@
       <Grid Visibility="{Binding IsNotAddingBook,Converter={StaticResource BoolVis}}" IsEnabled="{Binding IsNotFinishing}">
         <Grid.ColumnDefinitions><ColumnDefinition Width="1.5*"/><ColumnDefinition Width=".85*"/><ColumnDefinition Width="230"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel Margin="0,0,28,0">
-          <TextBlock Text="CURRENT SESSION" Style="{StaticResource Eyebrow}"/>
+          <TextBlock Text="{loc:Loc Key=sA800F3835E65584D}" Style="{StaticResource Eyebrow}"/>
           <TextBlock Text="{Binding ActiveBookTitle}" FontSize="22" FontWeight="SemiBold" Margin="0,7,0,3" TextTrimming="CharacterEllipsis"/>
           <TextBlock Text="{Binding ActiveBookAuthors}" Style="{StaticResource Muted}"/>
-          <TextBlock Text="BOOK" Style="{StaticResource Eyebrow}" Margin="0,16,0,6"/>
-          <ComboBox ItemsSource="{Binding Books}" SelectedItem="{Binding SelectedBook,Mode=TwoWay}" TextSearch.TextPath="Title" IsEnabled="{Binding CanSelectBook}" AutomationProperties.Name="Physical book for the next session"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
-          <TextBlock Text="{Binding SelectedBookProgressLabel}" Style="{StaticResource Muted}" Margin="0,7,0,0"/>
+          <TextBlock Text="{loc:Loc Key=s92719FE0CF8CD515}" Style="{StaticResource Eyebrow}" Margin="0,16,0,6"/>
+          <ComboBox ItemsSource="{Binding Books}" SelectedItem="{Binding SelectedBook,Mode=TwoWay}" TextSearch.TextPath="Title" IsEnabled="{Binding CanSelectBook}" AutomationProperties.Name="{loc:Loc Key=sEA4183C9CF595DD5}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+          <TextBlock Text="{Binding SelectedBookProgressLabel,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,7,0,0"/>
           <ProgressBar Value="{Binding SelectedBookProgress,Mode=OneWay}" Maximum="100" Margin="0,8,0,0"/>
         </StackPanel>
 
         <StackPanel Grid.Column="1" Margin="0,0,28,0">
-          <TextBlock Text="{Binding ActiveSessionState}" Style="{StaticResource Eyebrow}"/>
-          <TextBlock Text="{Binding ElapsedLabel}" FontSize="32" FontWeight="SemiBold" FontFamily="Cascadia Mono,Consolas" Margin="0,6,0,4" AutomationProperties.Name="Elapsed manual reading time"/>
-          <TextBlock Text="Time is checkpointed locally every 15 seconds." Style="{StaticResource Muted}"/>
+          <TextBlock Text="{Binding ActiveSessionState,Converter={StaticResource UiText}}" Style="{StaticResource Eyebrow}"/>
+          <TextBlock Text="{Binding ElapsedLabel}" FontSize="32" FontWeight="SemiBold" FontFamily="Cascadia Mono,Consolas" Margin="0,6,0,4" AutomationProperties.Name="{loc:Loc Key=s658ABC7E0F58A138}"/>
+          <TextBlock Text="{loc:Loc Key=sB5E106890B0F85A2}" Style="{StaticResource Muted}"/>
         </StackPanel>
 
         <Border Grid.Column="2" Style="{StaticResource EditorialAside}" Margin="0,0,18,0" Padding="14">
           <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="58"/><ColumnDefinition/></Grid.ColumnDefinitions>
             <Border Width="50" Height="72" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="5" ClipToBounds="True" VerticalAlignment="Top"><Grid><Image Source="/ReadestStats;component/Assets/readest-book.png" Width="24" Height="24" Opacity="0.4"/><Image Source="{Binding SelectedBook.CoverUrl,Converter={StaticResource CoverImage},ConverterParameter=100}" Stretch="UniformToFill"/></Grid></Border>
-            <StackPanel Grid.Column="1" Margin="10,0,0,0"><TextBlock Text="SELECTED BOOK" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding SelectedBook.Title}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,2"/><TextBlock Text="{Binding SelectedBook.Authors}" Style="{StaticResource Muted}" TextWrapping="Wrap"/><TextBlock Text="{Binding SelectedBook.Publisher}" Style="{StaticResource Muted}" Margin="0,5,0,0"/><TextBlock Text="{Binding SelectedBook.PublishedDate}" Style="{StaticResource Muted}"/></StackPanel>
+            <StackPanel Grid.Column="1" Margin="10,0,0,0"><TextBlock Text="{loc:Loc Key=sAE2AE53068D229C9}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding SelectedBook.Title}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,2"/><TextBlock Text="{Binding SelectedBook.Authors}" Style="{StaticResource Muted}" TextWrapping="Wrap"/><TextBlock Text="{Binding SelectedBook.Publisher}" Style="{StaticResource Muted}" Margin="0,5,0,0"/><TextBlock Text="{Binding SelectedBook.PublishedDate}" Style="{StaticResource Muted}"/></StackPanel>
           </Grid>
         </Border>
 
         <StackPanel Grid.Column="3" Width="118" VerticalAlignment="Top">
-          <Button Content="Start session" Command="{Binding StartSessionCommand}" Style="{StaticResource PrimaryButton}" AutomationProperties.Name="Start manual reading session"/>
-          <Button Content="{Binding PauseResumeLabel}" Command="{Binding PauseResumeCommand}" Margin="0,8,0,0" AutomationProperties.Name="Pause or resume manual reading session"/>
-          <Button Content="Finish" Command="{Binding BeginFinishCommand}" Margin="0,8,0,0" AutomationProperties.Name="Finish manual reading session"/>
+          <Button Content="{loc:Loc Key=s3C9DB1FC5AED369D}" Command="{Binding StartSessionCommand}" Style="{StaticResource PrimaryButton}" AutomationProperties.Name="{loc:Loc Key=sEC633D25AA04A22A}"/>
+          <Button Content="{Binding PauseResumeLabel,Converter={StaticResource UiText}}" Command="{Binding PauseResumeCommand}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Loc Key=s63B53731EF3A3B4F}"/>
+          <Button Content="{loc:Loc Key=s42AF43E3616EBA4A}" Command="{Binding BeginFinishCommand}" Margin="0,8,0,0" AutomationProperties.Name="{loc:Loc Key=s988E912F8B853241}"/>
         </StackPanel>
       </Grid>
 
       <Border Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1" CornerRadius="8" Padding="18" Visibility="{Binding IsFinishing,Converter={StaticResource BoolVis}}">
         <StackPanel>
-          <TextBlock Text="Finish this session" Style="{StaticResource SectionTitle}" Margin="0,0,0,3"/>
-          <TextBlock Text="Confirm the edition's physical page numbers. The elapsed timer excludes paused time." Style="{StaticResource Muted}" Margin="0,0,0,16"/>
+          <TextBlock Text="{loc:Loc Key=s62BE4F9582F3E00E}" Style="{StaticResource SectionTitle}" Margin="0,0,0,3"/>
+          <TextBlock Text="{loc:Loc Key=s61BC7F8F2CE92EB9}" Style="{StaticResource Muted}" Margin="0,0,0,16"/>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <StackPanel><TextBlock Text="Start page" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding FinishStartPage,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Session start page"/></StackPanel>
-            <StackPanel Grid.Column="2"><TextBlock Text="Last page reached" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding FinishEndPage,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Session end page"/></StackPanel>
+            <StackPanel><TextBlock Text="{loc:Loc Key=sFB63090493C8E1F2}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding FinishStartPage,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{loc:Loc Key=s7C14C7592D042FFA}"/></StackPanel>
+            <StackPanel Grid.Column="2"><TextBlock Text="{loc:Loc Key=s4DD39E134B186C6D}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding FinishEndPage,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{loc:Loc Key=sADC3F2B075200EB3}"/></StackPanel>
           </Grid>
-          <TextBlock Text="Session note (optional)" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/>
-          <TextBox Text="{Binding FinishNote,UpdateSourceTrigger=PropertyChanged}" MinHeight="58" AcceptsReturn="True" TextWrapping="Wrap" AutomationProperties.Name="Manual session note"/>
-          <TextBlock Text="{Binding FinishError}" Foreground="{DynamicResource TextSecondary}" Margin="0,7,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"/>
+          <TextBlock Text="{loc:Loc Key=sD27404B1A59A6BC8}" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/>
+          <TextBox Text="{Binding FinishNote,UpdateSourceTrigger=PropertyChanged}" MinHeight="58" AcceptsReturn="True" TextWrapping="Wrap" AutomationProperties.Name="{loc:Loc Key=s5A697ABF93A8C25D}"/>
+          <TextBlock Text="{Binding FinishError,Converter={StaticResource UiText}}" Foreground="{DynamicResource TextSecondary}" Margin="0,7,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
-            <Button Content="Discard session" Margin="0,0,8,0" Click="DiscardSession_Click"/>
-            <Button Content="Cancel" Command="{Binding CancelFinishCommand}" Margin="0,0,8,0"/>
-            <Button Content="Save session" Command="{Binding SaveFinishedSessionCommand}" Style="{StaticResource PrimaryButton}"/>
+            <Button Content="{loc:Loc Key=s2C6FE47706DCA247}" Margin="0,0,8,0" Click="DiscardSession_Click"/>
+            <Button Content="{loc:Loc Key=s2374D91794B79F4F}" Command="{Binding CancelFinishCommand}" Margin="0,0,8,0"/>
+            <Button Content="{loc:Loc Key=s782FD8D965E53C77}" Command="{Binding SaveFinishedSessionCommand}" Style="{StaticResource PrimaryButton}"/>
           </StackPanel>
         </StackPanel>
       </Border>
 
       <Border Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1" CornerRadius="8" Padding="18" Visibility="{Binding IsAddingBook,Converter={StaticResource BoolVis}}">
         <StackPanel>
-          <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding BookEditorTitle}" Style="{StaticResource SectionTitle}" Margin="0,0,0,3"/><TextBlock Text="Search online metadata, select the edition you own, then verify its page count." Style="{StaticResource Muted}"/></StackPanel><Button Grid.Column="1" Content="Close" Command="{Binding CancelAddBookCommand}" VerticalAlignment="Top"/></Grid>
-          <TextBlock Text="SEARCH BY TITLE, AUTHOR, OR ISBN" Style="{StaticResource Eyebrow}" Margin="0,18,0,6"/>
-          <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox Text="{Binding SearchQuery,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Book search query"/><Button Grid.Column="1" Content="Search" Command="{Binding SearchBooksCommand}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/><Button Grid.Column="2" Content="Enter manually" Command="{Binding UseManualEntryCommand}" Margin="8,0,0,0"/></Grid>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding BookEditorTitle,Converter={StaticResource UiText}}" Style="{StaticResource SectionTitle}" Margin="0,0,0,3"/><TextBlock Text="{loc:Loc Key=s39E0BD2302C22E2E}" Style="{StaticResource Muted}"/></StackPanel><Button Grid.Column="1" Content="{loc:Loc Key=s310FF200149B44A3}" Command="{Binding CancelAddBookCommand}" VerticalAlignment="Top"/></Grid>
+          <TextBlock Text="{loc:Loc Key=s952B14496CAAAA16}" Style="{StaticResource Eyebrow}" Margin="0,18,0,6"/>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox Text="{Binding SearchQuery,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{loc:Loc Key=s3C36CEE85218C61B}"/><Button Grid.Column="1" Content="{loc:Loc Key=s2419329067823CAB}" Command="{Binding SearchBooksCommand}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/><Button Grid.Column="2" Content="{loc:Loc Key=sF40A594FE121830E}" Command="{Binding UseManualEntryCommand}" Margin="8,0,0,0"/></Grid>
           <ProgressBar IsIndeterminate="True" Height="3" Visibility="{Binding IsSearching,Converter={StaticResource BoolVis}}" Margin="0,8,0,0"/>
-          <TextBlock Text="{Binding SearchStatus}" Style="{StaticResource Muted}" Margin="0,7,0,0" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock Text="{Binding SearchStatus,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,7,0,0" AutomationProperties.LiveSetting="Polite"/>
 
           <ListBox ItemsSource="{Binding SearchResults}" SelectedItem="{Binding SelectedSearchResult}" Height="190" Background="Transparent" BorderThickness="0" Margin="0,12,0,0" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True">
             <ListBox.ItemTemplate>
@@ -88,11 +88,11 @@
           <Separator Background="{DynamicResource Border}" Margin="0,14"/>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <StackPanel><TextBlock Text="Title *" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftTitle,UpdateSourceTrigger=PropertyChanged}"/><TextBlock Text="Author" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftAuthors,UpdateSourceTrigger=PropertyChanged}"/><TextBlock Text="Total pages" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftTotalPages,UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
-            <StackPanel Grid.Column="2"><TextBlock Text="Publisher" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftPublisher,UpdateSourceTrigger=PropertyChanged}"/><Grid Margin="0,12,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Published" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftPublishedDate,UpdateSourceTrigger=PropertyChanged}"/></StackPanel><StackPanel Grid.Column="2"><TextBlock Text="Language" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftLanguage,UpdateSourceTrigger=PropertyChanged}"/></StackPanel></Grid><TextBlock Text="Goodreads link (optional)" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftGoodreadsUrl,UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
+            <StackPanel><TextBlock Text="{loc:Loc Key=sCFDAF547AB9DAF12}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftTitle,UpdateSourceTrigger=PropertyChanged}"/><TextBlock Text="{loc:Loc Key=s636485868971EAC5}" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftAuthors,UpdateSourceTrigger=PropertyChanged}"/><TextBlock Text="{loc:Loc Key=sCC89081F21235248}" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftTotalPages,UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
+            <StackPanel Grid.Column="2"><TextBlock Text="{loc:Loc Key=s4F03A060B7EB0329}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftPublisher,UpdateSourceTrigger=PropertyChanged}"/><Grid Margin="0,12,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{loc:Loc Key=sB04E5EA201BB040C}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftPublishedDate,UpdateSourceTrigger=PropertyChanged}"/></StackPanel><StackPanel Grid.Column="2"><TextBlock Text="{loc:Loc Key=sA4EF304BA42A200B}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftLanguage,UpdateSourceTrigger=PropertyChanged}"/></StackPanel></Grid><TextBlock Text="{loc:Loc Key=sE2BEE5ED8084CC09}" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftGoodreadsUrl,UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
           </Grid>
-          <TextBlock Text="{Binding DraftError}" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"/>
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0"><Button Content="View source" Command="{Binding OpenMetadataCommand}" Margin="0,0,8,0"/><Button Content="Save book" Command="{Binding SaveBookCommand}" Style="{StaticResource PrimaryButton}"/></StackPanel>
+          <TextBlock Text="{Binding DraftError,Converter={StaticResource UiText}}" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0"><Button Content="{loc:Loc Key=s336352DB181DCDFE}" Command="{Binding OpenMetadataCommand}" Margin="0,0,8,0"/><Button Content="{loc:Loc Key=s44239D22FCAE60F3}" Command="{Binding SaveBookCommand}" Style="{StaticResource PrimaryButton}"/></StackPanel>
         </StackPanel>
       </Border>
 
@@ -101,35 +101,36 @@
       <Grid Visibility="{Binding IsNotAddingBook,Converter={StaticResource BoolVis}}">
         <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="24"/><ColumnDefinition Width="1.45*"/></Grid.ColumnDefinitions>
         <StackPanel>
-          <DockPanel LastChildFill="False"><TextBlock Text="PHYSICAL LIBRARY" Style="{StaticResource Eyebrow}"/><Button DockPanel.Dock="Right" Content="Undo import" Command="{Binding UndoLastImportCommand}" Padding="9,4" MinHeight="28" Visibility="{Binding CanUndoLastImport,Converter={StaticResource BoolVis}}"/><Button DockPanel.Dock="Right" Content="Undo book delete" Command="{Binding UndoDeleteBookCommand}" Padding="9,4" MinHeight="28" Margin="0,0,6,0" Visibility="{Binding CanUndoDeleteBook,Converter={StaticResource BoolVis}}"/></DockPanel>
-          <TextBlock Text="Books available for manual sessions" Style="{StaticResource SectionTitle}" Margin="0,5,0,3"/>
-          <DockPanel Margin="0,0,0,12"><Button DockPanel.Dock="Right" Content="Archive selected" Command="{Binding ArchiveSelectedBookCommand}" Padding="9,4"/><TextBlock Text="{Binding LibrarySummary}" Style="{StaticResource Muted}" VerticalAlignment="Center"/></DockPanel>
+          <DockPanel LastChildFill="False"><TextBlock Text="{loc:Loc Key=s217D8FED52AF055F}" Style="{StaticResource Eyebrow}"/><Button DockPanel.Dock="Right" Content="{loc:Loc Key=sB8B0A8348B4B0FDE}" Command="{Binding UndoLastImportCommand}" Padding="9,4" MinHeight="28" Visibility="{Binding CanUndoLastImport,Converter={StaticResource BoolVis}}"/><Button DockPanel.Dock="Right" Content="{loc:Loc Key=sE275DFE5280E25E2}" Command="{Binding UndoDeleteBookCommand}" Padding="9,4" MinHeight="28" Margin="0,0,6,0" Visibility="{Binding CanUndoDeleteBook,Converter={StaticResource BoolVis}}"/></DockPanel>
+          <TextBlock Text="{loc:Loc Key=sFBD267113F8C3EA6}" Style="{StaticResource SectionTitle}" Margin="0,5,0,3"/>
+          <DockPanel Margin="0,0,0,12"><Button DockPanel.Dock="Right" Content="{loc:Loc Key=sC8B1AB0C577F1F3A}" Command="{Binding ArchiveSelectedBookCommand}" Padding="9,4"/><TextBlock Text="{Binding LibrarySummary,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" VerticalAlignment="Center"/></DockPanel>
           <ListBox ItemsSource="{Binding Books}" SelectedItem="{Binding SelectedBook}" Background="Transparent" BorderThickness="0" MaxHeight="340" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True">
             <ListBox.ItemTemplate>
               <DataTemplate DataType="{x:Type core:ManualBook}">
-                <Grid Margin="2,6"><Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Width="34" Height="48" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1"><Image Source="{Binding CoverUrl}" Stretch="UniformToFill" AutomationProperties.Name="{Binding Title}"/></Border><StackPanel Grid.Column="1" Margin="10,0,10,0"><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Authors}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding CurrentPage,StringFormat=Page {0}}" Style="{StaticResource Muted}"/></StackPanel><StackPanel Grid.Column="2" Orientation="Horizontal"><Button Content="Edit" Click="EditBook_Click" DataContext="{Binding}" Margin="0,0,6,0" VerticalAlignment="Center" AutomationProperties.Name="Edit physical book"/><Button Content="Delete" Click="DeleteBook_Click" DataContext="{Binding}" VerticalAlignment="Center" AutomationProperties.Name="Delete physical book"/></StackPanel></Grid>
+                <Grid Margin="2,6"><Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Width="34" Height="48" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1"><Image Source="{Binding CoverUrl}" Stretch="UniformToFill" AutomationProperties.Name="{Binding Title}"/></Border><StackPanel Grid.Column="1" Margin="10,0,10,0"><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Authors}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding CurrentPage,StringFormat=Page {0}}" Style="{StaticResource Muted}"/></StackPanel><StackPanel Grid.Column="2" Orientation="Horizontal"><Button Content="{loc:Loc Key=s262121C5372BE8AF}" Click="EditBook_Click" DataContext="{Binding}" Margin="0,0,6,0" VerticalAlignment="Center" AutomationProperties.Name="{loc:Loc Key=s1306ED0BEF16B5F3}"/><Button Content="{loc:Loc Key=s6197595503F01EE2}" Click="DeleteBook_Click" DataContext="{Binding}" VerticalAlignment="Center" AutomationProperties.Name="{loc:Loc Key=s46B3E59CF78D2746}"/></StackPanel></Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
         </StackPanel>
 
         <StackPanel Grid.Column="2">
-          <TextBlock Text="RECENT MANUAL SESSIONS" Style="{StaticResource Eyebrow}"/>
-          <Grid Margin="0,5,0,12"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Your latest physical-reading history" Style="{StaticResource SectionTitle}"/><Button Grid.Column="1" Content="Undo delete" Command="{Binding UndoDeleteSessionCommand}" Margin="0,0,6,0" Padding="10,5" MinHeight="30" Visibility="{Binding CanUndoDeleteSession,Converter={StaticResource BoolVis}}"/><Button Grid.Column="2" Content="Add past session" Click="AddPastSession_Click" Padding="10,5" MinHeight="30" AutomationProperties.Name="Add past manual reading session"/></Grid>
-          <DataGrid ItemsSource="{Binding RecentSessions}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="360" AutomationProperties.Name="Recent manual reading sessions">
+          <TextBlock Text="{loc:Loc Key=s6D75F9724959434F}" Style="{StaticResource Eyebrow}"/>
+          <Grid Margin="0,5,0,12"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{loc:Loc Key=s2874729554B87A32}" Style="{StaticResource SectionTitle}"/><Button Grid.Column="1" Content="{loc:Loc Key=s805463AC207E4647}" Command="{Binding UndoDeleteSessionCommand}" Margin="0,0,6,0" Padding="10,5" MinHeight="30" Visibility="{Binding CanUndoDeleteSession,Converter={StaticResource BoolVis}}"/><Button Grid.Column="2" Content="{loc:Loc Key=s9557D6B1CF66A4FC}" Click="AddPastSession_Click" Padding="10,5" MinHeight="30" AutomationProperties.Name="{loc:Loc Key=sE6A50AFA973AAEA4}"/></Grid>
+          <DataGrid ItemsSource="{Binding RecentSessions}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="360" AutomationProperties.Name="{loc:Loc Key=s454E460689175CCE}">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="DATE" Binding="{Binding DateLabel}" Width="1.2*"/>
-              <DataGridTextColumn Header="BOOK" Binding="{Binding BookTitle}" Width="1.6*"/>
-              <DataGridTextColumn Header="TIME" Binding="{Binding DurationLabel}" Width="*"/>
-              <DataGridTextColumn Header="PAGES" Binding="{Binding PageRangeLabel}" Width="*"/>
-              <DataGridTemplateColumn Header="" Width="132"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Button Content="Edit" Click="EditSession_Click" DataContext="{Binding}" Padding="8,4" MinHeight="28" Margin="0,0,5,0" AutomationProperties.Name="Edit manual session"/><Button Content="Delete" Click="DeleteSession_Click" DataContext="{Binding}" Padding="8,4" MinHeight="28" AutomationProperties.Name="Delete manual session"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+              <DataGridTextColumn Header="{loc:Loc Key=s0E87632CD46BD490}" Binding="{Binding DateLabel}" Width="1.2*"/>
+              <DataGridTextColumn Header="{loc:Loc Key=s92719FE0CF8CD515}" Binding="{Binding BookTitle}" Width="1.6*"/>
+              <DataGridTextColumn Header="{loc:Loc Key=s336074805FC85398}" Binding="{Binding DurationLabel}" Width="*"/>
+              <DataGridTextColumn Header="{loc:Loc Key=sBFA062DE040F55A1}" Binding="{Binding PageRangeLabel}" Width="*"/>
+              <DataGridTemplateColumn Header="" Width="132"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Button Content="{loc:Loc Key=s262121C5372BE8AF}" Click="EditSession_Click" DataContext="{Binding}" Padding="8,4" MinHeight="28" Margin="0,0,5,0" AutomationProperties.Name="{loc:Loc Key=s856D74BF8A4F99AA}"/><Button Content="{loc:Loc Key=s6197595503F01EE2}" Click="DeleteSession_Click" DataContext="{Binding}" Padding="8,4" MinHeight="28" AutomationProperties.Name="{loc:Loc Key=s8BAACE39134C37CE}"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
-          <TextBlock Text="No sessions yet. Select a book and start the timer." Style="{StaticResource Muted}" Margin="0,10,0,0" Visibility="{Binding HasSessions,Converter={StaticResource InverseBoolVis}}"/>
+          <TextBlock Text="{loc:Loc Key=sF351A6E13D590346}" Style="{StaticResource Muted}" Margin="0,10,0,0" Visibility="{Binding HasSessions,Converter={StaticResource InverseBoolVis}}"/>
         </StackPanel>
       </Grid>
-      <Border Style="{StaticResource EditorialSection}" Margin="0,20,0,0" Visibility="{Binding HasDuplicateGroups,Converter={StaticResource BoolVis}}"><StackPanel><TextBlock Text="LIBRARY MAINTENANCE" Style="{StaticResource Eyebrow}"/><TextBlock Text="Potential duplicate physical editions" Style="{StaticResource SectionTitle}" Margin="0,4,0,8"/><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ComboBox ItemsSource="{Binding DuplicateGroups}" SelectedItem="{Binding SelectedDuplicateGroup}" DisplayMemberPath="Detail"/><Button Grid.Column="1" Content="Merge and preserve sessions" Command="{Binding MergeDuplicateBooksCommand}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/></Grid><TextBlock Text="The most-used edition is kept. Missing metadata is filled and every session is moved to it." Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/></StackPanel></Border>
-      <Border Style="{StaticResource EditorialSection}" Margin="0,20,0,0" Visibility="{Binding HasActivityLog,Converter={StaticResource BoolVis}}"><StackPanel><DockPanel><Button DockPanel.Dock="Right" Content="Undo latest" Command="{Binding UndoRecentActionCommand}" Style="{StaticResource PrimaryButton}" Padding="10,5"/><StackPanel><TextBlock Text="RECENT LIBRARY CHANGES" Style="{StaticResource Eyebrow}"/><TextBlock Text="Durable undo history survives an app restart" Style="{StaticResource Muted}" Margin="0,3,0,0"/></StackPanel></DockPanel><ItemsControl ItemsSource="{Binding ActivityLog}" Margin="0,9,0,0"><ItemsControl.ItemTemplate><DataTemplate><DockPanel Margin="0,3"><TextBlock DockPanel.Dock="Right" Text="{Binding TimeLabel}" Style="{StaticResource Muted}"/><TextBlock Text="{Binding Action}"/></DockPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+      <Border Style="{StaticResource EditorialSection}" Margin="0,20,0,0" Visibility="{Binding HasDuplicateGroups,Converter={StaticResource BoolVis}}"><StackPanel><TextBlock Text="{loc:Loc Key=sF5EBF414CB522324}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=s2D89FE1F7E105745}" Style="{StaticResource SectionTitle}" Margin="0,4,0,8"/><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ComboBox ItemsSource="{Binding DuplicateGroups}" SelectedItem="{Binding SelectedDuplicateGroup}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox><Button Grid.Column="1" Content="{loc:Loc Key=sF46AA67EE3CA8365}" Command="{Binding MergeDuplicateBooksCommand}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/></Grid><TextBlock Text="{loc:Loc Key=sA3BE0D4E66DE75AD}" Style="{StaticResource Muted}" Margin="0,12,0,5"/><ComboBox ItemsSource="{Binding SelectedDuplicateGroup.Books}" SelectedItem="{Binding MergePrimary}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox><TextBlock Text="{Binding MergePreview,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/></StackPanel></Border>
+      <Border Style="{StaticResource EditorialSection}" Margin="0,20,0,0" Visibility="{Binding HasArchivedBooks,Converter={StaticResource BoolVis}}"><StackPanel><TextBlock Text="{loc:Loc Key=s0DE9D28D7AD12C81}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=s51953A409E40AACD}" Style="{StaticResource Muted}" Margin="0,5,0,10"/><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ComboBox ItemsSource="{Binding ArchivedBooks}" SelectedItem="{Binding SelectedArchivedBook}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox><Button Grid.Column="1" Content="{loc:Loc Key=sD8FBEB5DFEF3469F}" Command="{Binding RestoreArchivedBookCommand}" Margin="8,0,0,0"/></Grid></StackPanel></Border>
+      <Border Style="{StaticResource EditorialSection}" Margin="0,20,0,0" Visibility="{Binding HasActivityLog,Converter={StaticResource BoolVis}}"><StackPanel><DockPanel><Button DockPanel.Dock="Right" Content="{loc:Loc Key=s3D15BE95D3482BC6}" Command="{Binding UndoRecentActionCommand}" Style="{StaticResource PrimaryButton}" Padding="10,5"/><StackPanel><TextBlock Text="{loc:Loc Key=s6A1092AF23BD88AD}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=s41185809776E1E2F}" Style="{StaticResource Muted}" Margin="0,3,0,0"/></StackPanel></DockPanel><ItemsControl ItemsSource="{Binding ActivityLog}" Margin="0,9,0,0"><ItemsControl.ItemTemplate><DataTemplate><DockPanel Margin="0,3"><TextBlock DockPanel.Dock="Right" Text="{Binding TimeLabel,Converter={StaticResource UiText}}" Style="{StaticResource Muted}"/><TextBlock Text="{Binding Action,Converter={StaticResource UiText}}"/></DockPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

@@ -69,7 +69,10 @@ public sealed class ManualReadingData
     public List<ManualBook> Books { get; set; } = [];
     public List<ManualReadingSession> Sessions { get; set; } = [];
     public ActiveManualSession? ActiveSession { get; set; }
+    public LibraryReferenceSnapshot? RecoveryReferences { get; set; }
 }
+
+public sealed record LibraryReferenceSnapshot(Dictionary<string, BookTrackingState> Tracking, List<BookEditionLink> Links, List<string> Pins);
 
 public sealed record BookMetadataResult(
     string Source,

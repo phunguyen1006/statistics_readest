@@ -1,3 +1,29 @@
+# Readest Stats v2.3.0
+
+Version 2.3.0 focuses on trustworthy history, recoverable changes, live localization, and responsive navigation.
+
+## History and comparison
+
+- Archived physical books keep their reading sessions and completion history in statistics, with a direct restore action.
+- Comparison summaries, tables, units and charts use the same selected baseline. Invalid custom ranges are rejected; unequal periods remain available as exact tables instead of misleading overlays.
+- Chart tooltips and keyboard details identify the date and value of both periods; a single baseline point remains visible.
+
+## Recovery and library maintenance
+
+- Backups snapshot SQLite including pending WAL data and verify SHA-256 checksums before restoration.
+- Restore stages and validates files first, keeps recovery copies, and rolls back interrupted replacements on the next launch.
+- Backup retention follows calendar age, not the number of files. Older archives remain identifiable as legacy backups.
+- Duplicate-edition merges preview the retained book and moved sessions, preserve app references, and offer durable transactional undo.
+- Data Health lists affected records with direct review actions; manual books no longer trigger missing Readest-file warnings.
+
+## Interface and performance
+
+- English/Vietnamese resources cover page controls, filters, common feedback and chart annotations; changing language leaves book titles and personal notes untouched.
+- Pages are created on first visit and reused. Analytics avoid repeated full-history scans, and large book lists recycle visible rows.
+- Adds regression coverage for archive/restore, merge/undo references, baseline selection, verified backups, interrupted recovery, localization and large-list rendering.
+
+---
+
 # Readest Stats v2.2.0
 
 Version 2.2.0 makes comparison, recovery, rediscovery, and library maintenance first-class workflows.

@@ -1,4 +1,4 @@
-# Readest Stats 2.2 — Design System
+# Readest Stats 2.3 — Design System
 
 This file is the implementation reference for every screen. It supersedes the former blue dashboard theme.
 

@@ -37,7 +37,7 @@ public sealed class MatrixChart : InfographicElement
     {
         base.OnRender(dc); _hits.Clear();
         var items = Items<MatrixCell>(); var muted = Viz.Muted(this); var dpi = Viz.Dpi(this);
-        if (items.Length == 0) { Viz.Empty(dc, this, "No matrix data in this period"); return; }
+        if (items.Length == 0) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("No matrix data in this period")); return; }
         var rows = items.Max(item => item.Row) + 1; var columns = items.Max(item => item.Column) + 1;
         var left = Math.Clamp(ActualWidth * .13, 56, 128); var top = 24d; var gap = columns > 40 ? 1d : 2d;
         var cellWidth = Math.Max(2, (ActualWidth - left - 8 - gap * (columns - 1)) / columns);
@@ -72,13 +72,13 @@ public sealed class TimelineBandChart : InfographicElement
     protected override void OnRender(DrawingContext dc)
     {
         base.OnRender(dc); _hits.Clear(); var items = Items<TimelineSpan>();
-        if (items.Length == 0) { Viz.Empty(dc, this, "No sessions on this day"); return; }
+        if (items.Length == 0) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("No sessions on this day")); return; }
         var muted = Viz.Muted(this); var grid = (Brush)FindResource("ChartGrid"); var primary = (Brush)FindResource("Primary"); var dpi = Viz.Dpi(this);
         var plot = new Rect(8, 24, Math.Max(1, ActualWidth - 16), Math.Max(24, ActualHeight - 38));
         foreach (var hour in new[] { 0, 6, 12, 18, 24 })
         {
             var x = plot.Left + plot.Width * hour / 24d; dc.DrawLine(new Pen(grid, 1), new(x, plot.Top - 4), new(x, plot.Bottom));
-            Viz.Text(dc, $"{hour % 24:00}:00", new(Math.Min(x, plot.Right - 28), 2), 9, muted, dpi);
+            Viz.Text(dc, Localization.Localizer.Instance.Translate($"{hour % 24:00}:00"), new(Math.Min(x, plot.Right - 28), 2), 9, muted, dpi);
         }
         var laneHeight = Math.Clamp((plot.Height - Math.Max(0, items.Length - 1) * 4) / items.Length, 6, 15);
         foreach (var item in items)
@@ -104,7 +104,7 @@ public sealed class SessionDistributionChart : InfographicElement
     protected override void OnRender(DrawingContext dc)
     {
         base.OnRender(dc); _hits.Clear(); var items = Items<DotDatum>();
-        if (items.Length == 0) { Viz.Empty(dc, this, "No sessions in this period"); return; }
+        if (items.Length == 0) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("No sessions in this period")); return; }
         if (items.Length <= 15) DrawDots(dc, items); else DrawHistogram(dc, items);
     }
 
@@ -113,14 +113,14 @@ public sealed class SessionDistributionChart : InfographicElement
         var muted = Viz.Muted(this); var primary = (Brush)FindResource("Primary"); var grid = (Brush)FindResource("ChartGrid"); var dpi = Viz.Dpi(this);
         var plot = new Rect(8, 18, Math.Max(1, ActualWidth - 16), Math.Max(1, ActualHeight - 42)); var max = Math.Max(1, items.Max(item => item.Value));
         dc.DrawLine(new Pen(grid, 1), new(plot.Left, plot.Bottom), new(plot.Right, plot.Bottom));
-        for (var i = 0; i <= 4; i++) { var x = plot.Left + plot.Width * i / 4; Viz.Text(dc, $"{max * i / 4:0.#}m", new(x - 7, plot.Bottom + 7), 9, muted, dpi); }
+        for (var i = 0; i <= 4; i++) { var x = plot.Left + plot.Width * i / 4; Viz.Text(dc, Localization.Localizer.Instance.Translate($"{max * i / 4:0.#}m"), new(x - 7, plot.Bottom + 7), 9, muted, dpi); }
         foreach (var (item, index) in items.Select((value, index) => (value, index)))
         {
             var center = new Point(plot.Left + plot.Width * item.Value / max, plot.Bottom - 9 - index % 3 * 13);
             dc.DrawEllipse(index == items.Length - 1 ? primary : (Brush)FindResource("Surface"), new Pen(primary, 1.5), center, index == items.Length - 1 ? 5 : 4, index == items.Length - 1 ? 5 : 4);
             _hits.Add((new Rect(center.X - 8, center.Y - 8, 16, 16), item));
         }
-        Viz.Text(dc, $"{items.Length} individual sessions", new(plot.Left, 0), 9, muted, dpi);
+        Viz.Text(dc, Localization.Localizer.Instance.Translate($"{items.Length} individual sessions"), new(plot.Left, 0), 9, muted, dpi);
     }
 
     private void DrawHistogram(DrawingContext dc, DotDatum[] items)
@@ -135,7 +135,7 @@ public sealed class SessionDistributionChart : InfographicElement
             var height = plot.Height * counts[i] / max; var rect = new Rect(plot.Left + i * slot + slot * .22, plot.Bottom - height, slot * .56, height);
             dc.DrawRoundedRectangle(primary, null, rect, 2, 2); Viz.Text(dc, labels[i], new(plot.Left + i * slot, plot.Bottom + 7), 9, muted, dpi);
         }
-        Viz.Text(dc, $"{items.Length} sessions · grouped distribution", new(plot.Left, 0), 9, muted, dpi);
+        Viz.Text(dc, Localization.Localizer.Instance.Translate($"{items.Length} sessions · grouped distribution"), new(plot.Left, 0), 9, muted, dpi);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -152,7 +152,7 @@ public sealed class ScatterPlotChart : InfographicElement
     protected override void OnRender(DrawingContext dc)
     {
         base.OnRender(dc); _hits.Clear(); var items = Items<DotDatum>();
-        if (items.Length < 4) { Viz.Empty(dc, this, "At least 4 active days are needed for a style map"); return; }
+        if (items.Length < 4) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("At least 4 active days are needed for a style map")); return; }
         var muted = Viz.Muted(this); var grid = (Brush)FindResource("ChartGrid"); var primary = (Brush)FindResource("Primary"); var dpi = Viz.Dpi(this);
         var plot = new Rect(38, 10, Math.Max(1, ActualWidth - 48), Math.Max(1, ActualHeight - 38)); var maxX = Math.Max(1, items.Max(item => item.Value)); var maxY = Math.Max(1, items.Max(item => item.Secondary));
         dc.DrawLine(new Pen(grid, 1), new(plot.Left, plot.Bottom), new(plot.Right, plot.Bottom)); dc.DrawLine(new Pen(grid, 1), new(plot.Left, plot.Top), new(plot.Left, plot.Bottom));
@@ -162,7 +162,7 @@ public sealed class ScatterPlotChart : InfographicElement
             var point = new Point(plot.Left + plot.Width * item.Value / maxX, plot.Bottom - plot.Height * item.Secondary / maxY);
             dc.DrawEllipse((Brush)FindResource("Surface"), new Pen(primary, 1.5), point, 4.5, 4.5); _hits.Add((point, item));
         }
-        Viz.Text(dc, "sessions →", new(plot.Right - 54, plot.Bottom + 8), 9, muted, dpi); Viz.Text(dc, "longer ↑", new(0, plot.Top), 9, muted, dpi);
+        Viz.Text(dc, Localization.Localizer.Instance.Translate("sessions →"), new(plot.Right - 54, plot.Bottom + 8), 9, muted, dpi); Viz.Text(dc, Localization.Localizer.Instance.Translate("longer ↑"), new(0, plot.Top), 9, muted, dpi);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -179,7 +179,7 @@ public sealed class SegmentedBandChart : InfographicElement
     protected override void OnRender(DrawingContext dc)
     {
         base.OnRender(dc); _hits.Clear(); var items = Items<CompositionPart>();
-        if (items.Length == 0 || items.Sum(item => item.Value) <= 0) { Viz.Empty(dc, this, "No book attention to divide yet"); return; }
+        if (items.Length == 0 || items.Sum(item => item.Value) <= 0) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("No book attention to divide yet")); return; }
         var total = items.Sum(item => item.Value); var dpi = Viz.Dpi(this); var left = 0d; var band = new Rect(0, 22, ActualWidth, 30);
         foreach (var item in items)
         {
@@ -188,7 +188,7 @@ public sealed class SegmentedBandChart : InfographicElement
             if (width > 72) Viz.Text(dc, Viz.Trim(item.Label, 15), new(rect.Left + 6, rect.Top + 7), 10, (Brush)FindResource(level >= 3 ? "HeatmapText4" : "HeatmapText1"), dpi);
             left += width;
         }
-        Viz.Text(dc, "0%", new(0, 58), 9, Viz.Muted(this), dpi); Viz.Text(dc, "100% of reading time", new(Math.Max(0, ActualWidth - 102), 58), 9, Viz.Muted(this), dpi);
+        Viz.Text(dc, Localization.Localizer.Instance.Translate("0%"), new(0, 58), 9, Viz.Muted(this), dpi); Viz.Text(dc, Localization.Localizer.Instance.Translate("100% of reading time"), new(Math.Max(0, ActualWidth - 102), 58), 9, Viz.Muted(this), dpi);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -201,7 +201,7 @@ public sealed class DumbbellChart : InfographicElement
 {
     protected override void OnRender(DrawingContext dc)
     {
-        base.OnRender(dc); var items = Items<DumbbellDatum>(); if (items.Length == 0) { Viz.Empty(dc, this, "No comparison available"); return; }
+        base.OnRender(dc); var items = Items<DumbbellDatum>(); if (items.Length == 0) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("No comparison available")); return; }
         var muted = Viz.Muted(this); var primary = (Brush)FindResource("Primary"); var grid = (Brush)FindResource("ChartGrid"); var surface = (Brush)FindResource("Surface"); var dpi = Viz.Dpi(this);
         var labelWidth = 96d; var valueWidth = 106d; var plotLeft = labelWidth; var plotRight = Math.Max(plotLeft + 40, ActualWidth - valueWidth); var rowHeight = Math.Max(30, ActualHeight / items.Length);
         foreach (var (item, index) in items.Select((value, index) => (value, index)))
@@ -209,7 +209,7 @@ public sealed class DumbbellChart : InfographicElement
             var y = rowHeight * index + rowHeight / 2; var max = Math.Max(1, Math.Max(item.Current, item.Previous)); var currentX = plotLeft + (plotRight - plotLeft) * item.Current / max; var previousX = plotLeft + (plotRight - plotLeft) * item.Previous / max;
             Viz.Text(dc, item.Label, new(0, y - 8), 10, muted, dpi); dc.DrawLine(new Pen(grid, 2), new(plotLeft, y), new(plotRight, y)); dc.DrawLine(new Pen(primary, 1.5), new(previousX, y), new(currentX, y));
             dc.DrawEllipse(surface, new Pen(primary, 1.5), new(previousX, y), 4, 4); dc.DrawEllipse(primary, null, new(currentX, y), 4.5, 4.5);
-            Viz.Text(dc, $"{item.PreviousLabel} → {item.CurrentLabel}", new(plotRight + 8, y - 8), 10, primary, dpi);
+            Viz.Text(dc, Localization.Localizer.Instance.Translate($"{item.PreviousLabel} → {item.CurrentLabel}"), new(plotRight + 8, y - 8), 10, primary, dpi);
         }
     }
 }
@@ -225,7 +225,7 @@ public sealed class FingerprintChart : InfographicElement
         {
             var ratio = item.Value / max; var height = item.Value <= 0 ? 2 : 5 + ratio * Math.Max(8, ActualHeight - 28); var brush = primary.Clone(); brush.Opacity = item.Value <= 0 ? .12 : .28 + .72 * ratio; brush.Freeze(); var rect = new Rect(index * slot, baseline - height, Math.Max(1, slot * .56), height); dc.DrawRectangle(brush, null, rect); _hits.Add((new Rect(index * slot, 0, Math.Max(3, slot), ActualHeight), item));
         }
-        Viz.Text(dc, "earlier", new(0, ActualHeight - 13), 9, muted, dpi); Viz.Text(dc, "today", new(Math.Max(0, ActualWidth - 28), ActualHeight - 13), 9, muted, dpi);
+        Viz.Text(dc, Localization.Localizer.Instance.Translate("earlier"), new(0, ActualHeight - 13), 9, muted, dpi); Viz.Text(dc, Localization.Localizer.Instance.Translate("today"), new(Math.Max(0, ActualWidth - 28), ActualHeight - 13), 9, muted, dpi);
     }
     protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : hit.Item.Detail; }
 }
@@ -234,7 +234,7 @@ public sealed class MomentumChart : InfographicElement
 {
     protected override void OnRender(DrawingContext dc)
     {
-        base.OnRender(dc); var items = Items<ChartPoint>(); if (items.Length < 4 || items.All(item => item.Value <= 0)) { Viz.Empty(dc, this, "More calendar observations are needed for momentum"); return; }
+        base.OnRender(dc); var items = Items<ChartPoint>(); if (items.Length < 4 || items.All(item => item.Value <= 0)) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("More calendar observations are needed for momentum")); return; }
         var primary = (Brush)FindResource("Primary"); var grid = (Brush)FindResource("ChartGrid"); var muted = Viz.Muted(this); var dpi = Viz.Dpi(this); var plot = new Rect(8, 12, ActualWidth - 16, ActualHeight - 34); var max = Math.Max(1, items.Max(item => item.Value)); var points = items.Select((item, index) => new Point(plot.Left + plot.Width * index / Math.Max(1, items.Length - 1), plot.Bottom - plot.Height * item.Value / max)).ToArray();
         dc.DrawLine(new Pen(grid, 1), new(plot.Left, plot.Bottom), new(plot.Right, plot.Bottom)); dc.DrawGeometry(null, new Pen(primary, 2) { LineJoin = PenLineJoin.Round }, new StreamGeometryBuilder(points).Geometry); foreach (var point in points.Where((_, index) => index == points.Length - 1 || index % Math.Max(1, points.Length / 12) == 0)) dc.DrawEllipse(primary, null, point, 2.5, 2.5);
         Viz.Text(dc, items[0].Label, new(plot.Left, plot.Bottom + 7), 9, muted, dpi); Viz.Text(dc, items[^1].Label, new(plot.Right - 30, plot.Bottom + 7), 9, muted, dpi);
@@ -245,7 +245,7 @@ public sealed class StaircaseChart : InfographicElement
 {
     protected override void OnRender(DrawingContext dc)
     {
-        base.OnRender(dc); var items = Items<ChartPoint>(); if (items.Length == 0) { Viz.Empty(dc, this, "No sessions to accumulate"); return; }
+        base.OnRender(dc); var items = Items<ChartPoint>(); if (items.Length == 0) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("No sessions to accumulate")); return; }
         var primary = (Brush)FindResource("Primary"); var muted = Viz.Muted(this); var dpi = Viz.Dpi(this); var plot = new Rect(8, 10, ActualWidth - 16, ActualHeight - 32); var max = Math.Max(1, items.Max(item => item.Value)); var pen = new Pen(primary, 2); Point? previous = null;
         for (var i = 0; i < items.Length; i++)
         {
@@ -253,7 +253,7 @@ public sealed class StaircaseChart : InfographicElement
             if (previous is not null) { dc.DrawLine(pen, previous.Value, new(point.X, previous.Value.Y)); dc.DrawLine(pen, new(point.X, previous.Value.Y), point); }
             dc.DrawEllipse(primary, null, point, 2.8, 2.8); previous = point;
         }
-        Viz.Text(dc, items[0].Label, new(plot.Left, plot.Bottom + 7), 9, muted, dpi); Viz.Text(dc, $"{items[^1].Value:0.#}h total", new(Math.Max(plot.Left, plot.Right - 48), 0), 9, primary, dpi);
+        Viz.Text(dc, items[0].Label, new(plot.Left, plot.Bottom + 7), 9, muted, dpi); Viz.Text(dc, Localization.Localizer.Instance.Translate($"{items[^1].Value:0.#}h total"), new(Math.Max(plot.Left, plot.Right - 48), 0), 9, primary, dpi);
     }
 }
 
@@ -270,7 +270,7 @@ public sealed class GoalBulletChart : FrameworkElement
         {
             var forecastX = track.Left + track.Width * Math.Clamp(Progress.Projected.Value / Progress.Target, 0, 1); var triangle = new StreamGeometry(); using var context = triangle.Open(); context.BeginFigure(new(forecastX, 7), true, true); context.LineTo(new(forecastX - 4, 1), true, false); context.LineTo(new(forecastX + 4, 1), true, false); triangle.Freeze(); dc.DrawGeometry(primary, null, triangle);
         }
-        Viz.Text(dc, $"Actual {Progress.CurrentLabel}", new(0, 38), 9, primary, dpi); var target = Viz.Format($"Target {Progress.TargetLabel}", 9, muted, dpi); dc.DrawText(target, new(Math.Max(0, ActualWidth - target.Width), 38));
+        Viz.Text(dc, Localization.Localizer.Instance.Translate($"Actual {Progress.CurrentLabel}"), new(0, 38), 9, primary, dpi); var target = Viz.Format($"Target {Progress.TargetLabel}", 9, muted, dpi); dc.DrawText(target, new(Math.Max(0, ActualWidth - target.Width), 38));
     }
 }
 
@@ -288,11 +288,11 @@ public sealed class PaceChart : InfographicElement
 {
     protected override void OnRender(DrawingContext dc)
     {
-        base.OnRender(dc); var items = Items<PaceDatum>(); if (items.Length == 0) { Viz.Empty(dc, this, "Set a yearly target to see pace"); return; }
+        base.OnRender(dc); var items = Items<PaceDatum>(); if (items.Length == 0) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("Set a yearly target to see pace")); return; }
         var primary = (Brush)FindResource("Primary"); var muted = Viz.Muted(this); var grid = (Brush)FindResource("ChartGrid"); var dpi = Viz.Dpi(this); var plot = new Rect(8, 10, ActualWidth - 16, ActualHeight - 32); var max = Math.Max(1, items.Max(item => Math.Max(item.Actual, item.Required))); var actual = new List<Point>(); var required = new List<Point>();
         for (var i = 0; i < items.Length; i++) { var x = plot.Left + plot.Width * i / Math.Max(1, items.Length - 1); actual.Add(new(x, plot.Bottom - plot.Height * items[i].Actual / max)); required.Add(new(x, plot.Bottom - plot.Height * items[i].Required / max)); }
         dc.DrawLine(new Pen(grid, 1), new(plot.Left, plot.Bottom), new(plot.Right, plot.Bottom)); dc.DrawGeometry(null, new Pen(primary, 2), new StreamGeometryBuilder(actual).Geometry); dc.DrawGeometry(null, new Pen(muted, 1.5) { DashStyle = DashStyles.Dash }, new StreamGeometryBuilder(required).Geometry);
-        foreach (var point in actual) dc.DrawEllipse(primary, null, point, 2.5, 2.5); Viz.Text(dc, "actual —  required - -", new(plot.Left, 0), 9, muted, dpi); Viz.Text(dc, items[0].Label, new(plot.Left, plot.Bottom + 7), 9, muted, dpi); Viz.Text(dc, items[^1].Label, new(plot.Right - 22, plot.Bottom + 7), 9, muted, dpi);
+        foreach (var point in actual) dc.DrawEllipse(primary, null, point, 2.5, 2.5); Viz.Text(dc, Localization.Localizer.Instance.Translate("actual —  required - -"), new(plot.Left, 0), 9, muted, dpi); Viz.Text(dc, items[0].Label, new(plot.Left, plot.Bottom + 7), 9, muted, dpi); Viz.Text(dc, items[^1].Label, new(plot.Right - 22, plot.Bottom + 7), 9, muted, dpi);
     }
 }
 
@@ -309,7 +309,7 @@ public sealed class LollipopChart : InfographicElement
 {
     protected override void OnRender(DrawingContext dc)
     {
-        base.OnRender(dc); var items = Items<ChartPoint>(); if (items.Length == 0) { Viz.Empty(dc, this, "No active days this year"); return; }
+        base.OnRender(dc); var items = Items<ChartPoint>(); if (items.Length == 0) { Viz.Empty(dc, this, Localization.Localizer.Instance.Translate("No active days this year")); return; }
         var primary = (Brush)FindResource("Primary"); var grid = (Brush)FindResource("ChartGrid"); var muted = Viz.Muted(this); var dpi = Viz.Dpi(this); var max = Math.Max(1, items.Max(item => item.Value)); var rowHeight = ActualHeight / items.Length;
         for (var i = 0; i < items.Length; i++) { var y = rowHeight * i + rowHeight / 2; var left = 58d; var right = left + (ActualWidth - 132) * items[i].Value / max; Viz.Text(dc, items[i].Label, new(0, y - 8), 10, muted, dpi); dc.DrawLine(new Pen(grid, 2), new(left, y), new(right, y)); dc.DrawEllipse(primary, null, new(right, y), 4.5, 4.5); Viz.Text(dc, Formatters.Duration(items[i].Value * 60), new(ActualWidth - 66, y - 8), 10, primary, dpi); }
     }

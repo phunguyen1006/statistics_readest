@@ -1,0 +1,806 @@
+Today	Hôm nay
+Activity	Hoạt động
+Sessions	Phiên đọc
+Manual log	Ghi thủ công
+Books	Sách
+Notes	Ghi chú
+Goals	Mục tiêu
+Statistics	Thống kê
+Year in Reading	Năm đọc sách
+Settings	Cài đặ
+Reading time	Thời gian đọc
+Active books	Sách đang đọc
+Active days	Ngày đọc
+All sources	Mọi nguồn
+Manual	Thủ công
+Linked	Đã liên kế
+All	Tất cả
+All books	Tất cả sách
+All notes	Tất cả ghi chú
+All time	Toàn bộ thời gian
+7 days	7 ngày
+30 days	30 ngày
+90 days	90 ngày
+6 months	6 tháng
+1 year	1 năm
+This week	Tuần này
+This month	Tháng này
+This year	Năm nay
+Last year	Năm trước
+Custom	Tùy chỉnh
+Off	Tắ
+Previous period	Kỳ trước
+Same period last year	Cùng kỳ năm trước
+Auto	Tự động
+Day	Ngày
+Week	Tuần
+Month	Tháng
+Time	Thời gian
+System	Theo hệ thống
+English	Tiếng Anh
+Light	Sáng
+Dark	Tối
+Newest	Mới nhấ
+Oldest	Cũ nhấ
+Longest	Dài nhấ
+Shortest	Ngắn nhấ
+Title	Tên sách
+Active in range	Đọc trong kỳ
+Currently reading	Đang đọc
+Want to read	Muốn đọc
+Finished this year	Hoàn thành năm nay
+Paused	Tạm dừng
+Physical books	Sách giấy
+Readest books	Sách Reades
+Without recent activity	Lâu chưa đọc
+Incomplete metadata	Thiếu thông tin
+Pinned	Đã ghim
+Recently read	Đọc gần đây
+Unspecified	Chưa xác định
+Reading	Đang đọc
+Finished	Đã đọc xong
+Dropped	Đã ngừng đọc
+Favorites	Yêu thích
+Favorites only	Chỉ mục yêu thích
+Selected book	Sách đã chọn
+Visible notes	Ghi chú hiển thị
+Readest highlights	Đoạn tô sáng Reades
+Manual notes	Ghi chú thủ công
+Ready	Sẵn sàng
+Verified	Đã xác minh
+Legacy backup	Bản sao lưu cũ
+Unreadable	Không đọc được
+Healthy	Tố
+Mostly healthy	Tương đối tố
+Needs attention	Cần kiểm tra
+Passed	Đạ
+Pass	Đạ
+Attention	Cần kiểm tra
+In progress	Đang thực hiện
+Complete	Hoàn thành
+On track	Đúng tiến độ
+Ahead	Vượt tiến độ
+Behind	Chậm tiến độ
+No plan	Chưa có kế hoạch
+Not enough data	Chưa đủ dữ liệu
+Rest day	Ngày nghỉ
+Skipped	Đã bỏ qua
+Partial	Một phần
+Missed	Chưa đạ
+Reading time by source	Thời gian đọc theo nguồn
+Monday	Thứ Hai
+Tuesday	Thứ Ba
+Wednesday	Thứ Tư
+Thursday	Thứ Năm
+Friday	Thứ Sáu
+Saturday	Thứ Bảy
+Sunday	Chủ nhậ
+Mon	T2
+Tue	T3
+Wed	T4
+Thu	T5
+Fri	T6
+Sat	T7
+Sun	CN
+M	T2
+T	T3
+W	T4
+F	T6
+S	T7
+ to	 đến
+to	đến
+ active	 ngày đọc
+ books	 cuốn sách
+ days	 ngày
+ periods · best streak 	 kỳ · chuỗi dài nhấ
+All history · 	Toàn bộ lịch sử ·
+12 MONTHS AT A GLANCE	TỔNG QUAN 12 THÁNG
+24-HOUR SESSION TIMELINE	PHIÊN ĐỌC TRONG 24 GIỜ
+24-hour reading clock	Đồng hồ đọc 24 giờ
+365-day reading activity	Hoạt động đọc 365 ngày
+90-day reading fingerprint	Nhịp đọc 90 ngày
+A compact daily barcode where taller darker marks mean more active reading time.	Mỗi vạch là một ngày; vạch cao và đậm hơn biểu thị thời gian đọc nhiều hơn.
+A focused timer for books away from Readest	Bấm giờ tập trung khi đọc sách giấy
+A transparent rolling average smooths isolated daily spikes	Trung bình trượt giúp nhìn rõ xu hướng qua các ngày
+A year of activity, with your current rhythm in focus	Một năm hoạt động, làm rõ nhịp đọc hiện tại
+ABOUT	GIỚI THIỆU
+ACTIVE BOOK PLANS	KẾ HOẠCH ĐANG THỰC HIỆN
+ACTIVE READING	THỜI GIAN THỰC ĐỌC
+ACTIVE TIME	THỜI GIAN THỰC ĐỌC
+ACTUAL VS REQUIRED PACE	NHỊP ĐỌC THỰC TẾ VÀ CẦN ĐẠT
+ADD A PHYSICAL BOOK	THÊM SÁCH GIẤY
+APP DATABASE	DỮ LIỆU ỨNG DỤNG
+ARCHIVED BOOKS	SÁCH ĐÃ LƯU TRỮ
+Author	Tác giả
+Average	Trung bình
+AVG / ACTIVE DAY	TRUNG BÌNH / NGÀY ĐỌC
+AVG SESSION	PHIÊN TRUNG BÌNH
+Activity density	Mật độ hoạt động
+Activity page	Trang hoạt động
+Adaptive reading session distribution	Phân bố phiên đọc theo lượng dữ liệu
+Adaptive session duration distribution	Phân bố thời lượng phiên đọc
+Add a past session	Thêm phiên đã đọc
+Add a physical book	Thêm sách giấy
+Add a physical book · Readest Stats	Thêm sách giấy · Readest Stats
+Add book	Thêm sách
+Add past manual reading session	Ghi lại phiên đọc sách giấy
+Add past session	Thêm phiên đã đọc
+Add this book to the physical library	Thêm sách này vào thư viện sách giấy
+Annual heatmap	Bản đồ hoạt động năm
+Another	Ghi chú khác
+Another from this book	Ghi chú khác từ sách này
+Another random note	Ghi chú ngẫu nhiên khác
+Another random note (Ctrl+N)	Ghi chú ngẫu nhiên khác (Ctrl+N)
+Appearance	Giao diện
+Application language	Ngôn ngữ ứng dụng
+Archive selected	Lưu trữ sách đã chọn
+Available	Có sẵn
+BACKUP & RECOVERY CENTER	SAO LƯU VÀ KHÔI PHỤC
+BEST READING DAYS	NHỮNG NGÀY ĐỌC NHIỀU NHẤT
+Book	Sách
+BOOK ATTENTION COMPOSITION	PHÂN BỔ THỜI GIAN CHO SÁCH
+BOOK ATTENTION SHARE	TỶ TRỌNG THỜI GIAN ĐỌC
+BOOK DETAILS	THÔNG TIN SÁCH
+BOOK METADATA	DỮ LIỆU SÁCH
+BOOK × PERIOD MATRIX	MA TRẬN SÁCH × THỜI GIAN
+BOOKS ACTIVE	SÁCH ĐANG ĐỌC
+BUILD DATE	NGÀY ĐÓNG GÓI
+Back	Quay lại
+Back up all app data	Sao lưu toàn bộ dữ liệu ứng dụng
+Best reading days lollipop ranking	Xếp hạng các ngày đọc nhiều nhấ
+Book attention by date matrix	Ma trận thời gian đọc sách theo ngày
+Book attention composition	Phân bổ thời gian đọc theo sách
+Book completion date	Ngày đọc xong sách
+Book goals use Finished dates set in Books.	Mục tiêu số sách dùng ngày hoàn thành được đặt trong mục Sách.
+Book library	Thư viện sách
+Book search query	Từ khóa tìm sách
+Books available for manual sessions	Sách có thể ghi phiên thủ công
+Books page	Trang sách
+COMMIT	MÃ BẢN DỰNG
+CURRENT SESSION	PHIÊN HIỆN TẠI
+CURRENT STREAK	CHUỖI NGÀY ĐỌC HIỆN TẠI
+Cancel	Hủy
+Change database	Chọn cơ sở dữ liệu
+Change the language of pages, controls and dialogs	Đổi ngôn ngữ các trang, nút điều khiển và hộp thoại
+Check for updates	Kiểm tra cập nhậ
+Clean unused covers	Dọn bìa sách không sử dụng
+Clear metadata fields and type your own book details.	Xóa các trường thông tin để tự nhập chi tiết sách.
+Close	Đóng
+Color theme	Chế độ màu
+Compact mode	Chế độ gọn
+Compare from	So sánh từ
+Compare trend with	So sánh xu hướng với
+Confirm the edition's physical page numbers. The elapsed timer excludes paused time.	Xác nhận số trang của bản sách giấy. Bộ đếm không tính thời gian tạm dừng.
+Copy	Sao chép
+Copy citation	Sao chép trích dẫn
+Copy note with book citation	Sao chép ghi chú kèm nguồn sách
+Copy selected note	Sao chép ghi chú đã chọn
+Create now	Sao lưu ngay
+Ctrl+K search · Ctrl+1–9 navigate · Ctrl+B books · Ctrl+M manual log · Ctrl+Shift+S start selected book · Ctrl+R refresh · Ctrl+N random note · F11 full screen	Ctrl+K tìm kiếm · Ctrl+1–9 chuyển trang · Ctrl+B sách · Ctrl+M ghi thủ công · Ctrl+Shift+S bắt đầu đọc · Ctrl+R làm mới · Ctrl+N ghi chú ngẫu nhiên · F11 toàn màn hình
+Cumulative session staircase	Thời gian đọc tích lũy qua từng phiên
+Current versus previous period dumbbells	So sánh các chỉ số giữa hai kỳ
+Current yearly book goal progress	Tiến độ mục tiêu số sách năm nay
+DAILY MINUTES	PHÚT MỖI NGÀY
+DAILY NOTE	GHI CHÚ HÔM NAY
+DAILY PAGES	TRANG MỖI NGÀY
+Data	Dữ liệu
+DATA HEALTH	TÌNH TRẠNG DỮ LIỆU
+DATA QUALITY	CHẤT LƯỢNG DỮ LIỆU
+DATA SOURCE	NGUỒN DỮ LIỆU
+Date	Ngày
+Display	Hiển thị
+DURATION (MINUTES)	THỜI LƯỢNG (PHÚT)
+Daily cells through 45 days; weekly cells for longer ranges	Ô theo ngày trong phạm vi 45 ngày; theo tuần khi dài hơn
+Daily reading	Hoạt động đọc hằng ngày
+Daily reading in selected month	Hoạt động đọc trong tháng đã chọn
+Daily reading this month	Hoạt động đọc tháng này
+Day of week	Ngày trong tuần
+Delete	Xóa
+Delete manual session	Xóa phiên thủ công
+Delete physical book	Xóa sách giấy
+Delete selected	Xóa mục đã chọn
+Details	Chi tiế
+Discard session	Hủy phiên đọc
+Does not change Readest's database.	Không thay đổi dữ liệu của Readest.
+Dots at ≤15 sessions · grouped above 15 · middle 50%: 	Dạng điểm khi ≤15 phiên · gộp nhóm khi nhiều hơn · 50% ở giữa:
+Durable undo history survives an app restart	Lịch sử hoàn tác được giữ sau khi khởi động lại
+EDITION LINK	LIÊN KẾT BẢN SÁCH
+Elapsed	Đã trôi qua
+End	Kết thúc
+Events	Bản ghi hoạt động
+Each segment is positioned at its actual start and end time; hover for book and activity-event details.	Mỗi đoạn nằm đúng thời gian bắt đầu và kết thúc; rê chuột để xem sách và chi tiết hoạt động.
+Each square is a local calendar day. Select a day to inspect it in Activity.	Mỗi ô là một ngày theo giờ địa phương. Chọn ngày để xem trong Hoạt động.
+Edit	Sửa
+Edit manual session	Sửa phiên thủ công
+Edit physical book	Sửa sách giấy
+Edition to keep	Bản sách giữ lại
+Elapsed manual reading time	Thời gian đọc thủ công đã trôi qua
+Enable this goal	Bật mục tiêu này
+Enter manually	Tự nhập
+Enter to open  ·  Esc to close  ·  Search pages, books, notes and sessions	Enter để mở · Esc để đóng · Tìm trang, sách, ghi chú và phiên đọc
+Every reconstructed session creates one step	Mỗi phiên đọc tạo một bậc tích lũy
+Exact comparison data	Số liệu kỳ so sánh
+Experimental page metrics	Chỉ số trang thử nghiệm
+Export monthly Markdown report	Xuất báo cáo tháng Markdown
+Export notes as CSV	Xuất ghi chú CSV
+Export notes as JSON	Xuất ghi chú JSON
+Export notes as Markdown	Xuất ghi chú Markdown
+Export physical library	Xuất thư viện sách giấy
+Export selected-range CSV	Xuất CSV của khoảng đã chọn
+Export summary JSON	Xuất tổng hợp JSON
+F11 toggles · Esc exits	F11 bật/tắt · Esc thoá
+FINISHED ON	NGÀY HOÀN THÀNH
+FIRST READ	LẦN ĐỌC ĐẦU
+FULL SCREEN	TOÀN MÀN HÌNH
+Few or many sessions · short or long sessions	Số lượng và thời lượng phiên đọc
+Filled cells are days with recorded reading activity.	Ô được tô là ngày có hoạt động đọc.
+Filter books	Lọc sách
+Filter sessions by exact book	Lọc phiên theo sách cụ thể
+Find and filter notes	Tìm và lọc ghi chú
+Find notes	Tìm ghi chú
+Find the edition on your shelf	Tìm đúng bản sách bạn đang có
+Finish	Kết thúc
+Finish manual reading session	Kết thúc phiên đọc thủ công
+Finish this session	Kết thúc phiên này
+Finished dates are stored locally	Ngày hoàn thành được lưu trên máy
+For example 19:30	Ví dụ 19:30
+Fourteen day reading plan adherence	Mức đạt kế hoạch đọc trong 14 ngày
+GOAL HISTORY	LỊCH SỬ MỤC TIÊU
+Goal actual target and required pace	Thực tế, mục tiêu và nhịp đọc cần đạ
+Goal hit history	Lịch sử đạt mục tiêu
+Goal target	Giá trị mục tiêu
+Goals page	Trang mục tiêu
+Goodreads link (optional)	Liên kết Goodreads (không bắt buộc)
+Google Books API key	Khóa API Google Books
+Google Books API key (optional)	Khóa API Google Books (không bắt buộc)
+Highlight	Đoạn tô sáng
+HOW OFTEN YOU READ	TẦN SUẤT ĐỌC
+HOW YOU READ	CÁCH BẠN ĐỌC
+HOW YOUR READING CHANGES	NHỊP ĐỌC THAY ĐỔI THẾ NÀO
+Hide from random picks until tomorrow	Ẩn khỏi lựa chọn ngẫu nhiên đến ngày mai
+Hide this note from random picks for seven days	Ẩn ghi chú khỏi lựa chọn ngẫu nhiên trong 7 ngày
+Hide this note from random picks for thirty days	Ẩn ghi chú khỏi lựa chọn ngẫu nhiên trong 30 ngày
+Historical reading stays in your statistics. Restore a book to read it again.	Lịch sử đọc vẫn được tính vào thống kê. Khôi phục sách để tiếp tục đọc.
+How reading time is divided, not merely ranked	Thời gian đọc được phân bổ giữa các sách
+How selected-period reading time was divided	Phân bổ thời gian đọc trong kỳ đã chọn
+IMPORT CENTER	NHẬP DỮ LIỆU
+Import books	Nhập sách
+Import physical library	Nhập thư viện sách giấy
+Include or exclude this note from random picks	Thêm hoặc loại ghi chú khỏi lựa chọn ngẫu nhiên
+Individual marks through 15 sessions; grouped distribution above that	Hiện từng phiên khi có tối đa 15 phiên; gộp nhóm khi nhiều hơn
+Keep	Giữ
+Keep seven daily complete backups	Giữ các bản sao lưu đầy đủ theo số ngày đã chọn
+Keep the next action close.	Sẵn sàng cho lần đọc tiếp theo.
+Language	Ngôn ngữ
+LAST 14 DAYS	14 NGÀY QUA
+LAST 30 DAYS	30 NGÀY QUA
+LAST ACTIVITY	HOẠT ĐỘNG MỚI NHẤT
+LAST PAGE REACHED	TRANG ĐÃ ĐỌC ĐẾN
+LAST READ	LẦN ĐỌC GẦN NHẤT
+LIBRARY MAINTENANCE	QUẢN LÝ THƯ VIỆN
+LONGEST STREAK	CHUỖI NGÀY ĐỌC DÀI NHẤT
+Last 30 days reading streak	Chuỗi ngày đọc trong 30 ngày qua
+Last 30 days streak timeline	Dòng thời gian chuỗi đọc 30 ngày
+Last page reached after each logged session	Trang đã đọc đến sau mỗi phiên được ghi
+Link editions	Liên kết bản sách
+Log physical reading that happened without the timer.	Ghi lại lần đọc sách giấy không dùng bộ đếm giờ.
+Median	Trung vị
+MY NOTE	GHI CHÚ CỦA TÔI
+Manual entry means the details are stored only in Readest Stats; no online match is required.	Thông tin tự nhập chỉ lưu trong Readest Stats; không cần tìm thấy sách trên mạng.
+Manual reading session	Phiên đọc thủ công
+Manual session note	Ghi chú phiên thủ công
+Matching book editions	Các bản sách phù hợp
+Merge and preserve sessions	Gộp và giữ các phiên đọc
+Milestones calculated from recorded activity	Các cột mốc tính từ hoạt động đã ghi
+Minimum valid session (seconds)	Phiên hợp lệ tối thiểu (giây)
+Month calendar	Lịch tháng
+Monthly reading journey this year	Hành trình đọc theo tháng năm nay
+Monthly reading volume as compact lollipop glyphs	Khối lượng đọc theo tháng dạng cột điểm
+NEXT UP	ĐỌC TIẾP
+NOTE (OPTIONAL)	GHI CHÚ (KHÔNG BẮT BUỘC)
+NOTE ANALYTICS	PHÂN TÍCH GHI CHÚ
+NOTE DETAIL	CHI TIẾT GHI CHÚ
+NOTE TYPES	LOẠI GHI CHÚ
+NOTES BY BOOK	GHI CHÚ THEO SÁCH
+NOTES LIBRARY	THƯ VIỆN GHI CHÚ
+NOTES OVER TIME	GHI CHÚ THEO THỜI GIAN
+Next month	Tháng sau
+Next year	Năm sau
+No active books in this period	Chưa có sách được đọc trong kỳ này
+No cover available	Chưa có bìa sách
+No reading activity in this period	Chưa có hoạt động đọc trong kỳ này
+No activity in this period	Chưa có hoạt động trong kỳ này
+No sessions yet. Select a book and start the timer.	Chưa có phiên đọc. Chọn sách và bắt đầu bấm giờ.
+Not enough reading history yet	Chưa đủ lịch sử đọc
+Note source filter	Lọc nguồn ghi chú
+Notes by type	Ghi chú theo loại
+Notes library page	Trang thư viện ghi chú
+Nothing is written until you confirm this preview.	Dữ liệu chỉ được lưu sau khi bạn xác nhận bản xem trước.
+Observed active days ranked with exact duration	Xếp hạng ngày đọc cùng thời lượng chính xác
+One focused queue combining your plans and recent reading	Danh sách đọc tiếp từ kế hoạch và hoạt động gần đây
+One mark per day · a compact signature of the year	Một vạch mỗi ngày · nhịp đọc của cả năm
+One mark per day · height and darkness show active reading	Một vạch mỗi ngày · chiều cao và độ đậm thể hiện lượng đọc
+Open	Mở
+Open Library works without a key. When supplied, Google Books results are searched first.	Open Library không cần khóa. Nếu có khóa, Google Books được tìm trước.
+Open books with reading activity in the selected period.	Mở các sách có hoạt động đọc trong kỳ đã chọn.
+Open diagnostic logs	Mở nhật ký chẩn đoán
+Open folder	Mở thư mục
+Open goals, progress, and previous-year results.	Mở mục tiêu, tiến độ và kết quả năm trước.
+Open in Notes	Mở trong Ghi chú
+Open in Readest	Mở trong Reades
+Open library	Mở thư viện
+Open note book in Readest	Mở sách của ghi chú trong Reades
+Open reconstructed continuous reading sessions.	Mở các phiên đọc liên tục đã tổng hợp.
+Open releases	Mở các bản phát hành
+Open selected book information	Mở thông tin sách đã chọn
+Open the activity calendar and reading trend.	Mở lịch hoạt động và xu hướng đọc.
+Open the activity calendar. An active day contains at least one valid reading event.	Mở lịch hoạt động. Ngày đọc có ít nhất một hoạt động hợp lệ.
+Open the complete statistics dashboard.	Mở trang thống kê đầy đủ.
+Open this title in Books	Mở sách này trong thư viện
+Open timer	Mở bộ đếm giờ
+Overview page	Trang tổng quan
+PAGE METRICS	CHỈ SỐ TRANG
+Pages	Trang
+PEAK WINDOW	KHUNG GIỜ ĐỌC NHIỀU NHẤT
+PERIOD COMPARISON	SO SÁNH THEO KỲ
+PERSONAL RECORDS	KỶ LỤC CÁ NHÂN
+PHYSICAL BOOK PROGRESS	TIẾN ĐỘ SÁCH GIẤY
+PHYSICAL LIBRARY	THƯ VIỆN SÁCH GIẤY
+PHYSICAL PROGRESS	TIẾN ĐỘ ĐỌC SÁCH GIẤY
+PHYSICAL READING	ĐỌC SÁCH GIẤY
+PREVIOUS YEARS	CÁC NĂM TRƯỚC
+PRIORITY (1–3)	ƯU TIÊN (1–3)
+PRIVACY & DATA HEALTH	QUYỀN RIÊNG TƯ VÀ DỮ LIỆU
+Projected	Dự kiến
+Page-based values can change with pagination, layout, font size, or reading engine.	Chỉ số trang có thể đổi theo cách phân trang, bố cục, cỡ chữ hoặc trình đọc.
+Pause or resume manual reading session	Tạm dừng hoặc tiếp tục phiên đọc thủ công
+Personal note	Ghi chú cá nhân
+Physical book	Sách giấy
+Physical book for the next session	Sách giấy cho phiên tiếp theo
+Physical book page progress	Tiến độ theo trang của sách giấy
+Physical editions can start a timer here	Có thể bắt đầu bấm giờ cho sách giấy tại đây
+Physical session note	Ghi chú phiên sách giấy
+Pin or unpin selected book	Ghim hoặc bỏ ghim sách đã chọn
+Potential duplicate physical editions	Các bản sách giấy có thể trùng
+Previous month	Tháng trước
+Previous random note	Ghi chú ngẫu nhiên trước
+Previous year	Năm trước
+Published	Ngày xuất bản
+Publisher	Nhà xuất bản
+QUICK START	BẮT ĐẦU NHANH
+Quality checks and repair routes	Kiểm tra dữ liệu và hướng xử lý
+RANDOM STUDIO	KHÁM PHÁ NGẪU NHIÊN
+READEST CONNECTION	KẾT NỐI READEST
+READEST NOTE	GHI CHÚ READEST
+READING DAYS	NGÀY ĐỌC
+READING GOALS	MỤC TIÊU ĐỌC
+READING LIFECYCLE	CÁC LƯỢT ĐỌC
+READING PATTERNS	THÓI QUEN ĐỌC
+READING PLAN	KẾ HOẠCH ĐỌC
+READING SOURCE MIX	PHÂN BỔ THEO NGUỒN
+READING STATISTICS	THỐNG KÊ ĐỌC
+READING STYLE MAP	BẢN ĐỒ PHONG CÁCH ĐỌC
+RECENT LIBRARY CHANGES	THAY ĐỔI THƯ VIỆN GẦN ĐÂY
+RECENT MANUAL SESSIONS	PHIÊN THỦ CÔNG GẦN ĐÂY
+RECENTLY REDISCOVERED	VỪA KHÁM PHÁ LẠI
+Rediscover	Khám phá lại
+Refresh	Làm mới
+Required	Cần đạ
+ROLLING MOMENTUM	XU HƯỚNG TRUNG BÌNH TRƯỢT
+Random note pool	Nguồn ghi chú ngẫu nhiên
+Re-detect	Tìm lại
+Read in Readest and refresh to begin your personal reading story.	Đọc trong Readest rồi làm mới để bắt đầu câu chuyện đọc sách của bạn.
+Read in Readest and refresh to see statistics here.	Đọc trong Readest rồi làm mới để xem thống kê tại đây.
+Readest Stats book icon	Biểu tượng sách Readest Stats
+Readest and physical-book time in the selected period	Thời gian đọc Readest và sách giấy trong kỳ đã chọn
+Readest data path	Đường dẫn dữ liệu Reades
+Readest is always opened read-only. Readest Stats owns a separate transactional SQLite database; manual-reading.json remains a human-readable recovery mirror.	Readest luôn được mở ở chế độ chỉ đọc. Dữ liệu riêng của ứng dụng được lưu tách biệt, kèm bản sao phục hồi dễ đọc.
+Readest notes	Ghi chú Reades
+Reading fingerprint	Nhịp đọc
+Reading status	Trạng thái đọc
+Reading style map by active day	Bản đồ phong cách đọc theo ngày
+Reading trend	Xu hướng đọc
+Recent manual reading sessions	Các phiên đọc thủ công gần đây
+Recent sessions	Phiên đọc gần đây
+Reconnect	Kết nối lại
+Reduce motion	Giảm chuyển động
+Refresh Readest notes	Làm mới ghi chú Reades
+Refresh behavior	Cách làm mới
+Refresh physical book metadata	Cập nhật thông tin sách giấy
+Refresh physical metadata	Cập nhật thông tin sách giấy
+Refresh the Readest library to look for notes.	Làm mới thư viện Readest để tìm ghi chú.
+Remove plan	Xóa kế hoạch
+Reset app-owned settings	Đặt lại cài đặt ứng dụng
+Restore book	Khôi phục sách
+Restore from another file	Khôi phục từ tệp khác
+Restore selected	Khôi phục bản đã chọn
+Retry	Thử lại
+Review	Xem chi tiế
+Review before adding	Kiểm tra trước khi thêm
+Review books before adding them	Kiểm tra sách trước khi thêm
+Rolling reading momentum	Xu hướng đọc trung bình trượ
+Rows are Monday through Sunday, columns are hours, and darker cells represent more reading activity. A dot marks multiple sessions.	Hàng là các ngày trong tuần, cột là giờ; ô đậm hơn thể hiện đọc nhiều hơn. Dấu chấm biểu thị nhiều phiên.
+Run checks	Chạy kiểm tra
+SEARCH BY TITLE, AUTHOR, OR ISBN	TÌM THEO TÊN SÁCH, TÁC GIẢ HOẶC ISBN
+SELECTED COMPARISON	KỲ SO SÁNH ĐÃ CHỌN
+Session	Phiên đọc
+SESSION DISTRIBUTION	PHÂN BỐ PHIÊN ĐỌC
+SESSION LENGTHS	THỜI LƯỢNG PHIÊN ĐỌC
+SESSION NOTE	GHI CHÚ PHIÊN ĐỌC
+SESSION-BY-SESSION ACCUMULATION	TÍCH LŨY QUA TỪNG PHIÊN
+SESSIONS / DAY	PHIÊN / NGÀY
+SKIPPED ROWS	DÒNG BỎ QUA
+Source	Nguồn
+Start	Bắt đầu
+START DATE	NGÀY BẮT ĐẦU
+Start page	Trang bắt đầu
+START TIME	GIỜ BẮT ĐẦU
+STATISTICS DATABASE	DỮ LIỆU THỐNG KÊ
+Save	Lưu
+Save book	Lưu sách
+Save goals	Lưu mục tiêu
+Save personal note	Lưu ghi chú cá nhân
+Save plan	Lưu kế hoạch
+Save session	Lưu phiên đọc
+Save settings	Lưu cài đặ
+Search	Tìm kiếm
+Search Google Books and Open Library, then verify the details before adding it.	Tìm trong Google Books và Open Library, kiểm tra thông tin trước khi thêm.
+Search book title	Tìm tên sách
+Search books	Tìm sách
+Search everything (Ctrl+K)	Tìm mọi thứ (Ctrl+K)
+Search note text, book, or author	Tìm nội dung ghi chú, sách hoặc tác giả
+Search online metadata, select the edition you own, then verify its page count.	Tìm thông tin trên mạng, chọn đúng bản sách rồi kiểm tra số trang.
+Search pages, books, notes, and sessions	Tìm trang, sách, ghi chú và phiên đọc
+Search session book title	Tìm tên sách trong phiên đọc
+Search title or author	Tìm tên sách hoặc tác giả
+Select a verified snapshot to inspect or restore	Chọn bản sao lưu đã xác minh để xem hoặc khôi phục
+Selected day session timeline	Dòng thời gian phiên đọc của ngày đã chọn
+Selected-period reading trend	Xu hướng đọc trong kỳ đã chọn
+Selected-period trend and accumulation	Xu hướng và tích lũy trong kỳ đã chọn
+Session end page	Trang cuối phiên
+Session gap (minutes)	Khoảng cách giữa các phiên (phút)
+Session length and the books receiving your time	Thời lượng phiên và các sách bạn dành thời gian đọc
+Session note (optional)	Ghi chú phiên (không bắt buộc)
+Session start page	Trang đầu phiên
+Sessions page	Trang phiên đọc
+Sessions per day → · average session length ↑	Phiên mỗi ngày → · thời lượng phiên trung bình ↑
+Settings page	Trang cài đặ
+Show another note from this book	Xem ghi chú khác từ sách này
+Show another random note	Xem ghi chú ngẫu nhiên khác
+Show daily note	Xem ghi chú hôm nay
+Show today's note	Xem ghi chú hôm nay
+Skip today	Bỏ qua hôm nay
+Snooze 30 days	Ẩn trong 30 ngày
+Snooze 7 days	Ẩn trong 7 ngày
+Solid line is current; dashed line is comparison. Use left and right arrow keys to inspect exact points.	Nét liền là kỳ hiện tại; nét đứt là kỳ so sánh. Dùng phím trái/phải để xem từng điểm.
+Solid line is the selected period; dashed line is the comparison period. Use arrow keys to inspect exact points.	Nét liền là kỳ đã chọn; nét đứt là kỳ so sánh. Dùng phím mũi tên để xem từng điểm.
+Sort books	Sắp xếp sách
+Start another reading cycle	Bắt đầu lượt đọc mới
+Start manual reading session	Bắt đầu phiên đọc thủ công
+Start of week	Ngày đầu tuần
+Start physical reading session	Bắt đầu phiên đọc sách giấy
+Start physical session	Bắt đầu đọc sách giấy
+Start re-read	Bắt đầu đọc lại
+Start session	Bắt đầu phiên
+Statistics reading story page	Trang câu chuyện đọc sách
+TARGET DATE	NGÀY MỤC TIÊU
+THIS PERIOD	KỲ NÀY
+TITLE, AUTHOR, OR ISBN	TÊN SÁCH, TÁC GIẢ HOẶC ISBN
+TODAY'S NOTE	GHI CHÚ HÔM NAY
+TOP BOOKS BY READING TIME	SÁCH ĐỌC NHIỀU NHẤT
+TOTAL NOTES	TỔNG GHI CHÚ
+TOTAL READING	TỔNG THỜI GIAN ĐỌC
+TOTAL SESSIONS	TỔNG PHIÊN ĐỌC
+Target	Mục tiêu
+The books that need your attention next	Những cuốn sách nên đọc tiếp
+The horizontal axis follows the month selected above	Trục ngang theo tháng đã chọn ở trên
+Time is checkpointed locally every 15 seconds.	Thời gian được lưu trên máy mỗi 15 giây.
+Time of day	Thời điểm trong ngày
+Time pattern metric	Chỉ số phân bố thời gian
+Title *	Tên sách *
+Tomorrow	Ngày mai
+Total pages	Tổng số trang
+Trend metric	Chỉ số xu hướng
+Trend time grouping	Gộp thời gian trên biểu đồ
+Twelve monthly reading glyphs	Biểu đồ đọc trong 12 tháng
+UNIQUE NOTES SEEN	GHI CHÚ KHÁC NHAU ĐÃ XEM
+Updates	Cập nhậ
+Undo book delete	Hoàn tác xóa sách
+Undo delete	Hoàn tác xóa
+Undo import	Hoàn tác nhập
+Undo latest	Hoàn tác gần nhấ
+Unlink	Bỏ liên kế
+Use 24-hour time	Dùng định dạng 24 giờ
+Uses the month currently shown on Activity.	Dùng tháng đang hiển thị trong Hoạt động.
+VALID BOOKS	SÁCH HỢP LỆ
+Version	Phiên bản
+View exact page data	Xem số trang chính xác
+View exact trend data	Xem số liệu xu hướng
+View source	Xem nguồn
+WHEN DURING THE WEEK YOU READ	BẠN ĐỌC VÀO LÚC NÀO TRONG TUẦN
+Week hour matrix metric	Chỉ số ma trận tuần và giờ
+Week × hour reading matrix	Ma trận đọc theo tuần × giờ
+Weekday by hour reading matrix	Ma trận ngày trong tuần theo giờ
+What your saved reading is concentrating on	Các nội dung bạn lưu tập trung vào đâu
+Where the year's reading time was concentrated	Thời gian đọc trong năm tập trung vào sách nào
+YEAR GOAL	MỤC TIÊU NĂM
+YEAR HIGHLIGHTS	ĐIỂM NỔI BẬT TRONG NĂM
+YEAR READING STRIP	DẢI HOẠT ĐỘNG ĐỌC TRONG NĂM
+YEARLY BOOK GOAL	MỤC TIÊU SỐ SÁCH NĂM
+YOUR READING STORY	CÂU CHUYỆN ĐỌC SÁCH
+YOUR YEAR IN READING	NĂM ĐỌC SÁCH CỦA BẠN
+Year in Reading page	Trang tổng kết năm đọc sách
+Year reading fingerprint	Nhịp đọc trong năm
+Yearly book attention composition	Phân bổ thời gian cho sách trong năm
+Yearly book goal actual versus required pace	Mục tiêu sách năm: thực tế và nhịp cần đạ
+Your latest physical-reading history	Lịch sử đọc sách giấy gần nhấ
+Your reading, remembered	Ghi lại hành trình đọc của bạn
+Selected period	Kỳ đã chọn
+Days with activity	Ngày có hoạt động
+Full year	Cả năm
+Not elapsed span	Không phải thời gian trôi qua
+Per active day	Mỗi ngày đọc
+Reconstructed	Được tổng hợp
+Titles with activity	Sách có hoạt động
+Typical session	Phiên thường gặp
+Within selected year	Trong năm đã chọn
+books finished	cuốn đã đọc xong
+{0}% consistency	Đều đặn {0}%
+All durations	Mọi thời lượng
+On Readest changes	Khi Readest thay đổi
+30 sec	30 giây
+1 min	1 phú
+5 min	5 phú
+Unseen	Chưa xem
+Not seen recently	Lâu chưa xem
+Readest only	Chỉ Reades
+Physical books only	Chỉ sách giấy
+All eligible notes	Mọi ghi chú phù hợp
+Current book	Sách hiện tại
+Resume	Tiếp tục
+Pause	Tạm dừng
+READING NOW	ĐANG ĐỌC
+Select a book	Chọn sách
+No active session	Chưa có phiên đọc
+Choose a physical book to begin.	Chọn một cuốn sách giấy để bắt đầu.
+Choose a physical book.	Hãy chọn sách giấy.
+Your physical-reading data is stored locally.	Dữ liệu đọc sách giấy được lưu trên máy.
+Search by title, author, or ISBN.	Tìm theo tên sách, tác giả hoặc ISBN.
+Search by title, author, or ISBN, or enter details manually.	Tìm theo tên sách, tác giả, ISBN hoặc tự nhập thông tin.
+Update the metadata for this physical edition.	Cập nhật thông tin cho bản sách giấy này.
+Searching Google Books and Open Library…	Đang tìm trên Google Books và Open Library…
+Book search is unavailable. Check your connection or enter the book manually.	Không tìm sách được. Kiểm tra kết nối hoặc tự nhập sách.
+Enter a book title.	Hãy nhập tên sách.
+Total pages must be a positive whole number.	Tổng số trang phải là số nguyên dương.
+Goodreads link must be a complete web address.	Liên kết Goodreads phải là địa chỉ web đầy đủ.
+This book is no longer available.	Sách này không còn trong thư viện.
+That edition is already in your physical library.	Bản sách này đã có trong thư viện sách giấy.
+Session resumed.	Đã tiếp tục phiên đọc.
+Session paused.	Đã tạm dừng phiên đọc.
+Timer stopped · confirm the last page you reached.	Đã dừng giờ · xác nhận trang bạn đã đọc đến.
+Session remains paused. Resume when you are ready.	Phiên vẫn tạm dừng. Tiếp tục khi bạn sẵn sàng.
+Start page must be a positive whole number.	Trang bắt đầu phải là số nguyên dương.
+Enter the last page you reached.	Hãy nhập trang bạn đã đọc đến.
+End page cannot be before the start page.	Trang kết thúc không được nhỏ hơn trang bắt đầu.
+End page cannot exceed {0}.	Trang kết thúc không được vượt quá {0}.
+The session is too short to save.	Phiên đọc quá ngắn để lưu.
+Active session discarded.	Đã hủy phiên đang đọc.
+Manual session deleted.	Đã xóa phiên thủ công.
+Deleted session restored.	Đã khôi phục phiên bị xóa.
+Deleted book and sessions restored.	Đã khôi phục sách và các phiên bị xóa.
+Finish or discard the active session before deleting this book.	Kết thúc hoặc hủy phiên đang đọc trước khi xóa sách này.
+The most recent library change was restored.	Đã hoàn tác thay đổi thư viện gần nhất.
+Book restored to the physical library.	Đã khôi phục sách vào thư viện sách giấy.
+Book archived; its sessions remain in statistics.	Đã lưu trữ sách; các phiên đọc vẫn được tính vào thống kê.
+Duplicate editions merged; all sessions were preserved.	Đã gộp các bản sách trùng và giữ lại mọi phiên đọc.
+Timer paused after sleep or a long system interruption; inactive time was excluded.	Đã tạm dừng sau khi máy ngủ hoặc gián đoạn lâu; thời gian không hoạt động không được tính.
+Recovered and paused the timer; time while the app was closed was excluded.	Đã khôi phục và tạm dừng bộ đếm; không tính thời gian ứng dụng đã đóng.
+Recovered a paused manual session.	Đã khôi phục phiên thủ công đang tạm dừng.
+Recovered a running manual session.	Đã khôi phục phiên thủ công đang chạy.
+Could not open the metadata page.	Không mở được trang thông tin sách.
+Past reading session added.	Đã thêm phiên đọc trước đây.
+Manual session updated.	Đã cập nhật phiên thủ công.
+The last import was undone.	Đã hoàn tác lần nhập gần nhất.
+Physical edition not found.	Không tìm thấy bản sách giấy.
+No matching metadata was found.	Không tìm thấy thông tin phù hợp.
+Metadata refreshed; your existing edits were preserved.	Đã cập nhật thông tin và giữ lại các chỉnh sửa của bạn.
+Duration must be between 1 minute and 24 hours.	Thời lượng phải từ 1 phút đến 24 giờ.
+Enter a valid start and end page.	Hãy nhập trang bắt đầu và kết thúc hợp lệ.
+Enter a valid date and start time.	Hãy nhập ngày và giờ bắt đầu hợp lệ.
+Duration and pages must be numbers.	Thời lượng và số trang phải là số.
+This overlaps another manual session for {0}. Edit the times before saving.	Phiên này trùng thời gian với phiên của {0}. Chỉnh thời gian trước khi lưu.
+Saved {0} · {1} pages.	Đã lưu {0} · {1} trang.
+{0} physical books · {1} manual sessions	{0} sách giấy · {1} phiên thủ công
+{0} physical book · {1} manual session	{0} sách giấy · {1} phiên thủ công
+{0} physical book · {1} manual sessions	{0} sách giấy · {1} phiên thủ công
+{0} physical books · {1} manual session	{0} sách giấy · {1} phiên thủ công
+{0} / {1} pages · {2}%	{0} / {1} trang · {2}%
+Page {0} · total pages unknown	Trang {0} · chưa biết tổng số trang
+Page {0}	Trang {0}
+{0} pages	{0} trang
+{0} days	{0} ngày
+{0} day	{0} ngày
+{0} notes	{0} ghi chú
+{0} note	{0} ghi chú
+Best: {0} days	Dài nhất: {0} ngày
+Best: {0} day	Dài nhất: {0} ngày
+{0} total · {1}/day	Tổng {0} · {1}/ngày
+{0} active days of {1} eligible days	{0} ngày đọc trên {1} ngày có dữ liệu
+{0} active day of {1} eligible day	{0} ngày đọc trên {1} ngày có dữ liệu
+No eligible days	Chưa có ngày đủ điều kiện
+No active book	Chưa có sách đang đọc
+No reading in this period.	Chưa đọc trong kỳ này.
+No reading activity this month.	Chưa có hoạt động đọc trong tháng này.
+No activity in this period.	Chưa có hoạt động trong kỳ này.
+No activity	Không có hoạt động
+Comparison off	Đã tắt so sánh
+Select a valid comparison range	Chọn khoảng so sánh hợp lệ
+No reading in comparison period	Không có hoạt động đọc trong kỳ so sánh
+Enter a valid start and end date for comparison.	Nhập ngày bắt đầu và kết thúc hợp lệ để so sánh.
+Solid: selected period · Dashed: {0} · aligned by bucket order	Nét liền: kỳ đã chọn · nét đứt: {0} · ghép theo thứ tự mốc
+Comparison: {0} · Different period lengths; totals and exact data are available below.	So sánh: {0} · Hai kỳ dài khác nhau; xem tổng và số liệu chính xác bên dưới.
+Peak · {0}	Cao nhất · {0}
+Readest connected	Đã kết nối Reades
+Not synced	Chưa đồng bộ
+Last sync {0}	Đồng bộ lúc {0}
+Finding Readest data…	Đang tìm dữ liệu Readest…
+Finding Readest data...	Đang tìm dữ liệu Readest…
+Manual library ready	Thư viện sách giấy đã sẵn sàng
+No Readest data found	Chưa tìm thấy dữ liệu Reades
+Readest data was not found. Manual log remains available; choose statistics.db to connect digital reading.	Chưa tìm thấy dữ liệu Readest. Bạn vẫn có thể ghi thủ công; chọn statistics.db để kết nối dữ liệu đọc điện tử.
+Incompatible database	Dữ liệu không tương thích
+Loading Readest activity…	Đang tải hoạt động Readest…
+Connection failed	Kết nối thất bại
+Last good data retained	Đang giữ dữ liệu hợp lệ gần nhấ
+Could not refresh Readest data. {0}	Không làm mới được dữ liệu Readest. {0}
+Readest data was not found.	Không tìm thấy dữ liệu Readest.
+Readest notes are stored locally and never modified.	Ghi chú Readest được đọc trên máy và không bị chỉnh sửa.
+Note settings saved locally.	Đã lưu tùy chỉnh ghi chú trên máy.
+Note copied to clipboard.	Đã sao chép ghi chú.
+Note and citation copied to clipboard.	Đã sao chép ghi chú và nguồn sách.
+That physical-session note no longer exists.	Ghi chú của phiên sách giấy này không còn tồn tại.
+Could not save note settings. {0}	Không lưu được tùy chỉnh ghi chú. {0}
+Refreshing local Readest notes…	Đang làm mới ghi chú Readest trên máy…
+Could not refresh notes. {0}	Không làm mới được ghi chú. {0}
+Opened the physical book details.	Đã mở thông tin sách giấy.
+The original book file is not available in the Readest library.	Tệp sách gốc không có trong thư viện Readest.
+Readest could not be opened. {0}	Không mở được Readest. {0}
+No local Readest notes found.	Chưa tìm thấy ghi chú Readest trên máy.
+No metadata page was saved for this physical edition.	Chưa lưu trang thông tin cho bản sách giấy này.
+The book information page could not be opened. {0}	Không mở được trang thông tin sách. {0}
+Could not find this book in the local Readest library.	Không tìm thấy sách này trong thư viện Readest trên máy.
+Book editions unlinked.	Đã bỏ liên kết các bản sách.
+Refreshing book metadata…	Đang cập nhật thông tin sách…
+Metadata refresh failed: {0}	Cập nhật thông tin thất bại: {0}
+Import canceled; no data was changed.	Đã hủy nhập; dữ liệu chưa thay đổi.
+Library import failed: {0}	Nhập thư viện thất bại: {0}
+Today's plan was skipped; history remains intact.	Đã bỏ qua kế hoạch hôm nay; lịch sử được giữ nguyên.
+Reading plan saved	Đã lưu kế hoạch đọc
+Reading plan removed	Đã xóa kế hoạch đọc
+Could not save the book status. {0}	Không lưu được trạng thái sách. {0}
+Checking GitHub releases…	Đang kiểm tra bản phát hành trên GitHub…
+Could not check for updates. Check your internet connection.	Không kiểm tra được cập nhật. Hãy kiểm tra kết nối mạng.
+Not checked yet	Chưa kiểm tra
+Settings saved	Đã lưu cài đặ
+Goals saved	Đã lưu mục tiêu
+Complete backup created · settings, goals, physical books, sessions and notes included	Đã sao lưu đầy đủ cài đặt, mục tiêu, sách giấy, phiên đọc và ghi chú
+Backup created · {0}	Đã tạo bản sao lưu · {0}
+Backup failed: {0}	Sao lưu thất bại: {0}
+Backup restored successfully	Đã khôi phục bản sao lưu
+Backup restore failed: {0}	Khôi phục thất bại: {0}
+Backup deleted	Đã xóa bản sao lưu
+Backup could not be deleted: {0}	Không xóa được bản sao lưu: {0}
+Backup could not be opened: {0}	Không mở được bản sao lưu: {0}
+App-owned settings reset	Đã đặt lại cài đặt ứng dụng
+Finish the active session and wait for refresh before restoring a backup.	Kết thúc phiên đang đọc và đợi làm mới xong trước khi khôi phục.
+Pin book	Ghim sách
+Unpin book	Bỏ ghim sách
+View book info	Xem thông tin sách
+Linked Readest + physical edition	Đã liên kết Readest và sách giấy
+No matching edition found	Chưa tìm thấy bản sách phù hợp
+Link with {0} ({1})	Liên kết với {0} ({1})
+Resume plan	Tiếp tục kế hoạch
+Pause plan	Tạm dừng kế hoạch
+Approximate · enabled	Ước tính · đang bậ
+Approximate · hidden	Ước tính · đang ẩn
+Development build	Bản phát triển
+Unknown	Chưa biế
+Annotation	Chú thích
+Bookmark	Đánh dấu trang
+Exclude from random	Loại khỏi ngẫu nhiên
+Include in random	Cho phép ngẫu nhiên
+Source connection	Kết nối nguồn
+Book mapping	Liên kết hoạt động với sách
+Event timestamps	Thời gian hoạt động
+Event duration	Thời lượng hoạt động
+Duplicate activity	Hoạt động trùng
+Local book files	Tệp sách trên máy
+Activity freshness	Mức cập nhật hoạt động
+Readest Stats database	Dữ liệu Readest Stats
+Readest note files	Tệp ghi chú Reades
+Edition links	Liên kết bản sách
+Manual session timeline	Dòng thời gian phiên thủ công
+Physical page ranges	Phạm vi trang sách giấy
+Duplicate physical editions	Bản sách giấy trùng
+Complete backup	Sao lưu đầy đủ
+Open book	Mở sách
+Edit session	Sửa phiên
+Review duplicates	Xem sách trùng
+Open activity	Mở hoạt động
+Create backup	Tạo bản sao lưu
+Open notes	Mở ghi chú
+Title or author is missing.	Thiếu tên sách hoặc tác giả.
+Overlaps another session for this book.	Trùng thời gian với phiên khác của sách này.
+The local Readest book file is unavailable.	Tệp sách Readest trên máy không có sẵn.
+Unresolved edition link	Liên kết bản sách không còn hợp lệ
+Backup history	Lịch sử sao lưu
+Create or inspect a complete backup below.	Tạo hoặc kiểm tra bản sao lưu đầy đủ ở bên dưới.
+Check the source diagnostics and refresh after Readest finishes saving.	Kiểm tra chẩn đoán nguồn và làm mới sau khi Readest lưu xong.
+Readest connection	Kết nối Reades
+Select the Readest statistics database below.	Chọn dữ liệu thống kê Readest ở bên dưới.
+Merge physical editions	Gộp các bản sách giấy
+Choose duplicate editions to review.	Chọn các bản sách trùng để kiểm tra.
+Keep: {0} · {1}\nMove {2} sessions from {3} other edition(s). Existing metadata is kept; missing page count, cover, ISBN, publisher and publication date are filled. Plans, pins and edition links follow the retained book. Undo is available in Activity log.	Giữ: {0} · {1}\nChuyển {2} phiên từ {3} bản sách khác. Giữ thông tin hiện có; bổ sung số trang, bìa, ISBN, nhà xuất bản và ngày xuất bản còn thiếu. Kế hoạch, ghim và liên kết theo sách được giữ. Có thể hoàn tác trong lịch sử thay đổi.
+Restore Readest Stats backup	Khôi phục dữ liệu Readest Stats
+Restore {0}?\n\nCurrent app-owned data will be kept as recovery copies.	Khôi phục {0}?\n\nDữ liệu hiện tại của ứng dụng sẽ được giữ trong bản dự phòng.
+Delete backup	Xóa bản sao lưu
+Delete {0}?	Xóa {0}?
+Delete the {0} session for {1}?	Xóa phiên {0} của sách {1}?
+Delete {0} and all of its manual sessions?	Xóa {0} và mọi phiên đọc thủ công của sách này?
+Discard the active manual session? Its elapsed time will not be saved.	Hủy phiên thủ công đang đọc? Thời gian đã đọc sẽ không được lưu.
+Reset Readest Stats settings and goals? Readest data will not be changed.	Đặt lại cài đặt và mục tiêu Readest Stats? Dữ liệu Readest không thay đổi.
+Export private notes	Xuất ghi chú cá nhân
+Comparison	So sánh
+Less	Í
+More	Nhiều
+30 days ago	30 ngày trước
+READING	ĐANG ĐỌC
+NO ACTIVITY	CHƯA CÓ HOẠT ĐỘNG
+{0}% of eligible days	{0}% số ngày có dữ liệu
+Median {0}	Trung vị {0}
+Current run started {0} · {1} of 30 days active	Chuỗi hiện tại bắt đầu {0} · Đọc {1}/30 ngày
+{0} here · {1} of selected-period reading	{0} trong khung giờ này · {1} thời gian đọc của kỳ đã chọn
+{0} started here · {1} of selected-period sessions	{0} bắt đầu tại đây · {1} số phiên của kỳ đã chọn
+{0} individual sessions	{0} phiên riêng lẻ
+{0} sessions · grouped distribution	{0} phiên · Phân bố theo nhóm
+sessions →	Số phiên →
+longer ↑	Dài hơn ↑
+100% of reading time	100% thời gian đọc
+earlier	Trước đây
+actual —  required - -	Thực tế —  Cần đạt - -
+No matrix data in this period	Chưa có dữ liệu ma trận trong kỳ này
+No sessions on this day	Không có phiên đọc trong ngày này
+No sessions in this period	Không có phiên đọc trong kỳ này
+At least 4 active days are needed for a style map	Cần ít nhất 4 ngày đọc để hiển thị bản đồ thói quen
+No book attention to divide yet	Chưa có thời gian đọc để phân bổ theo sách
+No comparison available	Chưa có dữ liệu so sánh
+More calendar observations are needed for momentum	Cần thêm dữ liệu theo ngày để tính nhịp đọc
+No sessions to accumulate	Chưa có phiên đọc để cộng dồn
+Set a yearly target to see pace	Đặt mục tiêu năm để theo dõi tiến độ
+No active days this year	Chưa có ngày đọc trong năm này
+Peak · {0}	Cao nhất · {0}
+{0}h total	Tổng {0}h
+Actual {0}	Thực tế {0}
+Target {0}	Mục tiêu {0}
+Export {0}? The file includes highlights, Readest notes, personal notes and favorite status in plain text.	Xuất {0}? Tệp chứa đoạn tô sáng, ghi chú Readest, ghi chú cá nhân và trạng thái yêu thích ở dạng văn bản.
+Readest Stats could not start. See the diagnostic log for details.\n\n{0}	Readest Stats không khởi động được. Xem nhật ký chẩn đoán để biết chi tiết.\n\n{0}

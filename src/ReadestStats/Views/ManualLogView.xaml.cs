@@ -25,7 +25,7 @@ public partial class ManualLogView : UserControl
     private void DeleteSession_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not ManualLogViewModel viewModel || sender is not Button { DataContext: ManualSessionRow row }) return;
-        if (MessageBox.Show($"Delete the {row.DurationLabel} session for {row.BookTitle}?", "Delete manual session", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+        if (ReadestStats.Localization.UiDialog.Show($"Delete the {row.DurationLabel} session for {row.BookTitle}?", "Delete manual session", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             viewModel.DeleteSessionCommand.Execute(row);
     }
 
@@ -42,7 +42,7 @@ public partial class ManualLogView : UserControl
     private void DeleteBook_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not ManualLogViewModel viewModel || sender is not Button { DataContext: ManualBook book }) return;
-        if (MessageBox.Show($"Delete {book.Title} and all of its manual sessions?", "Delete physical book", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+        if (ReadestStats.Localization.UiDialog.Show($"Delete {book.Title} and all of its manual sessions?", "Delete physical book", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             viewModel.DeleteBookCommand.Execute(book);
     }
 
@@ -58,7 +58,7 @@ public partial class ManualLogView : UserControl
     private void DiscardSession_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not ManualLogViewModel viewModel) return;
-        if (MessageBox.Show("Discard the active manual session? Its elapsed time will not be saved.", "Discard session", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+        if (ReadestStats.Localization.UiDialog.Show("Discard the active manual session? Its elapsed time will not be saved.", "Discard session", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             viewModel.DiscardSessionCommand.Execute(null);
     }
 }

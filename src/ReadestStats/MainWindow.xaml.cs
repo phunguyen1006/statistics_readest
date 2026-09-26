@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.ComponentModel;
+using ReadestStats.Views;
 using ReadestStats.ViewModels;
 
 namespace ReadestStats;
@@ -10,6 +12,8 @@ public partial class MainWindow : Window
     private bool _isFullScreen;
     private bool _wasMaximized;
     private Rect _boundsBeforeFullScreen;
+    private readonly Dictionary<string, FrameworkElement> _pages = [];
+    public int LoadedPageCount => _pages.Count;
 
     public MainWindow()
     {
@@ -17,6 +21,35 @@ public partial class MainWindow : Window
         RestorePlacement();
         PreviewKeyDown += HandlePreviewKeyDown;
         Closing += (_, _) => SavePlacement();
+        DataContextChanged += (_, args) =>
+        {
+            if (args.OldValue is MainViewModel old) old.PropertyChanged -= ViewModelChanged;
+            _pages.Clear();
+            if (args.NewValue is MainViewModel current) { current.PropertyChanged += ViewModelChanged; ShowPage(current); }
+        };
+        Closed += (_, _) => { if (DataContext is MainViewModel vm) vm.PropertyChanged -= ViewModelChanged; };
+    }
+
+    private void ViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is MainViewModel vm && e.PropertyName == nameof(MainViewModel.SelectedPage)) ShowPage(vm);
+    }
+
+    private void ShowPage(MainViewModel vm)
+    {
+        if (!_pages.TryGetValue(vm.SelectedPage, out var page))
+        {
+            page = vm.SelectedPage switch
+            {
+                "Activity" => new ActivityView(), "Sessions" => new SessionsView(), "Manual log" => new ManualLogView { DataContext = vm.Manual },
+                "Books" => new BooksView(), "Notes" => new NotesView(), "Goals" => new GoalsView(), "Statistics" => new StatisticsView(),
+                "Year in Reading" => new YearView(), "Settings" => new SettingsView(), _ => new OverviewView()
+            };
+            _pages.Add(vm.SelectedPage, page);
+        }
+        PageHost.Content = page;
+        page.Language = System.Windows.Markup.XmlLanguage.GetLanguage(System.Globalization.CultureInfo.CurrentCulture.IetfLanguageTag);
+        Localization.Localizer.RefreshBindings(page);
     }
 
     private void RestorePlacement()

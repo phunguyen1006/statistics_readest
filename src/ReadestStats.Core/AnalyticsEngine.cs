@@ -59,11 +59,13 @@ public sealed class AnalyticsEngine
             return (Key: g.Key, Label: label);
         }).ToArray();
         var readingUnit = unit == "Month" ? "h" : "min";
+        var eventBuckets = filtered.GroupBy(e => Key(DateOnly.FromDateTime(_statistics.ToLocal(e.Start).DateTime))).ToDictionary(g => g.Key, g => g.ToArray());
+        var sessionBuckets = sessions.GroupBy(s => Key(DateOnly.FromDateTime(_statistics.ToLocal(s.Start).DateTime))).ToDictionary(g => g.Key, g => g.Count());
         return dates.Select(bucket =>
         {
-            var bucketEvents = filtered.Where(e => Key(DateOnly.FromDateTime(_statistics.ToLocal(e.Start).DateTime)) == bucket.Key).ToArray();
+            var bucketEvents = eventBuckets.GetValueOrDefault(bucket.Key) ?? [];
             var seconds = bucketEvents.Sum(e => e.DurationSeconds);
-            var value = metric switch { "Sessions" => sessions.Count(s => Key(DateOnly.FromDateTime(_statistics.ToLocal(s.Start).DateTime)) == bucket.Key), "Active books" => bucketEvents.Select(e => e.BookId).Distinct().Count(), _ => readingUnit == "h" ? seconds / 3600d : seconds / 60d };
+            var value = metric switch { "Sessions" => sessionBuckets.GetValueOrDefault(bucket.Key), "Active books" => bucketEvents.Select(e => e.BookId).Distinct().Count(), _ => readingUnit == "h" ? seconds / 3600d : seconds / 60d };
             var valueUnit = metric switch { "Sessions" => "sessions", "Active books" => "books", _ => readingUnit };
             return new ChartPoint(bucket.Label, value, metric == "Reading time" ? Formatters.Duration(seconds) : $"{value:0} {valueUnit}", valueUnit);
         }).ToArray();
