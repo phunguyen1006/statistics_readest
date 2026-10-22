@@ -1,3 +1,47 @@
+# Readest Stats v2.5.0
+
+Version 2.5.0 focuses on dependable rediscovery, a recoverable physical-reading workflow and transparent data sharing.
+
+- Random Notes now uses the actual no-repeat shuffle engine, shared eligibility for same-book random, persistent pool/current/cycle/history and explicit eligible/empty-pool feedback. Back and history navigation do not mutate seen counts. Temporarily unavailable Readest note IDs are retained until a complete source refresh can reconcile them.
+- Physical sessions gain optional quiet minute targets and persistent page/note finish drafts. Finish pauses once; Cancel → Resume restarts dispatcher updates. A failed SQLite save retains the draft/progress, and normal shutdown flushes pending drafts/preferences before closing.
+- The physical-session journal searches all saved records by book, inclusive local dates and accent-insensitive text. Global search reaches the complete history; visible/total summaries are no longer capped at 250 sessions.
+- Backup restore opens a read-only, verified current → backup preview and an explicit replacement confirmation. Counts come from actual JSON/database content, not only manifest claims. Input and timer writes are suspended; existing local writes drain before replacement so an old save cannot overwrite restored data. Readest source files remain untouched.
+- Notes and physical-library exports offer current scope/all items and private-writing opt-in, with a distinct full portable archive option. Shareable physical data omits local paths; CSV cells neutralize formula-like text. This is not encryption.
+- Statistics adds a selectable monthly review with daily-minute bars, exact values and source-aware Markdown. Cross-month durations are clipped consistently; unfinished months compare equal elapsed time rather than a full previous month.
+- Settings makes Readest refresh failures, watcher fallback, SQLite/recovery-mirror status and automatic-backup state visible, with retry actions.
+- Focused note reading opens a large, theme-aware, keyboard-accessible window with Back/Next, a heart and separately labelled highlight/citation versus private-writing copy actions. Physical-session notes also appear in spotlight previews. Narrowed browsing no longer clears an independently selected random note.
+- Rediscovery curation has a one-step exact-note Undo and an End snooze action. A lightweight local clock updates expired snoozes and day-relative analytics without polling Readest or marking notes newly seen. Pending saves cannot accidentally skip a note after you navigate elsewhere.
+- Journal rows reveal the complete note, exact start/end, active/elapsed/pause time and recorded segments, with quick local-date ranges and direct book/calendar navigation. Editing pages, notes or editions preserves original seconds and pause intervals; changing time requires an explicit opt-in. Failed storage rolls the correction and affected progress back.
+- Monthly reports gain previous/next/current controls, exact-day drilldown and source-availability/freshness text in both the interface and Markdown. Export previews count the actual privacy-filtered records, distinguish books from sessions, refresh while open and disable an empty export.
+- Categorical bar-chart dates are centered beneath their actual bars, including sparse partial months. A rendered-position regression checks the alignment.
+- Simultaneous cover downloads/imports publish atomically and reuse the valid winner, including while a preview holds it open. Invalid cached covers can be repaired; cache cleanup leaves active temporary downloads alone. Recorded session dates remain readable while timing edits are locked.
+- No new external dependencies. Existing v1/v2 backup formats and SQLite/legacy-library migration remain supported. Backups are still unencrypted; original Readest books/config/statistics require a separate backup.
+
+---
+
+# Readest Stats v2.4.0
+
+Version 2.4.0 brings source-aware data health, physical-edition metadata control, a weekly recap and more transparent reading analytics.
+
+- Readest and physical-reading data report independent connection and update status. Physical sessions remain visible when the Readest database cannot be found.
+- A local, reversible Readest-event audit lets you exclude anomalous events without writing to Readest. Goals, charts and exports use the same adjusted reading history.
+- Book search retains distinct editions and ranks normalized exact ISBN matches. Custom local covers are cached durably; metadata refresh preserves edited fields and existing covers.
+- Today includes a seven-day recap, source split, weekly goal progress, previous-week comparison, exact daily values and Markdown export.
+- Statistics groups reading by primary listed author and language, with explicit metadata coverage and no multi-author double counting.
+- New interface text includes Vietnamese translations; recap charts expose exact values and audit controls carry accessibility names.
+
+## Reliability and data protection
+
+- Full local Readest refresh now reconciles old event edits/deletions and retains distinct records; custom-root detection and explicitly selected database paths no longer conflict.
+- Watcher failures fall back to periodic refresh. Malformed note dates no longer stop note loading.
+- Reading time is clipped and split at local day/week/month/year and hour boundaries, keeping charts, recap, comparisons and book active days consistent.
+- Corrupt settings/manual-library files are no longer silently replaced. Valid legacy recovery backups are checked before use and damaged bytes are retained. A failed JSON mirror cannot misreport an already committed SQLite save.
+- Metadata links allow only HTTP/HTTPS, and opening a Readest book requires the Readest executable rather than launching arbitrary file associations.
+- ZIP restore, CSV import and remote covers have streaming size/count limits. Imported remote cover URLs are not loaded directly by WPF; bounded cached previews retain the selected edition.
+- Google Books API keys migrate to current-user Windows protection and are omitted from new portable backups. Personal-data backups remain unencrypted and do not include original Readest source files.
+
+---
+
 # Readest Stats v2.3.0
 
 Version 2.3.0 focuses on trustworthy history, recoverable changes, live localization, and responsive navigation.

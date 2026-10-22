@@ -14,6 +14,7 @@ public abstract class ObservableObject : INotifyPropertyChanged
 public sealed class AsyncCommand(Func<Task> action, Func<bool>? canExecute = null) : ICommand
 {
     private bool _running;
+    public bool IsRunning => _running;
     public bool CanExecute(object? parameter) => !_running && (canExecute?.Invoke() ?? true);
     public event EventHandler? CanExecuteChanged;
     public async void Execute(object? parameter) { if (!CanExecute(parameter)) return; _running = true; CanExecuteChanged?.Invoke(this, EventArgs.Empty); try { await action(); } finally { _running = false; CanExecuteChanged?.Invoke(this, EventArgs.Empty); } }

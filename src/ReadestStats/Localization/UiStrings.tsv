@@ -7,13 +7,13 @@ Notes	Ghi chú
 Goals	Mục tiêu
 Statistics	Thống kê
 Year in Reading	Năm đọc sách
-Settings	Cài đặ
+Settings	Cài đặt
 Reading time	Thời gian đọc
 Active books	Sách đang đọc
 Active days	Ngày đọc
 All sources	Mọi nguồn
 Manual	Thủ công
-Linked	Đã liên kế
+Linked	Đã liên kết
 All	Tất cả
 All books	Tất cả sách
 All notes	Tất cả ghi chú
@@ -51,7 +51,7 @@ Want to read	Muốn đọc
 Finished this year	Hoàn thành năm nay
 Paused	Tạm dừng
 Physical books	Sách giấy
-Readest books	Sách Reades
+Readest books	Sách Readest
 Without recent activity	Lâu chưa đọc
 Incomplete metadata	Thiếu thông tin
 Pinned	Đã ghim
@@ -64,7 +64,7 @@ Favorites	Yêu thích
 Favorites only	Chỉ mục yêu thích
 Selected book	Sách đã chọn
 Visible notes	Ghi chú hiển thị
-Readest highlights	Đoạn tô sáng Reades
+Readest highlights	Đoạn tô sáng Readest
 Manual notes	Ghi chú thủ công
 Ready	Sẵn sàng
 Verified	Đã xác minh
@@ -208,6 +208,17 @@ DATA HEALTH	TÌNH TRẠNG DỮ LIỆU
 DATA QUALITY	CHẤT LƯỢNG DỮ LIỆU
 DATA SOURCE	NGUỒN DỮ LIỆU
 Date	Ngày
+Choose a note to set the current book, or switch to another pool.	Chọn một ghi chú để xác định sách hiện tại, hoặc đổi nhóm khác.
+No eligible notes in this pool. Change the pool or allow a snoozed/excluded note.	Nhóm này không có ghi chú phù hợp. Đổi nhóm hoặc cho phép ghi chú đang tạm ẩn/loại trừ xuất hiện lại.
+{0} eligible notes · every note appears once per shuffle cycle.	{0} ghi chú phù hợp · mỗi ghi chú xuất hiện một lần trong vòng xáo trộn.
+The current physical library cannot be inspected. Its counts are unknown; restore will still preserve recovery copies.	Chưa kiểm tra được thư viện sách giấy hiện tại. Số lượng chưa rõ; khôi phục vẫn giữ các bản phục hồi.
+The JSON recovery mirror has different counts from the verified database. The database is authoritative after restore.	Bản JSON phục hồi có số lượng khác cơ sở dữ liệu đã kiểm tra. Sau khôi phục, cơ sở dữ liệu là nguồn chính.
+This legacy backup has no stored checksums. Its file paths, size limits and data syntax were checked.	Bản sao lưu cũ không có checksum. Đã kiểm tra đường dẫn, giới hạn kích thước và cấu trúc dữ liệu.
+Settings, goals and note curation are absent and will stay unchanged.	Không có cài đặt, mục tiêu và tùy chọn ghi chú trong sao lưu; giữ nguyên dữ liệu hiện tại.
+Physical books, sessions and session notes are absent and will stay unchanged.	Không có sách giấy, phiên đọc và ghi chú phiên trong sao lưu; giữ nguyên dữ liệu hiện tại.
+The backup contains an unfinished physical-reading timer. It will be recovered safely; time while the app was closed is not counted.	Sao lưu có phiên đọc sách giấy chưa kết thúc. Phiên được khôi phục an toàn; không tính thời gian lúc app đóng.
+This backup does not contain original Readest statistics, book files or config.json highlights/annotations. Back up Readest separately.	Sao lưu không có thống kê gốc, tệp sách hay đoạn trích/ghi chú config.json của Readest. Hãy sao lưu Readest riêng.
+The backup is not encrypted. Keep it private; normal backups omit API credentials, but older backups may contain credential bytes.	Sao lưu không mã hóa. Giữ riêng tư; bản thông thường không có API key nhưng bản cũ có thể còn thông tin khóa.
 Display	Hiển thị
 DURATION (MINUTES)	THỜI LƯỢNG (PHÚT)
 Daily cells through 45 days; weekly cells for longer ranges	Ô theo ngày trong phạm vi 45 ngày; theo tuần khi dài hơn
@@ -347,9 +358,9 @@ Open diagnostic logs	Mở nhật ký chẩn đoán
 Open folder	Mở thư mục
 Open goals, progress, and previous-year results.	Mở mục tiêu, tiến độ và kết quả năm trước.
 Open in Notes	Mở trong Ghi chú
-Open in Readest	Mở trong Reades
+Open in Readest	Mở trong Readest
 Open library	Mở thư viện
-Open note book in Readest	Mở sách của ghi chú trong Reades
+Open note book in Readest	Mở sách của ghi chú trong Readest
 Open reconstructed continuous reading sessions.	Mở các phiên đọc liên tục đã tổng hợp.
 Open releases	Mở các bản phát hành
 Open selected book information	Mở thông tin sách đã chọn
@@ -413,9 +424,9 @@ Read in Readest and refresh to begin your personal reading story.	Đọc trong R
 Read in Readest and refresh to see statistics here.	Đọc trong Readest rồi làm mới để xem thống kê tại đây.
 Readest Stats book icon	Biểu tượng sách Readest Stats
 Readest and physical-book time in the selected period	Thời gian đọc Readest và sách giấy trong kỳ đã chọn
-Readest data path	Đường dẫn dữ liệu Reades
+Readest data path	Đường dẫn dữ liệu Readest
 Readest is always opened read-only. Readest Stats owns a separate transactional SQLite database; manual-reading.json remains a human-readable recovery mirror.	Readest luôn được mở ở chế độ chỉ đọc. Dữ liệu riêng của ứng dụng được lưu tách biệt, kèm bản sao phục hồi dễ đọc.
-Readest notes	Ghi chú Reades
+Readest notes	Ghi chú Readest
 Reading fingerprint	Nhịp đọc
 Reading status	Trạng thái đọc
 Reading style map by active day	Bản đồ phong cách đọc theo ngày
@@ -424,7 +435,7 @@ Recent manual reading sessions	Các phiên đọc thủ công gần đây
 Recent sessions	Phiên đọc gần đây
 Reconnect	Kết nối lại
 Reduce motion	Giảm chuyển động
-Refresh Readest notes	Làm mới ghi chú Reades
+Refresh Readest notes	Làm mới ghi chú Readest
 Refresh behavior	Cách làm mới
 Refresh physical book metadata	Cập nhật thông tin sách giấy
 Refresh physical metadata	Cập nhật thông tin sách giấy
@@ -529,7 +540,7 @@ Undo book delete	Hoàn tác xóa sách
 Undo delete	Hoàn tác xóa
 Undo import	Hoàn tác nhập
 Undo latest	Hoàn tác gần nhấ
-Unlink	Bỏ liên kế
+Unlink	Bỏ liên kết
 Use 24-hour time	Dùng định dạng 24 giờ
 Uses the month currently shown on Activity.	Dùng tháng đang hiển thị trong Hoạt động.
 VALID BOOKS	SÁCH HỢP LỆ
@@ -573,7 +584,7 @@ On Readest changes	Khi Readest thay đổi
 5 min	5 phú
 Unseen	Chưa xem
 Not seen recently	Lâu chưa xem
-Readest only	Chỉ Reades
+Readest only	Chỉ Readest
 Physical books only	Chỉ sách giấy
 All eligible notes	Mọi ghi chú phù hợp
 Current book	Sách hiện tại
@@ -660,13 +671,13 @@ Enter a valid start and end date for comparison.	Nhập ngày bắt đầu và k
 Solid: selected period · Dashed: {0} · aligned by bucket order	Nét liền: kỳ đã chọn · nét đứt: {0} · ghép theo thứ tự mốc
 Comparison: {0} · Different period lengths; totals and exact data are available below.	So sánh: {0} · Hai kỳ dài khác nhau; xem tổng và số liệu chính xác bên dưới.
 Peak · {0}	Cao nhất · {0}
-Readest connected	Đã kết nối Reades
+Readest connected	Đã kết nối Readest
 Not synced	Chưa đồng bộ
 Last sync {0}	Đồng bộ lúc {0}
 Finding Readest data…	Đang tìm dữ liệu Readest…
 Finding Readest data...	Đang tìm dữ liệu Readest…
 Manual library ready	Thư viện sách giấy đã sẵn sàng
-No Readest data found	Chưa tìm thấy dữ liệu Reades
+No Readest data found	Chưa tìm thấy dữ liệu Readest
 Readest data was not found. Manual log remains available; choose statistics.db to connect digital reading.	Chưa tìm thấy dữ liệu Readest. Bạn vẫn có thể ghi thủ công; chọn statistics.db để kết nối dữ liệu đọc điện tử.
 Incompatible database	Dữ liệu không tương thích
 Loading Readest activity…	Đang tải hoạt động Readest…
@@ -737,7 +748,7 @@ Duplicate activity	Hoạt động trùng
 Local book files	Tệp sách trên máy
 Activity freshness	Mức cập nhật hoạt động
 Readest Stats database	Dữ liệu Readest Stats
-Readest note files	Tệp ghi chú Reades
+Readest note files	Tệp ghi chú Readest
 Edition links	Liên kết bản sách
 Manual session timeline	Dòng thời gian phiên thủ công
 Physical page ranges	Phạm vi trang sách giấy
@@ -756,7 +767,7 @@ Unresolved edition link	Liên kết bản sách không còn hợp lệ
 Backup history	Lịch sử sao lưu
 Create or inspect a complete backup below.	Tạo hoặc kiểm tra bản sao lưu đầy đủ ở bên dưới.
 Check the source diagnostics and refresh after Readest finishes saving.	Kiểm tra chẩn đoán nguồn và làm mới sau khi Readest lưu xong.
-Readest connection	Kết nối Reades
+Readest connection	Kết nối Readest
 Select the Readest statistics database below.	Chọn dữ liệu thống kê Readest ở bên dưới.
 Merge physical editions	Gộp các bản sách giấy
 Choose duplicate editions to review.	Chọn các bản sách trùng để kiểm tra.
@@ -804,3 +815,29 @@ Actual {0}	Thực tế {0}
 Target {0}	Mục tiêu {0}
 Export {0}? The file includes highlights, Readest notes, personal notes and favorite status in plain text.	Xuất {0}? Tệp chứa đoạn tô sáng, ghi chú Readest, ghi chú cá nhân và trạng thái yêu thích ở dạng văn bản.
 Readest Stats could not start. See the diagnostic log for details.\n\n{0}	Readest Stats không khởi động được. Xem nhật ký chẩn đoán để biết chi tiết.\n\n{0}
+THIS WEEK	TUẦN NÀY
+Export Markdown	Xuất Markdown
+Exact daily values	Số liệu chính xác từng ngày
+AUTHORS & LANGUAGES	TÁC GIẢ & NGÔN NGỮ
+Reading by book metadata	Thống kê theo thông tin sách
+Each book is attributed once to its primary listed author. Missing metadata is omitted from named groups, not from overall reading time.	Mỗi sách chỉ được tính một lần cho tác giả đầu tiên. Sách thiếu thông tin không nằm trong các nhóm có tên, nhưng vẫn được tính vào tổng thời gian đọc.
+Authors	Tác giả
+Languages	Ngôn ngữ
+READING EVENT AUDIT	KIỂM TRA SỰ KIỆN ĐỌC
+Readest events are listed newest first. Exclusions affect Statistics only and can be restored at any time.	Các sự kiện Readest được sắp xếp mới nhất trước. Việc loại trừ chỉ ảnh hưởng Statistics và có thể hoàn tác bất cứ lúc nào.
+Reason (stored locally)	Lý do (lưu trên máy)
+Choose cover image…	Chọn ảnh bìa…
+LOCAL COVER	BÌA SÁCH TRÊN MÁY
+Excluded locally	Đã loại trừ trên máy
+Included	Đang tính
+Restore	Khôi phục
+Exclude	Loại trừ
+Select an edition to compare ISBN, publisher, date and pages.	Chọn một ấn bản để so sánh ISBN, nhà xuất bản, ngày phát hành và số trang.
+Select a Readest event to preview its effect.	Chọn một sự kiện Readest để xem trước ảnh hưởng.
+Weekly recap exported	Đã xuất bản tóm tắt tuần
+Readest event restored	Đã khôi phục sự kiện Readest
+Readest event excluded locally; restore is available	Đã loại trừ sự kiện Readest trên máy; có thể khôi phục
+READING EVENTS ON THIS DAY	CÁC SỰ KIỆN ĐỌC TRONG NGÀY
+Review in Data Health	Xem trong Tình trạng dữ liệu
+Snoozed	Đang tạm ẩn
+Excluded from random	Loại khỏi ngẫu nhiên

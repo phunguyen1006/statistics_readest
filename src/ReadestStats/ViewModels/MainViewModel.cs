@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
 using ReadestStats.Core;
+using ReadestStats.Services;
 
 namespace ReadestStats.ViewModels;
 
@@ -21,7 +22,7 @@ public sealed class NavItem(string name, string icon, string group) : Observable
 public sealed record BookFilterOption(long? Id, string Label);
 public sealed record GlobalSearchResult(string Kind, string Title, string Detail, string Target, string? Key = null);
 
-public sealed class MainViewModel : ObservableObject, IDisposable
+public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly ReadestDatabaseLocator _locator = new();
     private readonly SettingsStore _store;
@@ -50,6 +51,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private IReadestRepository? _repository;
     private ReadestNotesRepository? _notesRepository;
     private FileSystemWatcher? _watcher;
+    private bool _refreshPending;
     private CancellationTokenSource? _refreshDebounce;
     private CancellationTokenSource? _activeRefresh;
     private CancellationTokenSource? _noteSaveDebounce;
@@ -97,11 +99,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private NoteRow? _dailyNote;
     private NoteRow? _randomNote;
     private string? _lastRandomNoteId;
-    private readonly Stack<string> _randomHistory = new();
     private string _noteSearch = "";
     private string _noteScope = "All notes";
     private string _randomNotePool = "All eligible notes";
     private string _notesStatus = "Readest notes are stored locally and never modified.";
+    private bool _noteCurationBusy;
+    public bool IsNoteCurationBusy => _noteCurationBusy;
     private BookDetail? _bookDetail;
     private BookFilterOption _sessionBook = new(null, "All books");
     private string _sessionDuration = "All durations";
@@ -133,6 +136,24 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private IReadOnlyList<ReadingEvent>? _qualityCacheSource;
     private GlobalSearchResult? _selectedGlobalSearchResult;
 
+    public MainViewModel(
+        IDialogService dialogService,
+        IThemeService themeService,
+        IAppLogger logger,
+        string? dataDirectory = null)
+        : this(
+            dialogService.ChooseDatabase,
+            dialogService.ChooseExport,
+            logger.Log,
+            themeService.ApplyTheme,
+            dialogService.ChooseBackupImport,
+            dialogService.ChooseImport,
+            dialogService.ConfirmImport,
+            dataDirectory,
+            dialogService.ConfirmMerge)
+    {
+    }
+
     public MainViewModel(Func<string?> chooseDatabase, Func<string, string, string?> chooseExport, Action<string>? log = null, Action<string>? applyTheme = null, Func<string?>? chooseBackupImport = null, Func<string, string, string?>? chooseImport = null, Func<CatalogImportPreview, bool>? confirmImport = null, string? dataDirectory = null, Func<string, bool>? confirmMerge = null)
     {
         if (dataDirectory is not null) _locator = new(dataDirectory, dataDirectory);
@@ -141,9 +162,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _backup = new(_locator.SettingsPath, manualPath);
         Manual = new(new ManualReadingStore(manualPath), new BookMetadataService(googleApiKey: () => _settings.GoogleBooksApiKey), _log, confirmMerge: confirmMerge);
         Manual.CaptureReferences = () => JsonSerializer.Deserialize<LibraryReferenceSnapshot>(JsonSerializer.Serialize(new LibraryReferenceSnapshot(_settings.BookTracking, _settings.BookLinks, _settings.PinnedBookKeys)))!;
-        Manual.RestoreReferences = async snapshot => { _settings.BookTracking = snapshot.Tracking; _settings.BookLinks = snapshot.Links; _settings.PinnedBookKeys = snapshot.Pins; await _store.SaveAsync(_settings); };
+        Manual.RestoreReferences = async snapshot => { _settings.BookTracking = snapshot.Tracking; _settings.BookLinks = snapshot.Links; _settings.PinnedBookKeys = snapshot.Pins; await SaveSettingsDataAsync(); };
         Manual.MergeReferences = MergeLibraryReferencesAsync;
-        Manual.DataChanged += (_, _) => { ApplySourceSelection(); BuildNotes(); BuildDataQuality(); };
+        Manual.DataChanged += (_, _) => { if (_isRestoring) return; MarkManualUpdated(); ApplySourceSelection(); BuildNotes(); BuildDataQuality(); };
+        Manual.OpenBookRequested += OpenJournalBook;
+        Manual.OpenCalendarDayRequested += OpenJournalDay;
         NavigateCommand = new ParameterCommand<string>(page => { if (!string.IsNullOrWhiteSpace(page)) SelectedPage = page; });
         OpenInsightCommand = new ParameterCommand<InsightItem>(insight => { if (insight is not null) { SelectedInsight = insight; SelectedPage = "Statistics"; } });
         OpenSessionBookCommand = new ParameterCommand<SessionDisplay>(OpenSessionBook, session => session?.Source.BookIds.Count > 0);
@@ -151,20 +174,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         SelectNoteCommand = new ParameterCommand<NoteRow>(note => SelectedNote = note);
         ToggleFavoriteNoteCommand = new ParameterCommand<NoteRow>(ToggleFavoriteNote, note => note is not null);
         OpenSelectedNoteCommand = new RelayCommand(OpenSelectedNote, CanOpenSelectedNote);
-        RandomNoteCommand = new RelayCommand(SelectRandomNote, () => Notes.Count > 0);
-        RandomSameBookCommand = new RelayCommand(SelectRandomFromSameBook, () => SelectedNote is not null && Notes.Count(note => note.BookHash == SelectedNote.BookHash) > 1);
-        PreviousRandomNoteCommand = new RelayCommand(SelectPreviousRandomNote, () => _randomHistory.Count > 0);
-        SnoozeSelectedNoteCommand = new AsyncCommand(SnoozeSelectedNoteAsync, () => SelectedNote is not null);
-        ToggleRandomEligibilityCommand = new AsyncCommand(ToggleRandomEligibilityAsync, () => SelectedNote is not null);
+        RandomNoteCommand = new RelayCommand(SelectRandomNoteV25, CanPickRandomNoteV25);
+        RandomSameBookCommand = new RelayCommand(SelectRandomSameBookV25, CanPickRandomSameBookV25);
+        PreviousRandomNoteCommand = new RelayCommand(SelectPreviousRandomNoteV25, () => _noteDiscovery.CanGoBack);
+        SnoozeSelectedNoteCommand = new AsyncCommand(SnoozeSelectedNoteAsync, () => CanInteract && !_noteCurationBusy && SelectedNote is not null);
+        ToggleRandomEligibilityCommand = new AsyncCommand(ToggleRandomEligibilityAsync, () => CanInteract && !_noteCurationBusy && SelectedNote is not null);
         CopySelectedNoteCommand = new RelayCommand(CopySelectedNote, () => SelectedNote is not null);
         CopyNoteCitationCommand = new RelayCommand(CopyNoteCitation, () => SelectedNote is not null);
-        SnoozeNoteForCommand = new ParameterCommand<string>(value => { if (int.TryParse(value, out var days)) _ = SnoozeSelectedNoteAsync(days); }, _ => SelectedNote is not null);
+        SnoozeNoteForCommand = new ParameterCommand<string>(value => { if (int.TryParse(value, out var days)) _ = SnoozeSelectedNoteAsync(days); }, _ => CanInteract && !_noteCurationBusy && SelectedNote is not null);
         DailyNoteCommand = new RelayCommand(SelectDailyNote, () => _allNoteRows.Count > 0);
         SaveSelectedNoteCommand = new AsyncCommand(SaveSelectedNoteAsync, () => SelectedNote is not null);
         RefreshNotesCommand = new AsyncCommand(RefreshNotesAsync, () => _notesRepository is not null);
-        ExportNotesMarkdownCommand = new AsyncCommand(() => ExportNotesAsync("md"), () => Notes.Count > 0);
-        ExportNotesJsonCommand = new AsyncCommand(() => ExportNotesAsync("json"), () => Notes.Count > 0);
-        ExportNotesCsvCommand = new AsyncCommand(() => ExportNotesAsync("csv"), () => Notes.Count > 0);
+        ExportNotesMarkdownCommand = new AsyncCommand(() => ExportNotesAsync("md"), () => _allNoteRows.Count > 0);
+        ExportNotesJsonCommand = new AsyncCommand(() => ExportNotesAsync("json"), () => _allNoteRows.Count > 0);
+        ExportNotesCsvCommand = new AsyncCommand(() => ExportNotesAsync("csv"), () => _allNoteRows.Count > 0);
         TogglePinnedBookCommand = new AsyncCommand(TogglePinnedBookAsync, () => SelectedBook is not null);
         SaveReadingPlanCommand = new AsyncCommand(SaveReadingPlanAsync, () => SelectedBook is not null);
         RemoveReadingPlanCommand = new AsyncCommand(RemoveReadingPlanAsync, () => SelectedBookPlan.Enabled);
@@ -187,7 +210,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         CloseCommandPaletteCommand = new RelayCommand(CloseCommandPalette, () => IsCommandPaletteOpen);
         OpenGlobalSearchResultCommand = new ParameterCommand<GlobalSearchResult>(OpenGlobalSearchResult, result => result is not null);
         RefreshCommand = new AsyncCommand(() => RefreshAsync()); ChangeDatabaseCommand = new AsyncCommand(ChangeDatabaseAsync); RedetectCommand = new AsyncCommand(RedetectAsync);
-        OpenFolderCommand = new RelayCommand(OpenFolder, () => Diagnostics is not null); ExportCsvCommand = new AsyncCommand(ExportCsvAsync, () => Period is not null); ExportJsonCommand = new AsyncCommand(ExportJsonAsync, () => Period is not null); ExportMonthlyReportCommand = new AsyncCommand(ExportMonthlyReportAsync, () => IsConnected);
+        OpenFolderCommand = new RelayCommand(OpenFolder, () => Diagnostics is not null); ExportCsvCommand = new AsyncCommand(ExportCsvAsync, () => Period is not null); ExportJsonCommand = new AsyncCommand(ExportJsonAsync, () => Period is not null); ExportMonthlyReportCommand = new AsyncCommand(ExportMonthlyReportAsync);
         OpenLogsCommand = new RelayCommand(OpenLogs);
         SaveSettingsCommand = new AsyncCommand(SaveSettingsAsync); SaveGoalsCommand = new AsyncCommand(SaveGoalsAsync); BackupSettingsCommand = new AsyncCommand(BackupSettingsAsync); RestoreBackupCommand = new AsyncCommand(RestoreBackupAsync); ResetSettingsCommand = new AsyncCommand(ResetSettingsAsync);
         CreateAutomaticBackupCommand = new RelayCommand(CreateAutomaticBackup);
@@ -196,12 +219,33 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OpenBackupFolderCommand = new RelayCommand(OpenBackupFolder);
         ReviewDataQualityCommand = new ParameterCommand<DataQualityCheck>(ReviewDataQuality, check => check is not null);
         OpenHealthIssueCommand = new ParameterCommand<DataHealthIssue>(OpenHealthIssue, issue => issue is not null);
+        ToggleAuditEventCommand = new AsyncCommand(ToggleAuditEventAsync, () => SelectedAuditEvent is not null);
+        ExportWeeklyRecapCommand = new AsyncCommand(ExportWeeklyRecapAsync);
         PreviousMonthCommand = new RelayCommand(() => { Month = Month.AddMonths(-1); BuildActivity(); }); NextMonthCommand = new RelayCommand(() => { if (Month < new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1)) { Month = Month.AddMonths(1); BuildActivity(); } }); TodayCommand = new RelayCommand(() => { Month = new(DateTime.Today.Year, DateTime.Today.Month, 1); SelectedDate = DateOnly.FromDateTime(DateTime.Today); BuildActivity(); });
         PreviousYearCommand = new RelayCommand(() => { Year--; BuildYear(); }); NextYearCommand = new RelayCommand(() => { if (Year < DateTime.Today.Year) { Year++; BuildYear(); } });
         SelectDayCommand = new ParameterCommand<CalendarDayItem>(day => { if (day is not null) { SelectedDate = day.Date; BuildSelectedDay(); } });
         SelectHeatmapDayCommand = new ParameterCommand<ChartPoint>(point => { if (point is not null && DateOnly.TryParse(point.Label, out var date)) { Month = new(date.Year, date.Month, 1); SelectedDate = date; BuildActivity(); SelectedPage = "Activity"; } });
-        _refreshTimer.Tick += async (_, _) => await RefreshAsync(incremental: true);
+        _refreshTimer.Tick += async (_, _) => await RefreshAsync();
+        Overview = new(this);
+        ActivityPage = new(this);
+        SessionsPage = new(this);
+        BooksPage = new(this);
+        NotesPage = new(this);
+        GoalsPage = new(this);
+        StatisticsPage = new(this);
+        YearPage = new(this);
+        SettingsPage = new(this);
     }
+
+    public OverviewViewModel Overview { get; }
+    public ActivityViewModel ActivityPage { get; }
+    public SessionsViewModel SessionsPage { get; }
+    public BooksViewModel BooksPage { get; }
+    public NotesViewModel NotesPage { get; }
+    public GoalsViewModel GoalsPage { get; }
+    public StatisticsViewModel StatisticsPage { get; }
+    public YearViewModel YearPage { get; }
+    public SettingsViewModel SettingsPage { get; }
 
     public string[] Pages { get; } = ["Today", "Activity", "Sessions", "Manual log", "Books", "Notes", "Goals", "Statistics", "Year in Reading", "Settings"];
     public NavItem[] Navigation { get; } =
@@ -386,14 +430,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool IsCommandPaletteOpen { get => _isCommandPaletteOpen; private set { if (Set(ref _isCommandPaletteOpen, value)) CloseCommandPaletteCommand.Refresh(); } }
     public string GlobalSearch { get => _globalSearch; set { if (Set(ref _globalSearch, value ?? "")) RebuildGlobalSearch(); } }
     public GlobalSearchResult? SelectedGlobalSearchResult { get => _selectedGlobalSearchResult; set => Set(ref _selectedGlobalSearchResult, value); }
-    public string? Error { get => _error; private set { Set(ref _error, value); Raise(nameof(HasError)); } }
+    public string? Error { get => _error; private set { Set(ref _error, value); Raise(nameof(HasError)); Raise(nameof(ReadestSourceStatus)); } }
     public bool HasError => !string.IsNullOrWhiteSpace(Error);
     public bool IsBusy { get => _isBusy; private set => Set(ref _isBusy, value); }
-    public DateTimeOffset? LastSync { get => _lastSync; private set { Set(ref _lastSync, value); Raise(nameof(LastSyncLabel)); } }
+    public DateTimeOffset? LastSync { get => _lastSync; private set { Set(ref _lastSync, value); Raise(nameof(LastSyncLabel)); RaiseV25Status(); } }
     public string LastSyncLabel => LastSync is null ? "Not synced" : $"Last sync {FormatTime(LastSync.Value)}";
     public bool IsConnected => _repository is not null;
     public bool HasData => _events.Count > 0;
-    public bool NoPeriodData => _periodEvents.Count == 0 && IsConnected;
+    public bool NoPeriodData => _periodEvents.Count == 0 && (_bookModels.Count > 0 || IsConnected);
     public DatabaseDiagnostics? Diagnostics { get => _diagnostics; private set => Set(ref _diagnostics, value); }
     public PeriodMetrics? Period { get => _period; private set { Set(ref _period, value); Raise(nameof(EligibleDaysLabel)); } }
     public ComparisonResult? Comparison { get => _comparison; private set => Set(ref _comparison, value); }
@@ -434,6 +478,16 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             var days = _resolvedRange is null ? 1 : Math.Max(1, _resolvedRange.EndDate.DayNumber - _resolvedRange.StartDate.DayNumber + 1);
             var resolution = AnalyticsEngine.ResolveTrendGranularity(days, TrendGranularity).ToLowerInvariant();
+            if (Localization.Localizer.Instance.IsVietnamese)
+            {
+                var unit = resolution switch { "day" => "ngày", "week" => "tuần", "month" => "tháng", _ => resolution };
+                return TrendMetric switch
+                {
+                    "Sessions" => $"{Period?.SessionCount ?? 0} phiên đọc · biểu đồ theo {unit}",
+                    "Active books" => $"{Period?.ActiveBooks ?? 0} sách đang đọc · biểu đồ theo {unit}",
+                    _ => $"Tổng {Formatters.Duration(Period?.TotalSeconds ?? 0)} · {Formatters.Duration(Period?.AveragePerCalendarDay ?? 0)}/ngày · biểu đồ theo {unit}"
+                };
+            }
             return TrendMetric switch
             {
                 "Sessions" => $"{Formatters.Count(Period?.SessionCount ?? 0, "session")} · {resolution} view",
@@ -458,7 +512,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         set
         {
             if (!Set(ref _selectedNote, value)) return;
-            if (value is not null)
+            if (value is not null && !_rediscoveryNavigating)
             {
                 value.MarkSeen();
                 Raise(nameof(NotesReadCount));
@@ -471,10 +525,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             RandomSameBookCommand.Refresh();
             SnoozeSelectedNoteCommand.Refresh();
             ToggleRandomEligibilityCommand.Refresh();
+            RefreshRediscoveryCommands();
+            RefreshReaderCommands();
         }
     }
-    public NoteRow? DailyNote { get => _dailyNote; private set => Set(ref _dailyNote, value); }
-    public NoteRow? RandomNote { get => _randomNote; private set => Set(ref _randomNote, value); }
+    public NoteRow? DailyNote { get => _dailyNote; private set { Set(ref _dailyNote, value); RefreshReaderCommands(); } }
+    public NoteRow? RandomNote { get => _randomNote; private set { Set(ref _randomNote, value); RefreshReaderCommands(); } }
     public BookDetail? BookDetail { get => _bookDetail; private set => Set(ref _bookDetail, value); }
     public InsightItem? SelectedInsight { get => _selectedInsight; set => Set(ref _selectedInsight, value); }
     public BookFilterOption SessionBook { get => _sessionBook; set { var normalized = value ?? SessionBookOptions.First(); if (Set(ref _sessionBook, normalized)) ApplySessionFilters(); } }
@@ -508,9 +564,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public int FavoriteNotesCount => _allNoteRows.Count(note => note.IsFavorite);
     public int NotesReadCount => _allNoteRows.Count(note => note.TimesSeen > 0);
     public string NoteSearch { get => _noteSearch; set { if (Set(ref _noteSearch, value ?? "")) ApplyNoteFilters(); } }
-    public string[] NoteScopeOptions { get; } = ["All notes", "Unseen", "Not seen recently", "Readest only", "Physical books only", "Favorites only", "Selected book"];
+    public string[] NoteScopeOptions { get; } = ["All notes", "Unseen", "Not seen recently", "Readest only", "Physical books only", "Favorites only", "Snoozed", "Excluded from random", "Selected book"];
     public string[] RandomNotePools { get; } = ["All eligible notes", "Favorites", "Unseen", "Not seen recently", "Readest", "Physical books", "Current book"];
-    public string RandomNotePool { get => _randomNotePool; set { var normalized = RandomNotePools.Contains(value) ? value : "All eligible notes"; if (Set(ref _randomNotePool, normalized)) SelectRandomNote(); } }
+    public string RandomNotePool { get => _randomNotePool; set => SetRandomPoolV25(value); }
     public string NoteScope { get => _noteScope; set { var normalized = NoteScopeOptions.Contains(value) ? value : "All notes"; if (Set(ref _noteScope, normalized)) ApplyNoteFilters(); } }
     public string NotesSummary
     {
@@ -692,60 +748,82 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync()
     {
-        _settings = await _store.LoadAsync(); _settings.BookTracking ??= []; _settings.BookLinks ??= []; _settings.PinnedBookKeys ??= []; _settings.NoteStates ??= []; if (_settings.AutomaticBackups) { try { _store.CreateAutomaticBackup(); } catch (Exception ex) { _log("Automatic backup error: " + ex); } } GoalEngine.Migrate(_settings); _settings.Theme = ThemeManager.Normalize(_settings.Theme); _applyTheme(_settings.Theme); _selectedRange = DateRangePresets.All.Contains(_settings.DefaultRangePreset) ? _settings.DefaultRangePreset : _settings.DefaultRangeDays switch { 1 => "Today", 7 => "7 days", 90 => "90 days", 183 => "6 months", 366 => "1 year", 365 => "This year", -1 => "All time", _ => "30 days" }; _selectedSource = SourceOptions.Contains(_settings.DefaultSourceFilter) ? _settings.DefaultSourceFilter : "All sources"; _customStart = _settings.CustomRangeStart?.ToDateTime(TimeOnly.MinValue) ?? _customStart; _customEnd = _settings.CustomRangeEnd?.ToDateTime(TimeOnly.MinValue) ?? _customEnd; _trendMetric = TrendMetrics.Contains(_settings.TrendMetric) ? _settings.TrendMetric : "Reading time"; _trendGranularity = Granularities.Contains(_settings.TrendGranularity) ? _settings.TrendGranularity : "Auto"; _compareMode = CompareModes.Contains(_settings.CompareMode) ? _settings.CompareMode : "Previous period"; _compareCustomStart = _settings.CompareCustomStart?.ToDateTime(TimeOnly.MinValue) ?? _compareCustomStart; _compareCustomEnd = _settings.CompareCustomEnd?.ToDateTime(TimeOnly.MinValue) ?? _compareCustomEnd; Manual.GoogleApiKeyState = _settings.GoogleBooksApiKey; await Manual.InitializeAsync(); if (_settings.AutomaticBackups) { try { _backup.CreateAutomatic(AppVersion, Math.Clamp(_settings.BackupRetentionDays, 1, 30)); } catch (Exception ex) { _log("Complete automatic backup error: " + ex); } } RefreshBackupHistory(); RaiseSettings(); Raise(nameof(SelectedSource));
+        _settings = await _store.LoadAsync(); _settingsLoaded = true; RestoreRediscoveryPreferences(); _settings.BookTracking ??= []; _settings.BookLinks ??= []; _settings.PinnedBookKeys ??= []; _settings.NoteStates ??= []; _settings.ReadingEventExclusions ??= []; if (_settings.AutomaticBackups) { try { _store.CreateAutomaticBackup(); } catch (Exception ex) { _log("Automatic backup error: " + ex); } } GoalEngine.Migrate(_settings); _settings.Theme = ThemeManager.Normalize(_settings.Theme); _applyTheme(_settings.Theme); _selectedRange = DateRangePresets.All.Contains(_settings.DefaultRangePreset) ? _settings.DefaultRangePreset : _settings.DefaultRangeDays switch { 1 => "Today", 7 => "7 days", 90 => "90 days", 183 => "6 months", 366 => "1 year", 365 => "This year", -1 => "All time", _ => "30 days" }; _selectedSource = SourceOptions.Contains(_settings.DefaultSourceFilter) ? _settings.DefaultSourceFilter : "All sources"; _customStart = _settings.CustomRangeStart?.ToDateTime(TimeOnly.MinValue) ?? _customStart; _customEnd = _settings.CustomRangeEnd?.ToDateTime(TimeOnly.MinValue) ?? _customEnd; _trendMetric = TrendMetrics.Contains(_settings.TrendMetric) ? _settings.TrendMetric : "Reading time"; _trendGranularity = Granularities.Contains(_settings.TrendGranularity) ? _settings.TrendGranularity : "Auto"; _compareMode = CompareModes.Contains(_settings.CompareMode) ? _settings.CompareMode : "Previous period"; _compareCustomStart = _settings.CompareCustomStart?.ToDateTime(TimeOnly.MinValue) ?? _compareCustomStart; _compareCustomEnd = _settings.CompareCustomEnd?.ToDateTime(TimeOnly.MinValue) ?? _compareCustomEnd; Manual.GoogleApiKeyState = _settings.GoogleBooksApiKey; await Manual.InitializeAsync(); if (_settings.AutomaticBackups) { try { _backup.CreateAutomatic(AppVersion, Math.Clamp(_settings.BackupRetentionDays, 1, 30)); RecordBackupAttempt(true); } catch (Exception ex) { RecordBackupAttempt(false); _log("Complete automatic backup error: " + ex); } } RefreshBackupHistory(); RaiseSettings(); Raise(nameof(SelectedSource));
+        if (_store.ApiKeyWarning is { } apiKeyWarning) _log(apiKeyWarning);
         Localization.Localizer.Instance.SetLanguage(Language); ApplyNavigationLanguage(); Raise(nameof(PageTitle)); Raise(nameof(PageSubtitle)); Raise(nameof(Breadcrumb));
-        var path = await _locator.LocateAsync(_settings.DatabasePath);
-        if (path is null) { Status = Manual.HasBooks ? "Manual library ready" : "No Readest data found"; Error = "Readest data was not found. Manual log remains available; choose statistics.db to connect digital reading."; RaiseConnectionState(); return; }
-        await ConnectAsync(path);
+        var path = await _locator.LocateAsync(_settings.DatabasePath, preferSavedPath: _settings.DatabasePathIsManual);
+        if (path is null) { var hasManual = Manual.HasBooks || Manual.Sessions.Count > 0; Status = hasManual ? "Manual library ready" : "No Readest data found"; Error = hasManual ? null : "Readest data was not found. Manual log remains available; choose statistics.db to connect digital reading."; ApplySourceSelection(); BuildNotes(); RaiseConnectionState(); CompleteRediscoveryInitialization(); StartLocalClock(); return; }
+        try { await ConnectAsync(path); }
+        finally { CompleteRediscoveryInitialization(); StartLocalClock(); }
     }
 
-    private async Task ConnectAsync(string path)
+    private Task ConnectAsync(string path) => ConnectWithSelectionAsync(path, false);
+
+    private async Task ConnectWithSelectionAsync(string path, bool manuallySelected)
     {
         IsBusy = true; Error = null;
         try
         {
             var repository = new SqliteReadestRepository(path); var validation = await repository.ValidateAsync();
-            if (!validation.IsValid) { _repository = null; _notesRepository = null; Diagnostics = null; Error = validation.Message; Status = "Incompatible database"; return; }
-            _repository = repository; _notesRepository = new ReadestNotesRepository(path); Diagnostics = validation.Diagnostics; _settings.DatabasePath = path; await _store.SaveAsync(_settings); Status = "Loading Readest activity…"; await RefreshAsync(force: true); ConfigureRefresh();
+            if (!validation.IsValid) { _repository = null; _notesRepository = null; Diagnostics = null; Error = validation.Message; Status = "Incompatible database"; ApplySourceSelection(); return; }
+            _repository = repository; _notesRepository = new ReadestNotesRepository(path); Diagnostics = validation.Diagnostics; _settings.DatabasePath = path; if (manuallySelected) _settings.DatabasePathIsManual = true; await SaveSettingsDataAsync(); Status = "Loading Readest activity…"; await RefreshAsync(force: true); ConfigureRefresh();
         }
-        catch (Exception ex) { _repository = null; _notesRepository = null; Error = Friendly(ex); Status = "Connection failed"; }
+        catch (Exception ex) { _repository = null; _notesRepository = null; Error = Friendly(ex); Status = "Connection failed"; ApplySourceSelection(); }
         finally { IsBusy = false; RaiseConnectionState(); }
     }
 
-    private async Task RefreshAsync(bool incremental = false, bool force = false)
+    private async Task RefreshAsync(bool force = false)
     {
-        if (IsBusy && !force) return;
+        if (_disposed || _isRestoring && !_restoreReloading) return;
+        if (IsBusy && !force) { _refreshPending = true; return; }
         _qualityCacheSource = null;
         if (_repository is null) { BuildDataQuality(); return; }
         _activeRefresh?.Cancel(); _activeRefresh?.Dispose(); _activeRefresh = new CancellationTokenSource(TimeSpan.FromSeconds(30)); var token = _activeRefresh.Token; IsBusy = true; Error = null;
         try
         {
             var booksTask = _repository.GetBooksAsync(token);
-            var since = incremental && _readestEvents.Count > 0 ? DateTimeOffset.FromUnixTimeSeconds(_readestEvents.Max(e => e.StartTime)) : (DateTimeOffset?)null;
-            var eventsTask = _repository.GetEventsAsync(since, cancellationToken: token);
+            // Reconcile the full Readest history: old events may be edited or deleted.
+            var eventsTask = _repository.GetEventsAsync(cancellationToken: token);
             var notesTask = _notesRepository?.LoadAsync(token) ?? Task.FromResult<IReadOnlyList<ReadestNote>>([]);
             await Task.WhenAll(booksTask, eventsTask, notesTask);
+            var diagnostics = (await _repository.ValidateAsync(token)).Diagnostics;
             _readestBookModels = await booksTask;
             var fresh = await eventsTask;
             _readestNotes = await notesTask;
-            _readestEvents = since is null ? fresh : _readestEvents.Concat(fresh).GroupBy(e => (e.BookId, e.Page, e.StartTime)).Select(g => g.Last()).OrderBy(e => e.StartTime).ToArray();
+            SetReadestNotesSnapshotAuthority(_notesRepository?.LastDiagnostics.FilesFailed == 0);
+            _readestEvents = fresh;
             ApplySourceSelection(false);
-            Diagnostics = (await _repository.ValidateAsync(token)).Diagnostics;
-            if (_goalEngine.SyncYearArchives(_settings, _events, completedBooks: CompletedBookDates())) await _store.SaveAsync(_settings, token);
+            Diagnostics = diagnostics;
+            if (_goalEngine.SyncYearArchives(_settings, _events, completedBooks: CompletedBookDates())) await SaveSettingsDataAsync(token);
             BuildNotes();
             RecalculateAll();
             LastSync = DateTimeOffset.Now;
+            RecordRefreshSuccess();
+            RaiseV24SourceStatus();
             Status = "Readest connected";
             _log($"Refresh complete · {_readestEvents.Count} Readest events · {Manual.AsReadingEvents().Count} manual sessions · {_bookModels.Count} books · {_readestNotes.Count} notes · {_repository.DatabasePath}");
         }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { Error = "Could not refresh Readest data. " + Friendly(ex); Status = "Last good data retained"; _log("Refresh error: " + ex); }
-        finally { IsBusy = false; RaiseConnectionState(); }
+        catch (OperationCanceledException) when (!_disposed)
+        {
+            RecordRefreshFailure();
+            Error = V24Text("Readest refresh timed out or was interrupted. Last good data is retained; retry when Readest is ready.", "Làm mới Readest quá thời gian hoặc bị gián đoạn. Dữ liệu gần nhất vẫn được giữ; thử lại khi Readest sẵn sàng.");
+            Status = "Last good data retained";
+        }
+        catch (Exception ex) { RecordRefreshFailure(); Error = "Could not refresh Readest data. " + Friendly(ex); Status = "Last good data retained"; _log("Refresh error: " + ex); }
+        finally
+        {
+            IsBusy = false; RaiseConnectionState(); RaiseV25Status();
+            if (_refreshPending && !_disposed)
+            {
+                _refreshPending = false;
+                _ = Application.Current.Dispatcher.InvokeAsync(async () => await RefreshAsync());
+            }
+        }
     }
 
     private void RecalculateAll()
     {
-        Raise(nameof(IsCustomRange)); if (_events.Count == 0) { ClearAnalytics(); if (_bookModels.Count > 0) ApplyBookFilters(); BuildDataQuality(); return; }
+        Raise(nameof(IsCustomRange)); if (_events.Count == 0) { ClearAnalytics(); if (_bookModels.Count > 0) ApplyBookFilters(); BuildDataQuality(); BuildV24(); return; }
         var first = _events.Min(e => e.Start); _resolvedRange = _ranges.Resolve(SelectedRange, DateTimeOffset.Now, first, _settings.WeekStartsMonday, CustomStart is null ? null : DateOnly.FromDateTime(CustomStart.Value), CustomEnd is null ? null : DateOnly.FromDateTime(CustomEnd.Value)); _periodEvents = _analytics.Filter(_events, _resolvedRange); _periodSessions = _statistics.BuildSessions(_periodEvents, TimeSpan.FromMinutes(SessionGapMinutes)).Where(s => s.DurationSeconds >= MinimumSessionSeconds).ToArray();
         Period = _analytics.Metrics(_events, _resolvedRange, SessionGapMinutes); Comparison = _analytics.Compare(_events, _resolvedRange); SessionProfile = _analytics.Sessions(_periodSessions); WeekdayWeekend = _analytics.WeekdayWeekend(_events, _resolvedRange); CommonWindow = _analytics.CommonWindow(_events, _resolvedRange); Raise(nameof(CommonWindowLabel)); Raise(nameof(ConsistencyDetail));
         if (!ReferenceEquals(_allTimeCacheSource, _events) || _allTimeCacheGap != SessionGapMinutes)
@@ -755,14 +833,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
         AllSessionCount = _allSessions.Count; var streaks = _statistics.Streaks(_allDaily.Select(d => d.Date), DateOnly.FromDateTime(DateTime.Today)); CurrentStreak = streaks.Current; LongestStreak = streaks.Longest; Raise(nameof(CurrentStreak)); Raise(nameof(LongestStreak)); Raise(nameof(CurrentStreakLabel)); Raise(nameof(LongestStreakLabel)); Raise(nameof(StreakContinuation)); Raise(nameof(ComparisonText)); Raise(nameof(AbsoluteDeltaText));
         TopBookLabel = _statistics.RankBooks(_periodEvents, _bookModels).FirstOrDefault()?.Title ?? "No active book"; Raise(nameof(TopBookLabel));
-        BuildTrend(); BuildHeatmap(_allDaily); BuildPatterns(); BuildStory(_allDaily); BuildGoals(); BuildRecordsAndInsights(); BuildInfographics(_allDaily); BuildDataQuality(); RefreshSelectedPage(); ExportCsvCommand.Refresh(); ExportJsonCommand.Refresh(); Raise(nameof(ReadingPeriodSummary)); Raise(nameof(SessionsPerActiveDay)); Raise(nameof(NoPeriodData)); Raise(nameof(HasData));
+        BuildTrend(); BuildHeatmap(_allDaily); BuildPatterns(); BuildStory(_allDaily); BuildGoals(); BuildRecordsAndInsights(); BuildInfographics(_allDaily); BuildDataQuality(); BuildV24(); RefreshSelectedPage(); ExportCsvCommand.Refresh(); ExportJsonCommand.Refresh(); Raise(nameof(ReadingPeriodSummary)); Raise(nameof(SessionsPerActiveDay)); Raise(nameof(NoPeriodData)); Raise(nameof(HasData));
     }
 
     private void ApplySourceSelection(bool recalculate = true)
     {
         var manualEvents = Manual.AsReadingEvents();
         var manualBooks = Manual.AsBooks();
-        var manualWithoutReadestOverlap = ReadingEventMerger.ExcludeOverlaps(manualEvents, _readestEvents);
+        var includedReadest = ReadingEventAudit.Apply(_readestEvents, _settings.ReadingEventExclusions);
+        var manualWithoutReadestOverlap = ReadingEventMerger.ExcludeOverlaps(manualEvents, includedReadest);
         var linkedManualToReadest = _settings.BookLinks
             .Select(link => (ManualId: ParseManualKey(link.ManualKey), Readest: _readestBookModels.FirstOrDefault(book => BookKey(book).Equals(link.ReadestKey, StringComparison.OrdinalIgnoreCase))))
             .Where(item => item.ManualId is not null && item.Readest is not null)
@@ -774,9 +853,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             .Concat(manualBooks.Where(book => !linkedManualIds.Contains(book.Id))).ToArray();
         _events = SelectedSource switch
         {
-            "Readest" => _readestEvents,
+            "Readest" => includedReadest,
             "Manual" => manualEvents,
-            _ => _readestEvents.Concat(combinedManualEvents).OrderBy(item => item.StartTime).ToArray()
+            _ => includedReadest.Concat(combinedManualEvents).OrderBy(item => item.StartTime).ToArray()
         };
         _bookModels = SelectedSource switch
         {
@@ -986,13 +1065,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private void BuildActivity()
     {
-        var monthStart = new DateOnly(Month.Year, Month.Month, 1); var gridStart = monthStart.AddDays(-((_settings.WeekStartsMonday ? (int)monthStart.DayOfWeek + 6 : (int)monthStart.DayOfWeek) % 7)); Replace(WeekdayHeaders, _settings.WeekStartsMonday ? new[] { "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN" } : new[] { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" }); var daily = _allDaily.ToDictionary(d => d.Date); var sessions = _allSessions; var max = daily.Where(x => x.Key.Year == Month.Year && x.Key.Month == Month.Month).Select(x => x.Value.Seconds).DefaultIfEmpty().Max(); Replace(CalendarDays, Enumerable.Range(0, 42).Select(i => { var date = gridStart.AddDays(i); var d = daily.GetValueOrDefault(date); var value = d?.Seconds ?? 0; var level = value <= 0 || max <= 0 ? "None" : (value / max) switch { < .25 => "Low", < .5 => "Medium", < .75 => "High", _ => "Peak" }; return new CalendarDayItem(date, date.Month == Month.Month, value, sessions.Count(s => DateOnly.FromDateTime(_statistics.ToLocal(s.Start).DateTime) == date), d?.Books ?? 0, level, value <= 0 ? "" : Formatters.Duration(value)); })); Replace(ActivityMonthTrend, Enumerable.Range(0, DateTime.DaysInMonth(Month.Year, Month.Month)).Select(index => { var date = monthStart.AddDays(index); var stat = daily.GetValueOrDefault(date); return new ChartPoint(date.Day.ToString(), (stat?.Seconds ?? 0) / 60d, stat is null ? $"{date:MMM d} · No activity" : $"{date:MMM d} · {Formatters.Duration(stat.Seconds)}", "min"); })); if (SelectedDate.Month != Month.Month || SelectedDate.Year != Month.Year) SelectedDate = monthStart; BuildSelectedDay(); Raise(nameof(MonthSummary));
+        var monthStart = new DateOnly(Month.Year, Month.Month, 1); var gridStart = monthStart.AddDays(-((_settings.WeekStartsMonday ? (int)monthStart.DayOfWeek + 6 : (int)monthStart.DayOfWeek) % 7)); Replace(WeekdayHeaders, _settings.WeekStartsMonday ? new[] { "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN" } : new[] { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" }); var daily = _allDaily.ToDictionary(d => d.Date); var max = daily.Where(x => x.Key.Year == Month.Year && x.Key.Month == Month.Month).Select(x => x.Value.Seconds).DefaultIfEmpty().Max(); Replace(CalendarDays, Enumerable.Range(0, 42).Select(i => { var date = gridStart.AddDays(i); var d = daily.GetValueOrDefault(date); var value = d?.Seconds ?? 0; var level = value <= 0 || max <= 0 ? "None" : (value / max) switch { < .25 => "Low", < .5 => "Medium", < .75 => "High", _ => "Peak" }; return new CalendarDayItem(date, date.Month == Month.Month, value, d?.Sessions ?? 0, d?.Books ?? 0, level, value <= 0 ? "" : Formatters.Duration(value)); })); Replace(ActivityMonthTrend, Enumerable.Range(0, DateTime.DaysInMonth(Month.Year, Month.Month)).Select(index => { var date = monthStart.AddDays(index); var stat = daily.GetValueOrDefault(date); return new ChartPoint(date.Day.ToString(), (stat?.Seconds ?? 0) / 60d, stat is null ? $"{date:MMM d} · No activity" : $"{date:MMM d} · {Formatters.Duration(stat.Seconds)}", "min"); })); if (SelectedDate.Month != Month.Month || SelectedDate.Year != Month.Year) SelectedDate = monthStart; BuildSelectedDay(); Raise(nameof(MonthSummary));
     }
 
     public string MonthSummary { get { var items = CalendarDays.Where(d => d.IsInMonth && d.Seconds > 0).ToArray(); return items.Length == 0 ? "No reading activity this month." : $"{Formatters.Duration(items.Sum(d => d.Seconds))} · {Formatters.Count(items.Length, "active day")} · {Formatters.Count(items.Sum(d => d.Sessions), "session")} · {Formatters.Count(_events.Where(e => { var d = _statistics.ToLocal(e.Start); return d.Year == Month.Year && d.Month == Month.Month; }).Select(e => e.BookId).Distinct().Count(), "book active", "books active")}"; } }
     private void BuildSelectedDay()
     {
-        var sessions = _allSessions.Where(s => DateOnly.FromDateTime(_statistics.ToLocal(s.Start).DateTime) == SelectedDate).ToArray(); var events = _events.Where(e => DateOnly.FromDateTime(_statistics.ToLocal(e.Start).DateTime) == SelectedDate).ToArray(); var rows = SessionRows(sessions).ToArray(); var titles = _bookModels.ToDictionary(b => b.Id, b => b.Title); var books = events.GroupBy(e => e.BookId).Select(g => new ChartPoint(titles.GetValueOrDefault(g.Key, "Unknown book"), g.Sum(e => e.DurationSeconds), Formatters.Duration(g.Sum(e => e.DurationSeconds)))).OrderByDescending(x => x.Value).ToArray(); SelectedDay = new(SelectedDate, events.Sum(e => e.DurationSeconds), sessions.Length, events.Select(e => e.BookId).Distinct().Count(), rows.FirstOrDefault()?.Start, rows.LastOrDefault()?.End, rows, books); Replace(DaySessions, rows); Replace(DayBooks, books); Replace(DayTimeline, _infographics.DayTimeline(_events, _bookModels, SelectedDate, SessionGapMinutes));
+        var events = ReadingEventWindow.Clip(_events, _ranges.ToUtc(SelectedDate), _ranges.ToUtc(SelectedDate.AddDays(1))); var sessions = _statistics.BuildSessions(events, TimeSpan.FromMinutes(SessionGapMinutes)).ToArray(); var rows = SessionRows(sessions).ToArray(); var titles = _bookModels.ToDictionary(b => b.Id, b => b.Title); var books = events.GroupBy(e => e.BookId).Select(g => new ChartPoint(titles.GetValueOrDefault(g.Key, "Unknown book"), g.Sum(e => e.DurationSeconds), Formatters.Duration(g.Sum(e => e.DurationSeconds)))).OrderByDescending(x => x.Value).ToArray(); SelectedDay = new(SelectedDate, events.Sum(e => e.DurationSeconds), sessions.Length, events.Select(e => e.BookId).Distinct().Count(), rows.FirstOrDefault()?.Start, rows.LastOrDefault()?.End, rows, books); Replace(DaySessions, rows); Replace(DayBooks, books); Replace(DayTimeline, _infographics.DayTimeline(_events, _bookModels, SelectedDate, SessionGapMinutes)); BuildDayAudit();
     }
 
     private void BuildGoals()
@@ -1084,9 +1163,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private void BuildNotes()
     {
         var selectedId = _selectedNote?.Id;
-        var randomId = _randomNote?.Id;
         var noteSources = _readestNotes.Concat(Manual.AsNotes()).ToArray();
-        _noteDiscovery.Update(noteSources.Select(note => KeyValuePair.Create(note.Id, note.BookHash))); PreviousRandomNoteCommand.Refresh();
+        _noteDiscovery.Update(noteSources.Select(note => KeyValuePair.Create(note.Id, note.BookHash)));
         _allNoteRows.Clear();
         foreach (var source in noteSources)
         {
@@ -1103,10 +1181,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ApplyNoteFilters();
         BuildNoteAnalytics();
         DailyNote = ChooseDailyNote();
-        RandomNote = randomId is null
-            ? ChooseRandomNote()
-            : _allNoteRows.FirstOrDefault(note => note.Id.Equals(randomId, StringComparison.OrdinalIgnoreCase)) ?? ChooseRandomNote();
-        _lastRandomNoteId = RandomNote?.Id;
+        BuildRediscoveryState();
 
         _selectedNote = selectedId is null
             ? DailyNote ?? RandomNote ?? Notes.FirstOrDefault()
@@ -1130,6 +1205,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ExportNotesMarkdownCommand.Refresh();
         ExportNotesJsonCommand.Refresh();
         ExportNotesCsvCommand.Refresh();
+        RefreshReaderCommands();
     }
 
     private void ApplyNoteFilters()
@@ -1142,6 +1218,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             "Unseen" => rows.Where(note => note.TimesSeen == 0),
             "Not seen recently" => rows.Where(note => note.LastSeenUtc is null || note.LastSeenUtc < DateTimeOffset.UtcNow.AddDays(-30)),
             "Favorites only" => rows.Where(note => note.IsFavorite),
+            "Snoozed" => rows.Where(note => note.IsSnoozed),
+            "Excluded from random" => rows.Where(note => note.ExcludeFromRandom),
             "Selected book" when SelectedNote is not null => rows.Where(note => note.BookHash.Equals(SelectedNote.BookHash, StringComparison.OrdinalIgnoreCase)),
             _ => rows
         };
@@ -1151,11 +1229,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             _selectedNote = Notes.FirstOrDefault();
             Raise(nameof(SelectedNote));
+            RefreshReaderCommands();
         }
         Raise(nameof(NotesCountLabel));
         Raise(nameof(HasNoVisibleNotes));
         Raise(nameof(NotesEmptyMessage));
         Raise(nameof(FavoriteNotesCount)); Raise(nameof(NotesReadCount));
+        Raise(nameof(NoteListSelection));
         RandomNoteCommand.Refresh();
         RandomSameBookCommand.Refresh();
         ExportNotesMarkdownCommand.Refresh();
@@ -1187,21 +1267,26 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private void NoteRowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
+        if (_refreshingNoteClock) return;
         if (sender is not NoteRow note) return;
         Raise(nameof(FavoriteNotesCount));
         ScheduleNoteSave(note);
+        OnRediscoveryNoteStateChanged(args.PropertyName);
+        RefreshReaderCommands();
     }
 
     private void ScheduleNoteSave(NoteRow note)
     {
+        if (_isRestoring || _disposed) return;
         _noteSaveDebounce?.Cancel(); _noteSaveDebounce?.Dispose(); _noteSaveDebounce = new(); var token = _noteSaveDebounce.Token;
-        _ = Application.Current.Dispatcher.InvokeAsync(async () => { try { await Task.Delay(350, token); await SaveNoteStateAsync(note); NotesStatus = "Note settings saved locally."; } catch (OperationCanceledException) { } });
+        _ = Application.Current.Dispatcher.InvokeAsync(async () => { try { await Task.Delay(350, token); if (await SaveNoteStateAsync(note)) NotesStatus = "Note settings saved locally."; } catch (OperationCanceledException) { } });
     }
 
     private void SchedulePreferenceSave()
     {
+        if (_isRestoring || _disposed) return;
         _preferenceSaveDebounce?.Cancel(); _preferenceSaveDebounce?.Dispose(); _preferenceSaveDebounce = new(); var token = _preferenceSaveDebounce.Token;
-        _ = Application.Current.Dispatcher.InvokeAsync(async () => { try { await Task.Delay(500, token); await _store.SaveAsync(_settings, token); } catch (OperationCanceledException) { } catch (Exception ex) { _log("Preference save error: " + ex); } });
+        _ = Application.Current.Dispatcher.InvokeAsync(async () => { try { await Task.Delay(500, token); await SaveSettingsDataAsync(token); } catch (OperationCanceledException) { } catch (Exception ex) { _log("Preference save error: " + ex); } });
     }
 
     private NoteRow? ChooseDailyNote()
@@ -1210,66 +1295,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         return id is null ? null : _allNoteRows.FirstOrDefault(note => note.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
     }
 
-    private NoteRow? ChooseRandomNote()
-    {
-        IEnumerable<NoteRow> pool = _allNoteRows.Where(note => !note.ExcludeFromRandom && !note.IsSnoozed);
-        pool = RandomNotePool switch
-        {
-            "Favorites" => pool.Where(note => note.IsFavorite),
-            "Unseen" => pool.Where(note => note.TimesSeen == 0),
-            "Not seen recently" => pool.Where(note => note.LastSeenUtc is null || note.LastSeenUtc < DateTimeOffset.UtcNow.AddDays(-30)),
-            "Readest" => pool.Where(note => note.IsReadest),
-            "Physical books" => pool.Where(note => note.IsManual),
-            "Current book" when SelectedNote is not null => pool.Where(note => note.BookHash.Equals(SelectedNote.BookHash, StringComparison.OrdinalIgnoreCase)),
-            _ => pool
-        };
-        var candidates = pool.Where(note => note.Id != _lastRandomNoteId).ToArray();
-        if (candidates.Length == 0) candidates = pool.ToArray();
-        if (candidates.Length == 0) return null;
-        var poolSize = Math.Max(1, (int)Math.Ceiling(candidates.Length * 0.4));
-        var rediscoveryPool = candidates.OrderBy(note => note.TimesSeen).ThenBy(note => note.LastSeenUtc ?? DateTimeOffset.MinValue).Take(poolSize).ToArray();
-        return rediscoveryPool[Random.Shared.Next(rediscoveryPool.Length)];
-    }
 
     private void SelectDailyNote()
     {
         if (DailyNote is not null) SelectedNote = DailyNote;
     }
 
-    private void SelectRandomNote()
-    {
-        var selected = ChooseRandomNote();
-        if (selected is null) return;
-        if (!string.IsNullOrWhiteSpace(_lastRandomNoteId) && _lastRandomNoteId != selected.Id)
-        {
-            _randomHistory.Push(_lastRandomNoteId);
-            if (_randomHistory.Count > 20) { var recent = _randomHistory.Take(20).Reverse().ToArray(); _randomHistory.Clear(); foreach (var id in recent) _randomHistory.Push(id); }
-        }
-        RandomNote = selected;
-        RandomNoteHistory.Remove(selected); RandomNoteHistory.Insert(0, selected); while (RandomNoteHistory.Count > 8) RandomNoteHistory.RemoveAt(RandomNoteHistory.Count - 1);
-        _lastRandomNoteId = selected.Id;
-        SelectedNote = selected;
-        PreviousRandomNoteCommand.Refresh();
-    }
+    private void SelectRandomNote() => SelectRandomNoteV25();
 
-    private void SelectPreviousRandomNote()
-    {
-        var id = _randomHistory.TryPop(out var previous) ? previous : null;
-        var note = id is null ? null : _allNoteRows.FirstOrDefault(item => item.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
-        if (note is not null) { RandomNote = note; _lastRandomNoteId = note.Id; SelectedNote = note; }
-        PreviousRandomNoteCommand.Refresh();
-    }
 
-    private void SelectRandomFromSameBook()
-    {
-        if (SelectedNote is null) return;
-        var candidates = Notes.Where(note => note.BookHash.Equals(SelectedNote.BookHash, StringComparison.OrdinalIgnoreCase) && note.Id != SelectedNote.Id).ToArray();
-        if (candidates.Length == 0) return;
-        RandomNote = candidates[Random.Shared.Next(candidates.Length)];
-        _lastRandomNoteId = RandomNote.Id;
-        SelectedNote = RandomNote;
-        RandomSameBookCommand.Refresh();
-    }
 
     private void CopySelectedNote()
     {
@@ -1296,50 +1330,74 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private Task SnoozeSelectedNoteAsync() => SnoozeSelectedNoteAsync(7);
     private async Task SnoozeSelectedNoteAsync(int days)
     {
-        if (SelectedNote is null) return;
-        SelectedNote.Snooze(days); await SaveNoteStateAsync(SelectedNote); NotesStatus = $"This note will stay out of Random Note for {days} days."; SelectRandomNote();
+        var note = SelectedNote;
+        if (note is null || !CanInteract || _noteCurationBusy || days is < 1 or > 365) return;
+        RememberNoteCurationChange(note);
+        SetReaderCurationBusy(true);
+        try
+        {
+            note.Snooze(days);
+            if (!await SaveNoteStateAsync(note)) return;
+            NotesStatus = $"This note will stay out of Random Note for {days} days.";
+            if (ReferenceEquals(SelectedNote, note)) SelectRandomNote();
+        }
+        finally { SetReaderCurationBusy(false); }
     }
 
     private async Task ToggleRandomEligibilityAsync()
     {
-        if (SelectedNote is null) return;
-        SelectedNote.ToggleRandomEligibility(); await SaveNoteStateAsync(SelectedNote); NotesStatus = SelectedNote.ExcludeFromRandom ? "This note stays searchable but will not appear randomly." : "This note can appear randomly again.";
-        if (SelectedNote.ExcludeFromRandom) SelectRandomNote();
+        var note = SelectedNote;
+        if (note is null || !CanInteract || _noteCurationBusy) return;
+        RememberNoteCurationChange(note);
+        SetReaderCurationBusy(true);
+        try
+        {
+            note.ToggleRandomEligibility();
+            if (!await SaveNoteStateAsync(note)) return;
+            NotesStatus = note.ExcludeFromRandom ? "This note stays searchable but will not appear randomly." : "This note can appear randomly again.";
+            if (note.ExcludeFromRandom && ReferenceEquals(SelectedNote, note)) SelectRandomNote();
+        }
+        finally { SetReaderCurationBusy(false); }
     }
 
     private async Task SaveSelectedNoteAsync()
     {
-        if (SelectedNote is null) return;
-        if (SelectedNote.IsManual && !await Manual.UpdateSessionNoteAsync(SelectedNote.Id, SelectedNote.Note))
+        var note = SelectedNote;
+        if (note is null || !CanInteract) return;
+        if (note.IsManual && !await Manual.UpdateSessionNoteAsync(note.Id, note.Note))
         {
             NotesStatus = "That physical-session note no longer exists.";
             return;
         }
-        await SaveNoteStateAsync(SelectedNote);
-        NotesStatus = SelectedNote.IsManual ? "Physical-session note saved locally." : "Personal note settings saved locally.";
+        if (await SaveNoteStateAsync(note))
+            NotesStatus = note.IsManual ? "Physical-session note saved locally." : "Personal note settings saved locally.";
     }
 
-    private async Task SaveNoteStateAsync(NoteRow note)
+    private async Task<bool> SaveNoteStateAsync(NoteRow note)
     {
+        if (_isRestoring || _disposed) return false;
         try
         {
             _settings.NoteStates[note.Id] = note.State;
-            await _store.SaveAsync(_settings);
+            await SaveSettingsDataAsync();
+            return true;
         }
         catch (Exception ex)
         {
             NotesStatus = "Could not save note settings. " + Friendly(ex);
             _log("Note state save error: " + ex);
+            return false;
         }
     }
 
     private async Task RefreshNotesAsync()
     {
-        if (_notesRepository is null) return;
+        if (_notesRepository is null || _isRestoring || _disposed) return;
         try
         {
             NotesStatus = "Refreshing local Readest notes…";
             _readestNotes = await _notesRepository.LoadAsync();
+            SetReadestNotesSnapshotAuthority(_notesRepository.LastDiagnostics.FilesFailed == 0);
             BuildNotes();
         }
         catch (Exception ex)
@@ -1349,7 +1407,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private bool CanOpenSelectedNote() => SelectedNote?.Id.StartsWith("manual:", StringComparison.OrdinalIgnoreCase) == true || SelectedNote?.BookPath is { } path && File.Exists(path);
+    private bool CanOpenSelectedNote() => SelectedNote?.Id.StartsWith("manual:", StringComparison.OrdinalIgnoreCase) == true || SelectedNote?.BookPath is { } path && ReadestLibraryLocator.IsLocalBookFile(path) && File.Exists(path);
 
     private void OpenSelectedNote()
     {
@@ -1361,7 +1419,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             NotesStatus = "Opened the physical book details.";
             return;
         }
-        if (SelectedNote?.BookPath is not { } bookPath || !File.Exists(bookPath))
+        if (SelectedNote?.BookPath is not { } bookPath || !ReadestLibraryLocator.IsLocalBookFile(bookPath) || !File.Exists(bookPath))
         {
             NotesStatus = "The original book file is not available in the Readest library.";
             return;
@@ -1369,8 +1427,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         try
         {
             var executable = ReadestLibraryLocator.FindReadestExecutable();
-            var startInfo = executable is null ? new ProcessStartInfo(bookPath) { UseShellExecute = true } : new ProcessStartInfo(executable) { UseShellExecute = true };
-            if (executable is not null) startInfo.ArgumentList.Add(bookPath);
+            if (executable is null) { NotesStatus = "Readest is not installed; this book cannot be opened safely."; return; }
+            var startInfo = new ProcessStartInfo(executable) { UseShellExecute = true };
+            startInfo.ArgumentList.Add(bookPath);
             Process.Start(startInfo);
             NotesStatus = $"Opening {SelectedNote.BookTitle} in Readest…";
         }
@@ -1383,24 +1442,30 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private async Task ExportNotesAsync(string format)
     {
-        var rows = Notes.ToArray();
-        if (rows.Length == 0) return;
-        if (ReadestStats.Localization.UiDialog.Show($"Export {Formatters.Count(rows.Length, "note")}? The file includes highlights, Readest notes, personal notes and favorite status in plain text.", "Export private notes", MessageBoxButton.OKCancel, MessageBoxImage.Information) != MessageBoxResult.OK) return;
+        var options = ChooseExportOptions(false, Notes.Count, _allNoteRows.Count);
+        if (options is null) return;
+        var rows = (options.AllItems ? _allNoteRows.AsEnumerable() : Notes.AsEnumerable())
+            .Where(note => ExportScopeCounter.IncludesNote(note.IsManual, !string.IsNullOrWhiteSpace(note.Text), options.IncludePrivate)).ToArray();
+        if (rows.Length == 0)
+        {
+            NotesStatus = V24Text("No shareable highlights in this scope. Enable private writing or choose another scope.", "Phạm vi này không có đoạn trích để chia sẻ. Bật xuất nội dung riêng hoặc chọn phạm vi khác.");
+            return;
+        }
         var extension = format switch { "json" => "json", "csv" => "csv", _ => "md" };
         var filter = extension switch { "json" => "JSON file|*.json", "csv" => "CSV file|*.csv", _ => "Markdown file|*.md" };
         var path = _chooseExport(extension, filter);
         if (path is null) return;
         var content = format switch
         {
-            "json" => JsonSerializer.Serialize(rows.Select(ToExportObject), new JsonSerializerOptions { WriteIndented = true }),
-            "csv" => BuildNotesCsv(rows),
-            _ => BuildNotesMarkdown(rows)
+            "json" => JsonSerializer.Serialize(rows.Select(note => ToExportObject(note, options.IncludePrivate)), new JsonSerializerOptions { WriteIndented = true }),
+            "csv" => BuildNotesCsv(rows, options.IncludePrivate),
+            _ => BuildNotesMarkdown(rows, options.IncludePrivate)
         };
         await File.WriteAllTextAsync(path, content, Encoding.UTF8);
         NotesStatus = $"{Formatters.Count(rows.Length, "note")} exported.";
     }
 
-    private object ToExportObject(NoteRow note) => new
+    private object ToExportObject(NoteRow note, bool includePrivate) => new
     {
         id = note.Id,
         book = note.BookTitle,
@@ -1409,17 +1474,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         type = note.TypeLabel,
         color = note.ColorLabel,
         highlight = note.Text,
-        note = note.Note,
-        personalNote = note.PersonalNote,
+        note = includePrivate ? note.Note : "",
+        personalNote = includePrivate ? note.PersonalNote : "",
         favorite = note.IsFavorite,
         createdAt = note.Source.CreatedAt,
-        updatedAt = note.Source.UpdatedAt
+        updatedAt = note.Source.UpdatedAt,
+        includesPrivateWriting = includePrivate,
+        source = note.IsManual ? "Manual" : "Readest"
     };
 
-    private static string BuildNotesMarkdown(IEnumerable<NoteRow> rows)
+    private static string BuildNotesMarkdown(IEnumerable<NoteRow> rows, bool includePrivate)
     {
         var builder = new StringBuilder();
         builder.AppendLine("# Readest Notes");
+        builder.AppendLine(includePrivate ? "Includes private writing. Keep this unencrypted file private." : "Highlights only; private writing excluded.");
         builder.AppendLine();
         foreach (var note in rows)
         {
@@ -1430,8 +1498,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 var quotedText = note.Text.Replace(Environment.NewLine, Environment.NewLine + "> ");
                 builder.AppendLine($"> {quotedText}");
             }
-            if (!string.IsNullOrWhiteSpace(note.Note)) { builder.AppendLine(); builder.AppendLine(note.Note); }
-            if (!string.IsNullOrWhiteSpace(note.PersonalNote)) { builder.AppendLine(); builder.AppendLine($"**My note:** {note.PersonalNote}"); }
+            if (includePrivate && !string.IsNullOrWhiteSpace(note.Note)) { builder.AppendLine(); builder.AppendLine(note.Note); }
+            if (includePrivate && !string.IsNullOrWhiteSpace(note.PersonalNote)) { builder.AppendLine(); builder.AppendLine($"**My note:** {note.PersonalNote}"); }
             builder.AppendLine();
             builder.AppendLine($"- {note.PageLabel} · {note.TypeLabel} · {note.ColorLabel}");
             builder.AppendLine();
@@ -1439,18 +1507,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         return builder.ToString();
     }
 
-    private static string BuildNotesCsv(IEnumerable<NoteRow> rows)
+    private static string BuildNotesCsv(IEnumerable<NoteRow> rows, bool includePrivate)
     {
-        static string Csv(string? value)
-        {
-            var normalized = (value ?? string.Empty).Replace("\"", "\"\"").Replace(Environment.NewLine, " ");
-            return "\"" + normalized + "\"";
-        }
+        static string Csv(string? value) => ShareExportPolicy.CsvCell(value);
         var builder = new StringBuilder();
         builder.AppendLine("Book,Authors,Page,Type,Color,Highlight,Note,Personal note,Favorite,Created");
         foreach (var note in rows)
         {
-            builder.AppendLine(string.Join(",", Csv(note.BookTitle), Csv(note.Authors), Csv(note.Page?.ToString()), Csv(note.TypeLabel), Csv(note.ColorLabel), Csv(note.Text), Csv(note.Note), Csv(note.PersonalNote), Csv(note.IsFavorite.ToString()), Csv(note.Source.CreatedAt?.ToString("O"))));
+            builder.AppendLine(string.Join(",", Csv(note.BookTitle), Csv(note.Authors), Csv(note.Page?.ToString()), Csv(note.TypeLabel), Csv(note.ColorLabel), Csv(note.Text), Csv(includePrivate ? note.Note : ""), Csv(includePrivate ? note.PersonalNote : ""), Csv(note.IsFavorite.ToString()), Csv(note.Source.CreatedAt?.ToString("O"))));
         }
         return builder.ToString();
     }
@@ -1506,7 +1570,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         results.AddRange(_bookModels.Select(book => new GlobalSearchResult("BOOK", book.Title, book.Authors, "Books", book.Id.ToString())));
         results.AddRange(Manual.Books.Where(book => !string.IsNullOrWhiteSpace(book.Isbn13)).Select(book => new GlobalSearchResult("BOOK", book.Title, $"{book.Authors} · ISBN {book.Isbn13}", "Books", book.Id.ToString())));
         results.AddRange(_allNoteRows.Select(note => new GlobalSearchResult("NOTE", string.IsNullOrWhiteSpace(note.Text) ? note.Note : note.Text, note.BookTitle, "Notes", note.Id)));
-        results.AddRange(Manual.RecentSessions.Select(session => new GlobalSearchResult("SESSION", session.BookTitle, $"{session.DateLabel} · {session.DurationLabel} · {session.PageRangeLabel}", "Manual log", session.Id)));
+        results.AddRange(Manual.SearchSessions(query, 100).Select(session => new GlobalSearchResult("SESSION", session.BookTitle, $"{session.DateLabel} · {session.DurationLabel} · {session.PageRangeLabel} · {session.Note}", "Manual log", session.Id)));
         results = results.GroupBy(item => $"{item.Kind}:{item.Key}:{item.Title}", StringComparer.OrdinalIgnoreCase).Select(group => group.First()).ToList();
         if (!string.IsNullOrWhiteSpace(query)) results = results.Select(item => (Item: item, Score: SearchRanking.Score(query, item.Title, item.Detail, item.Kind))).Where(item => item.Score > 0).OrderByDescending(item => item.Score).ThenBy(item => item.Item.Title).Select(item => item.Item).ToList();
         else results = results.OrderBy(item => item.Kind == "COMMAND" ? 0 : item.Kind == "PAGE" ? 1 : 2).ThenBy(item => item.Title).ToList();
@@ -1537,6 +1601,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         else if (result.Kind == "NOTE" && result.Key is not null)
         {
             SelectedNote = _allNoteRows.FirstOrDefault(note => note.Id.Equals(result.Key, StringComparison.OrdinalIgnoreCase));
+        }
+        else if (result.Kind == "SESSION" && result.Key is not null && Manual.FindSession(result.Key) is { } manualSession)
+        {
+            Manual.JournalSearch = "";
+            Manual.JournalFrom = manualSession.StartedAtUtc.LocalDateTime.Date;
+            Manual.JournalThrough = manualSession.StartedAtUtc.LocalDateTime.Date;
+            Manual.SelectedJournalBook = Manual.JournalBooks.FirstOrDefault(option => option.BookId == manualSession.BookId);
+            Manual.SelectedBook = Manual.Books.FirstOrDefault(book => book.Id == manualSession.BookId);
         }
         SelectedPage = result.Target;
         CloseCommandPalette();
@@ -1571,7 +1643,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OpenBookStatus = SelectedBook is null
             ? "Select a book to open it in Readest."
             : model?.Source == "Manual"
-                ? manual?.InfoUrl is not null || manual?.GoodreadsUrl is not null ? "Open the saved metadata page for this physical edition." : "No metadata page was saved for this physical edition."
+                ? SavedMetadataUri(manual) is not null ? "Open the saved metadata page for this physical edition." : "No safe web metadata page was saved for this physical edition."
             : path is null
                 ? "This book file is not available in the local Readest library."
                 : "";
@@ -1584,7 +1656,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (model?.Source == "Manual")
         {
             var manual = Manual.FindBook(model.Id);
-            return manual?.InfoUrl is not null || manual?.GoodreadsUrl is not null;
+            return SavedMetadataUri(manual) is not null;
         }
         return ReadestLibraryLocator.FindBookFile(Diagnostics?.Path, model?.Hash) is not null;
     }
@@ -1595,11 +1667,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (model?.Source == "Manual")
         {
             var manual = Manual.FindBook(model.Id);
-            var url = manual?.GoodreadsUrl ?? manual?.InfoUrl;
-            if (url is null) { OpenBookStatus = "No metadata page was saved for this physical edition."; return; }
+            var url = SavedMetadataUri(manual);
+            if (url is null) { OpenBookStatus = "No safe web metadata page was saved for this physical edition."; return; }
             try
             {
-                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true });
                 OpenBookStatus = $"Opening information for {SelectedBook!.Title}…";
             }
             catch (Exception ex)
@@ -1614,8 +1686,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         try
         {
             var executable = ReadestLibraryLocator.FindReadestExecutable();
-            var startInfo = executable is null ? new ProcessStartInfo(bookPath) { UseShellExecute = true } : new ProcessStartInfo(executable) { UseShellExecute = true };
-            if (executable is not null) startInfo.ArgumentList.Add(bookPath);
+            if (executable is null) { OpenBookStatus = "Readest is not installed; this book cannot be opened safely."; return; }
+            var startInfo = new ProcessStartInfo(executable) { UseShellExecute = true };
+            startInfo.ArgumentList.Add(bookPath);
             Process.Start(startInfo);
             OpenBookStatus = $"Opening {SelectedBook!.Title} in Readest…";
         }
@@ -1624,6 +1697,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OpenBookStatus = "Readest could not be opened. " + ex.Message;
             _log("Open in Readest error: " + ex);
         }
+    }
+
+    private static Uri? SavedMetadataUri(ManualBook? book)
+    {
+        if (ExternalLinkPolicy.TryGetWebUri(book?.GoodreadsUrl, out var goodreads)) return goodreads;
+        return ExternalLinkPolicy.TryGetWebUri(book?.InfoUrl, out var info) ? info : null;
     }
 
     private string? BookTrackingKey(long bookId)
@@ -1660,7 +1739,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
         _settings.BookLinks.RemoveAll(link => keys.Contains(link.ManualKey));
         if (links.FirstOrDefault() is { } keptLink) { keptLink.ManualKey = primaryKey; _settings.BookLinks.Add(keptLink); }
-        await _store.SaveAsync(_settings);
+        await SaveSettingsDataAsync();
     }
 
     private BookEditionLink? LinkForBook(long bookId)
@@ -1707,7 +1786,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (manual is null || readest is null) return;
         _settings.BookLinks.RemoveAll(link => link.ManualKey == "manual:" + manual.Id || link.ReadestKey == BookKey(readest));
         _settings.BookLinks.Add(new BookEditionLink { ManualKey = "manual:" + manual.Id, ReadestKey = BookKey(readest) });
-        await _store.SaveAsync(_settings);
+        await SaveSettingsDataAsync();
         ApplySourceSelection();
         SelectedBook = Books.FirstOrDefault(book => book.Id == readest.Id);
         Status = $"Linked the Readest and physical editions of {readest.Title}.";
@@ -1717,7 +1796,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedBook is null || LinkForBook(SelectedBook.Id) is not { } link) return;
         _settings.BookLinks.Remove(link);
-        await _store.SaveAsync(_settings);
+        await SaveSettingsDataAsync();
         ApplySourceSelection();
         SelectedBook = Books.FirstOrDefault(book => book.Id == SelectedBook.Id) ?? Books.FirstOrDefault();
         Status = "Book editions unlinked.";
@@ -1738,13 +1817,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Status = removed == 0 ? "No unused cached covers found" : $"Removed {Formatters.Count(removed, "unused cover")}";
     }
 
-    private async Task ExportPhysicalLibraryAsync()
-    {
-        var path = _chooseExport("json", "Readest Stats physical library|*.json");
-        if (path is null) return;
-        await Manual.ExportLibraryAsync(path);
-        Status = $"Exported {Formatters.Count(Manual.Books.Count, "physical book")} with manual sessions";
-    }
+    private Task ExportPhysicalLibraryAsync() => ExportPhysicalLibraryV25Async();
 
     private async Task ImportPhysicalLibraryAsync()
     {
@@ -1876,7 +1949,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (SelectedTracking?.Plan is not { Enabled: true } plan) return;
         var today = DateOnly.FromDateTime(DateTime.Today);
         if (!plan.SkippedDates.Contains(today)) plan.SkippedDates.Add(today);
-        await _store.SaveAsync(_settings); BuildSelectedPlan(); BuildContinueReading(); Status = "Today's plan was skipped; history remains intact.";
+        await SaveSettingsDataAsync(); BuildSelectedPlan(); BuildContinueReading(); Status = "Today's plan was skipped; history remains intact.";
     }
 
     private async Task SaveReadingPlanAsync()
@@ -1884,7 +1957,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         var plan = EnsureSelectedPlan();
         if (plan is null) return;
         plan.Enabled = true;
-        await _store.SaveAsync(_settings);
+        await SaveSettingsDataAsync();
         BuildSelectedPlan(); BuildContinueReading();
         Status = "Reading plan saved";
     }
@@ -1893,7 +1966,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedTracking?.Plan is not { } plan) return;
         plan.Enabled = false;
-        await _store.SaveAsync(_settings);
+        await SaveSettingsDataAsync();
         BuildSelectedPlan(); BuildContinueReading();
         Status = "Reading plan removed";
     }
@@ -1902,7 +1975,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedTracking?.Plan is not { Enabled: true } plan) return;
         plan.IsPaused = !plan.IsPaused;
-        await _store.SaveAsync(_settings);
+        await SaveSettingsDataAsync();
         BuildSelectedPlan(); BuildContinueReading();
         Status = plan.IsPaused ? "Reading plan paused" : "Reading plan resumed";
     }
@@ -2001,7 +2074,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            await _store.SaveAsync(_settings);
+            await SaveSettingsDataAsync();
             BuildGoals(); BuildYear(); ApplyBookFilters();
             Status = $"Book status saved · {SelectedBookStatus}";
         }
@@ -2014,7 +2087,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         var key = BookTrackingKey(SelectedBook.Id);
         if (key is null) return;
         if (!_settings.PinnedBookKeys.Remove(key)) _settings.PinnedBookKeys.Add(key);
-        await _store.SaveAsync(_settings);
+        await SaveSettingsDataAsync();
         Raise(nameof(IsSelectedBookPinned)); Raise(nameof(PinBookLabel));
         Status = IsSelectedBookPinned ? "Book pinned" : "Book unpinned";
         ApplyBookFilters();
@@ -2024,13 +2097,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private string FormatHour(int hour) => DateTime.Today.AddHours(hour).ToString(Use24HourTime ? "HH:mm" : "h tt");
     private string FormatHourRange(int startHour, int hours) => $"{FormatHour(startHour)}–{FormatHour((startHour + hours) % 24)}";
 
-    private async Task ChangeDatabaseAsync() { var path = _chooseDatabase(); if (path is not null) await ConnectAsync(path); }
-    private async Task RedetectAsync() { _settings.DatabasePath = null; var path = await _locator.LocateAsync(); if (path is null) { Error = "Readest data was not found."; RaiseConnectionState(); } else await ConnectAsync(path); }
+    private async Task ChangeDatabaseAsync() { var path = _chooseDatabase(); if (path is not null) await ConnectWithSelectionAsync(path, true); }
+    private async Task RedetectAsync() { _settings.DatabasePath = null; _settings.DatabasePathIsManual = false; var path = await _locator.LocateAsync(); if (path is null) { Error = "Readest data was not found."; RaiseConnectionState(); } else await ConnectAsync(path); }
     private void OpenFolder() { if (Diagnostics is not null) Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{Diagnostics.Path}\"") { UseShellExecute = true }); }
     private void OpenLogs() { var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ReadestStats", "logs"); Directory.CreateDirectory(directory); Process.Start(new ProcessStartInfo("explorer.exe", directory) { UseShellExecute = true }); }
     private async Task ExportCsvAsync() { var path = _chooseExport("csv", "CSV file|*.csv"); if (path is not null) await _export.ExportCsvAsync(path, _statistics.Daily(_periodEvents, TimeSpan.FromMinutes(SessionGapMinutes))); }
     private async Task ExportJsonAsync() { var path = _chooseExport("json", "JSON file|*.json"); if (path is not null && _resolvedRange is not null) await _export.ExportJsonAsync(path, _statistics.Overview(_periodEvents, _bookModels, Math.Max(1, _resolvedRange.EndDate.DayNumber - _resolvedRange.StartDate.DayNumber + 1), TimeSpan.FromMinutes(SessionGapMinutes)), Books.Select(b => b.Summary)); }
-    private async Task ExportMonthlyReportAsync() { var path = _chooseExport("md", "Markdown report|*.md"); if (path is not null) { await _export.ExportMonthlyMarkdownAsync(path, Month.Year, Month.Month, _events, _bookModels, SessionGapMinutes); Status = $"{Month:MMMM yyyy} report exported"; } }
+    private async Task ExportMonthlyReportAsync()
+    {
+        BuildMonthlyReview();
+        var path = _chooseExport("md", "Markdown report|*.md");
+        if (path is null || MonthlyReview is null) return;
+        await File.WriteAllTextAsync(path, MonthlyReviewEngine.ToMarkdown(MonthlyReview), Encoding.UTF8);
+        Status = $"{ReportMonth:MMMM yyyy} report exported";
+    }
     private async Task CheckForUpdatesAsync()
     {
         UpdateStatus = "Checking GitHub releases…";
@@ -2050,16 +2130,22 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
     private void OpenUpdate() { if (!string.IsNullOrWhiteSpace(_updateUrl)) Process.Start(new ProcessStartInfo(_updateUrl) { UseShellExecute = true }); }
-    private async Task SaveSettingsAsync() { _settings.DefaultRangePreset = SelectedRange; _settings.CustomRangeStart = CustomStart is null ? null : DateOnly.FromDateTime(CustomStart.Value); _settings.CustomRangeEnd = CustomEnd is null ? null : DateOnly.FromDateTime(CustomEnd.Value); _settings.TrendMetric = TrendMetric; _settings.TrendGranularity = TrendGranularity; _settings.DefaultRangeDays = SelectedRange switch { "Today" => 1, "7 days" => 7, "90 days" => 90, "6 months" => 183, "1 year" => 366, "This year" => 365, "All time" => -1, _ => 30 }; await _store.SaveAsync(_settings); Status = "Settings saved"; ConfigureRefresh(); }
-    private async Task SaveGoalsAsync() { foreach (var goal in Goals) goal.Commit(); _settings.Goals = Goals.Select(g => g.Definition).ToList(); await _store.SaveAsync(_settings); BuildGoals(); BuildRecordsAndInsights(); BuildStatistics(); BuildYear(); Status = "Goals saved"; }
+    private async Task SaveSettingsAsync() { _settings.DefaultRangePreset = SelectedRange; _settings.CustomRangeStart = CustomStart is null ? null : DateOnly.FromDateTime(CustomStart.Value); _settings.CustomRangeEnd = CustomEnd is null ? null : DateOnly.FromDateTime(CustomEnd.Value); _settings.TrendMetric = TrendMetric; _settings.TrendGranularity = TrendGranularity; _settings.DefaultRangeDays = SelectedRange switch { "Today" => 1, "7 days" => 7, "90 days" => 90, "6 months" => 183, "1 year" => 366, "This year" => 365, "All time" => -1, _ => 30 }; await SaveSettingsDataAsync(); Status = "Settings saved"; ConfigureRefresh(); }
+    private async Task SaveGoalsAsync() { foreach (var goal in Goals) goal.Commit(); _settings.Goals = Goals.Select(g => g.Definition).ToList(); await SaveSettingsDataAsync(); BuildGoals(); BuildRecordsAndInsights(); BuildStatistics(); BuildYear(); Status = "Goals saved"; }
     private async Task BackupSettingsAsync()
     {
         var path = _chooseExport("zip", "Readest Stats backup|*.zip");
         if (path is null) return;
-        await _store.SaveAsync(_settings);
-        _backup.Create(path, AppVersion);
-        RefreshBackupHistory();
-        Status = "Complete backup created · settings, goals, physical books, sessions and notes included";
+        try
+        {
+            await SaveSettingsDataAsync();
+            await Manual.FlushDraftAsync();
+            _backup.Create(path, AppVersion);
+            RecordBackupAttempt(true);
+            RefreshBackupHistory();
+            Status = "Complete backup created · settings, goals, physical books, sessions and notes included";
+        }
+        catch (Exception ex) { RecordBackupAttempt(false); Status = "Backup failed: " + Friendly(ex); _log("Backup export error: " + ex); }
     }
 
     private void RefreshBackupHistory()
@@ -2067,20 +2153,21 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         var selectedPath = SelectedBackup?.Path;
         Replace(BackupHistory, _backup.ListAutomatic());
         SelectedBackup = BackupHistory.FirstOrDefault(item => string.Equals(item.Path, selectedPath, StringComparison.OrdinalIgnoreCase)) ?? BackupHistory.FirstOrDefault();
+        RaiseV25Status();
     }
 
     private void CreateAutomaticBackup()
     {
-        try { var path = _backup.CreateAutomatic(AppVersion, BackupRetentionDays); _qualityCacheSource = null; BuildDataQuality(); Status = $"Backup created · {Path.GetFileName(path)}"; }
-        catch (Exception ex) { Status = "Backup failed: " + Friendly(ex); _log("Backup error: " + ex); }
+        try { var path = _backup.CreateAutomatic(AppVersion, BackupRetentionDays); RecordBackupAttempt(true); RefreshBackupHistory(); _qualityCacheSource = null; BuildDataQuality(); Status = $"Backup created · {Path.GetFileName(path)}"; }
+        catch (Exception ex) { RecordBackupAttempt(false); Status = "Backup failed: " + Friendly(ex); _log("Backup error: " + ex); }
     }
 
     private async Task RestoreSelectedBackupAsync()
     {
         if (SelectedBackup is null) return;
         if (Manual.HasActiveSession || IsBusy) { Status = "Finish the active session and wait for refresh before restoring a backup."; return; }
-        if (ReadestStats.Localization.UiDialog.Show($"Restore {SelectedBackup.FileName}?\n\nCurrent app-owned data will be kept as recovery copies.", "Restore Readest Stats backup", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-        try { await RestoreAppBackupAsync(SelectedBackup.Path); Status = "Backup restored successfully"; }
+        var path = SelectedBackup.Path;
+        try { if (!await PreviewRestoreAsync(path)) return; await RestoreAppBackupAsync(path); Status = "Backup restored successfully"; }
         catch (Exception ex) { Status = "Backup restore failed: " + Friendly(ex); _log("Backup restore error: " + ex); }
     }
 
@@ -2132,10 +2219,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (Manual.HasActiveSession || IsBusy) { Status = "Finish the active session and wait for refresh before restoring a backup."; return; }
         var path = _chooseBackupImport();
         if (path is null) return;
-        BackupManifest manifest;
-        try { manifest = _backup.Inspect(path); }
+        try { if (!await PreviewRestoreAsync(path)) return; }
         catch (Exception ex) { Status = "Backup could not be opened: " + Friendly(ex); return; }
-        if (ReadestStats.Localization.UiDialog.Show($"Restore backup from {manifest.CreatedAtUtc.ToLocalTime():g}?\n\n{Formatters.Count(manifest.Books, "physical book")} · {Formatters.Count(manifest.Sessions, "manual session")} · {Formatters.Count(manifest.Notes, "session note")} · {Formatters.Count(manifest.Covers, "cached cover")}\n\nCurrent app-owned data will be kept as recovery copies.", "Restore Readest Stats backup", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         try
         {
             await RestoreAppBackupAsync(path);
@@ -2146,12 +2231,25 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private async Task RestoreAppBackupAsync(string path)
     {
-        _preferenceSaveDebounce?.Cancel(); _noteSaveDebounce?.Cancel(); _activeRefresh?.Cancel();
+        if (_isRestoring || Manual.HasActiveSession || IsBusy || HasRunningCommand())
+            throw new InvalidOperationException(V24Text("Finish the active session and wait for other operations before restoring.", "Kết thúc phiên đang đọc và chờ các thao tác khác xong trước khi khôi phục."));
+        _isRestoring = true; Raise(nameof(IsRestoring)); Raise(nameof(CanInteract)); RaiseV25Status(); RefreshReaderCommands();
+        _preferenceSaveDebounce?.Cancel(); _noteSaveDebounce?.Cancel(); _activeRefresh?.Cancel(); _refreshDebounce?.Cancel();
+        _watcher?.Dispose(); _watcher = null; _refreshTimer.Stop(); _refreshPending = false;
+        _localTimeTimer.Stop();
+        try
+        {
+        // New input and timer writes are suspended. Drain the actual Core writes,
+        // not UI continuations, before any backup bytes can replace live data.
+        await Manual.SuspendForRestoreAsync();
+        await DrainSettingsWritesAsync();
+        await _store.WaitForWritesAsync();
         _backup.Restore(path);
-        _watcher?.Dispose(); _watcher = null; _refreshTimer.Stop();
         _repository = null; _notesRepository = null; Diagnostics = null;
         _readestEvents = []; _readestBookModels = []; _readestNotes = []; LastSync = null;
         _settings = await _store.LoadAsync(); GoalEngine.Migrate(_settings);
+        ClearNoteCurationUndo();
+        RestoreRediscoveryPreferences();
         _selectedRange = DateRangePresets.All.Contains(_settings.DefaultRangePreset) ? _settings.DefaultRangePreset : "30 days";
         _selectedSource = SourceOptions.Contains(_settings.DefaultSourceFilter) ? _settings.DefaultSourceFilter : "All sources";
         _trendMetric = TrendMetrics.Contains(_settings.TrendMetric) ? _settings.TrendMetric : "Reading time";
@@ -2164,16 +2262,56 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         RaiseSettings(); Raise(nameof(SelectedSource)); Raise(nameof(TrendMetric)); Raise(nameof(TrendGranularity)); Raise(nameof(IsCustomComparison)); Raise(nameof(PageTitle)); Raise(nameof(PageSubtitle));
         Raise(nameof(SelectedRange)); Raise(nameof(CustomStart)); Raise(nameof(CustomEnd)); Raise(nameof(CompareMode)); Raise(nameof(CompareCustomStart)); Raise(nameof(CompareCustomEnd)); RaiseConnectionState();
         _qualityCacheSource = null; ApplySourceSelection(); BuildNotes(); RefreshBackupHistory();
-        var database = await _locator.LocateAsync(_settings.DatabasePath);
+        var database = await _locator.LocateAsync(_settings.DatabasePath, preferSavedPath: _settings.DatabasePathIsManual);
+        _restoreReloading = true;
         if (database is not null) await ConnectAsync(database);
+        CompleteRediscoveryInitialization();
+        await _store.SaveAsync(_settings);
+        }
+        finally
+        {
+            _restoreReloading = false;
+            Manual.ResumeAfterRestore();
+            _isRestoring = false; Raise(nameof(IsRestoring)); Raise(nameof(CanInteract)); RaiseV25Status(); RefreshReaderCommands();
+            ConfigureRefresh();
+            StartLocalClock();
+        }
     }
-    private async Task ResetSettingsAsync() { if (ReadestStats.Localization.UiDialog.Show("Reset Readest Stats settings and goals? Readest data will not be changed.", "Readest Stats", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return; var database = _settings.DatabasePath; _settings = new() { DatabasePath = database }; GoalEngine.Migrate(_settings); _applyTheme(_settings.Theme); await _store.SaveAsync(_settings); RaiseSettings(); RecalculateAll(); Status = "App-owned settings reset"; }
+    private async Task ResetSettingsAsync() { if (ReadestStats.Localization.UiDialog.Show("Reset Readest Stats settings and goals? Readest data will not be changed.", "Readest Stats", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return; var database = _settings.DatabasePath; var manuallySelected = _settings.DatabasePathIsManual; _settings = new() { DatabasePath = database, DatabasePathIsManual = manuallySelected }; GoalEngine.Migrate(_settings); _applyTheme(_settings.Theme); await SaveSettingsDataAsync(); RestoreRediscoveryPreferences(); ClearNoteCurationUndo(); BuildNotes(); CompleteRediscoveryInitialization(); RaiseSettings(); RecalculateAll(); Status = "App-owned settings reset"; }
 
     private void ConfigureRefresh()
     {
-        _watcher?.Dispose(); _watcher = null; _refreshTimer.Stop(); if (!_settings.AutoRefresh || _repository is null) return;
-        if (_settings.RefreshIntervalSeconds > 0) { _refreshTimer.Interval = TimeSpan.FromSeconds(_settings.RefreshIntervalSeconds); _refreshTimer.Start(); return; }
-        _watcher = new FileSystemWatcher(Path.GetDirectoryName(_repository.DatabasePath)!) { Filter = "*", IncludeSubdirectories = true, NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName, EnableRaisingEvents = true }; _watcher.Changed += WatcherChanged; _watcher.Created += WatcherChanged; _watcher.Renamed += WatcherChanged; _watcher.Deleted += WatcherChanged;
+        _watcher?.Dispose(); _watcher = null; _refreshTimer.Stop(); _watcherFallback = false;
+        try
+        {
+            if (_isRestoring || _disposed) return;
+            if (!_settings.AutoRefresh || _repository is null) return;
+            if (_settings.RefreshIntervalSeconds > 0) { _refreshTimer.Interval = TimeSpan.FromSeconds(_settings.RefreshIntervalSeconds); _refreshTimer.Start(); return; }
+            _watcher = new FileSystemWatcher(Path.GetDirectoryName(_repository.DatabasePath)!) { Filter = "*", IncludeSubdirectories = true, NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName };
+            _watcher.Changed += WatcherChanged; _watcher.Created += WatcherChanged; _watcher.Renamed += WatcherChanged; _watcher.Deleted += WatcherChanged; _watcher.Error += WatcherError;
+            _watcher.EnableRaisingEvents = true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            _log("Readest file monitoring could not start; using periodic refresh: " + ex);
+            _watcher?.Dispose(); _watcher = null; _watcherFallback = true;
+            _refreshTimer.Interval = TimeSpan.FromMinutes(1); _refreshTimer.Start();
+        }
+        finally { RaiseV25Status(); }
+    }
+    private void WatcherError(object sender, ErrorEventArgs e)
+    {
+        _log("Readest file watcher failed; switching to periodic full refresh: " + e.GetException());
+        _ = Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            if (_disposed || _isRestoring || !_settings.AutoRefresh || !ReferenceEquals(sender, _watcher)) return;
+            _watcher?.Dispose(); _watcher = null;
+            _watcherFallback = true; RaiseV25Status();
+            _refreshTimer.Interval = TimeSpan.FromMinutes(1);
+            _refreshTimer.Start();
+            Status = "Readest file monitoring paused; checking the library every minute.";
+            await RefreshAsync();
+        });
     }
     private void WatcherChanged(object sender, FileSystemEventArgs e)
     {
@@ -2182,7 +2320,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             !file.Equals("config.json", StringComparison.OrdinalIgnoreCase) &&
             !file.Equals("library.json", StringComparison.OrdinalIgnoreCase)) return;
         _refreshDebounce?.Cancel(); _refreshDebounce?.Dispose(); _refreshDebounce = new(); var token = _refreshDebounce.Token;
-        _ = Application.Current.Dispatcher.InvokeAsync(async () => { try { await Task.Delay(900, token); await RefreshAsync(incremental: true); } catch (OperationCanceledException) { } });
+        _ = Application.Current.Dispatcher.InvokeAsync(async () => { try { await Task.Delay(900, token); await RefreshAsync(); } catch (OperationCanceledException) { } });
     }
     private void ClearAnalytics()
     {
@@ -2193,8 +2331,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     }
     private static string Friendly(Exception ex) => ex switch { UnauthorizedAccessException => "Permission denied while reading the database.", IOException => ex.Message, Microsoft.Data.Sqlite.SqliteException => "The database is locked, corrupted, or incompatible.", _ => ex.Message };
     private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> values) { target.Clear(); foreach (var value in values) target.Add(value); }
-    private void RaiseConnectionState() { Raise(nameof(IsConnected)); Raise(nameof(NoPeriodData)); Raise(nameof(HasData)); OpenFolderCommand.Refresh(); }
+    private void RaiseConnectionState() { Raise(nameof(IsConnected)); Raise(nameof(NoPeriodData)); Raise(nameof(HasData)); RaiseV24SourceStatus(); RaiseV25Status(); OpenFolderCommand.Refresh(); }
     private void RaiseSettings() { Raise(nameof(SessionGapMinutes)); Raise(nameof(MinimumSessionSeconds)); Raise(nameof(FirstDayOfWeek)); Raise(nameof(ExperimentalPageMetrics)); Raise(nameof(CompactMode)); Raise(nameof(Use24HourTime)); Raise(nameof(ReduceMotion)); Raise(nameof(AutomaticBackups)); Raise(nameof(BackupRetentionDays)); Raise(nameof(Theme)); Raise(nameof(Language)); Raise(nameof(RefreshMode)); Raise(nameof(SelectedRange)); Raise(nameof(SelectedSource)); Raise(nameof(GoogleBooksApiKey)); Raise(nameof(CompareMode)); Raise(nameof(CompareCustomStart)); Raise(nameof(CompareCustomEnd)); }
     private bool _disposed;
-    public void Dispose() { if (_disposed) return; _disposed = true; Manual.Dispose(); _watcher?.Dispose(); _refreshTimer.Stop(); _refreshDebounce?.Cancel(); _refreshDebounce?.Dispose(); _activeRefresh?.Cancel(); _activeRefresh?.Dispose(); _noteSaveDebounce?.Cancel(); _noteSaveDebounce?.Dispose(); _preferenceSaveDebounce?.Cancel(); _preferenceSaveDebounce?.Dispose(); }
+    public void Dispose() { if (_disposed) return; _disposed = true; _localTimeTimer.Stop(); Manual.Dispose(); _watcher?.Dispose(); _refreshTimer.Stop(); _refreshDebounce?.Cancel(); _refreshDebounce?.Dispose(); _activeRefresh?.Cancel(); _activeRefresh?.Dispose(); _noteSaveDebounce?.Cancel(); _noteSaveDebounce?.Dispose(); _preferenceSaveDebounce?.Cancel(); _preferenceSaveDebounce?.Dispose(); }
 }

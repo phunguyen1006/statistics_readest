@@ -15,6 +15,7 @@ public static class ReadestLibraryLocator
     public static string? FindBookFile(string? databasePath, string? bookHash)
     {
         if (string.IsNullOrWhiteSpace(databasePath) || string.IsNullOrWhiteSpace(bookHash)) return null;
+        if (bookHash is "." or ".." || bookHash.IndexOfAny(['/', '\\', ':']) >= 0) return null;
         try
         {
             var root = Path.GetDirectoryName(Path.GetFullPath(databasePath));
@@ -29,9 +30,24 @@ public static class ReadestLibraryLocator
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
     }
 
+    public static bool IsSupportedBookFile(string? path) =>
+        !string.IsNullOrWhiteSpace(path) && SupportedExtensions.Contains(Path.GetExtension(path));
+
+    public static bool IsLocalBookFile(string? path)
+    {
+        if (!IsSupportedBookFile(path)) return false;
+        try
+        {
+            var root = Path.GetPathRoot(Path.GetFullPath(path!));
+            return root is { Length: >= 2 } && root[1] == ':';
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException) { return false; }
+    }
+
     public static string? FindCoverFile(string? databasePath, string? bookHash)
     {
         if (string.IsNullOrWhiteSpace(databasePath) || string.IsNullOrWhiteSpace(bookHash)) return null;
+        if (bookHash is "." or ".." || bookHash.IndexOfAny(['/', '\\', ':']) >= 0) return null;
         try
         {
             var root = Path.GetDirectoryName(Path.GetFullPath(databasePath));

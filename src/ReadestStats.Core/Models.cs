@@ -32,6 +32,7 @@ public sealed record SchemaValidation(bool IsValid, string Message, DatabaseDiag
 public sealed class AppSettings
 {
     public string? DatabasePath { get; set; }
+    public bool DatabasePathIsManual { get; set; }
     public int SessionGapMinutes { get; set; } = 5;
     public bool WeekStartsMonday { get; set; } = true;
     public int DefaultRangeDays { get; set; } = 30;
@@ -44,7 +45,9 @@ public sealed class AppSettings
     public DateOnly? CompareCustomStart { get; set; }
     public DateOnly? CompareCustomEnd { get; set; }
     public string DefaultSourceFilter { get; set; } = "All sources";
+    [System.Text.Json.Serialization.JsonIgnore]
     public string? GoogleBooksApiKey { get; set; }
+    public string? GoogleBooksApiKeyProtected { get; set; }
     public bool AutoRefresh { get; set; } = true;
     public string Theme { get; set; } = "System";
     public double DailyGoalMinutes { get; set; } = 30;
@@ -63,12 +66,15 @@ public sealed class AppSettings
     public List<BookEditionLink> BookLinks { get; set; } = [];
     public int LibrarySchemaVersion { get; set; } = 2;
     public List<string> PinnedBookKeys { get; set; } = [];
+    /// <summary>Local-only exclusions; the Readest database is never modified.</summary>
+    public List<ReadingEventExclusion> ReadingEventExclusions { get; set; } = [];
     public bool AutomaticBackups { get; set; } = true;
     public int BackupRetentionDays { get; set; } = 7;
     public string Language { get; set; } = "System";
     /// <summary>Statistics-owned note curation. Readest source files remain read-only.</summary>
     public Dictionary<string, NoteUserState> NoteStates { get; set; } = [];
     public int NoteStateSchemaVersion { get; set; } = 3;
+    public NoteDiscoveryState NoteDiscovery { get; set; } = new();
 }
 
 public sealed class BookTrackingState

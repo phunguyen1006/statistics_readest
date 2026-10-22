@@ -1,6 +1,6 @@
 <UserControl x:Class="ReadestStats.Views.StatisticsView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:loc="clr-namespace:ReadestStats.Localization" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:charts="clr-namespace:ReadestStats.Controls" AutomationProperties.Name="{loc:Loc Key=sB565E409754792E3}">
-  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="26,22,26,32" MaxWidth="1380">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+    <StackPanel Margin="26,22,26,32" Width="{Binding ViewportWidth,RelativeSource={RelativeSource AncestorType=ScrollViewer},Converter={StaticResource PageWidth}}" MaxWidth="1380">
       <Border Visibility="{Binding NoPeriodData,Converter={StaticResource BoolVis}}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="0,10,0,24" Margin="0,0,0,24">
         <StackPanel><TextBlock Text="{loc:Loc Key=s627C54597D322DAB}" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{loc:Loc Key=s7592F20FEBD3E58F}" Style="{StaticResource Muted}" Margin="0,5,0,0"/></StackPanel>
       </Border>
@@ -27,13 +27,52 @@
         </Border>
       </Grid>
       <Separator Background="{DynamicResource Border}" Margin="0,0,0,24"/>
+      <StackPanel Margin="0,0,0,10">
+        <TextBlock Text="{Binding MonthlyReviewEyebrow}" Style="{StaticResource Eyebrow}"/>
+        <TextBlock Text="{Binding MonthlyReviewHeading}" Style="{StaticResource SectionTitle}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+        <WrapPanel Margin="0,10,0,0">
+          <Button Content="{Binding MonthlyPreviousLabel}" Command="{Binding PreviousReviewMonthCommand}" Margin="0,0,8,8" AutomationProperties.Name="{Binding MonthlyPreviousLabel}"/>
+          <DatePicker SelectedDate="{Binding ReportMonth}" DisplayDateStart="{Binding EarliestReportDate,Mode=OneWay}" DisplayDateEnd="{Binding LatestReportDate,Mode=OneWay}" Width="138" MinHeight="34" Margin="0,0,8,8" ToolTip="{Binding MonthlyReviewPickerHint}" AutomationProperties.Name="{Binding MonthlyReviewPickerHint}"/>
+          <Button Content="{Binding MonthlyNextLabel}" Command="{Binding NextReviewMonthCommand}" Margin="0,0,8,8" AutomationProperties.Name="{Binding MonthlyNextLabel}"/>
+          <Button Content="{Binding MonthlyCurrentLabel}" Command="{Binding CurrentReviewMonthCommand}" Margin="0,0,8,8" AutomationProperties.Name="{Binding MonthlyCurrentLabel}"/>
+          <Button Content="{Binding MonthlyReviewExportLabel}" Command="{Binding ExportMonthlyReportCommand}" Margin="0,0,0,8" AutomationProperties.Name="{Binding MonthlyReviewExportLabel}"/>
+        </WrapPanel>
+      </StackPanel>
+      <TextBlock Text="{Binding MonthlyReviewSummary}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding MonthlyReviewComparison}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+      <TextBlock Text="{Binding MonthlyReviewContext}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,5,0,10"/>
+      <TextBlock Text="{Binding MonthlyReviewCoverage}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,14" AutomationProperties.LiveSetting="Polite"/>
+      <charts:BarChart ItemsSource="{Binding MonthlyReviewDays}" Height="150" MaxBarWidth="20" AutomationProperties.Name="{Binding MonthlyReviewHeading}" AutomationProperties.HelpText="{Binding MonthlyReviewSummary}"/>
+      <Expander Header="{Binding MonthlyReviewExactLabel}" Margin="0,8,0,22">
+        <StackPanel>
+          <TextBlock Text="{Binding MonthlyDayHint}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,10"/>
+          <DataGrid ItemsSource="{Binding MonthlyReviewDaily}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column" MaxHeight="250" EnableRowVirtualization="True" MinColumnWidth="64" AutomationProperties.Name="{Binding MonthlyReviewExactLabel}">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="{loc:Loc Key=s0E87632CD46BD490}" Binding="{Binding Date,StringFormat={}{0:MMM d}}" Width="*"/>
+              <DataGridTextColumn Header="{loc:Loc Key=sD648F2EC79D887EF}" Binding="{Binding Seconds,Converter={StaticResource Duration}}" Width="*"/>
+              <DataGridTextColumn Header="{loc:Loc Key=s6E317BCD6839E887}" Binding="{Binding Books}" Width="*"/>
+              <DataGridTextColumn Header="{loc:Loc Key=s1225AE6C1AE69DCB}" Binding="{Binding Sessions}" Width="*"/>
+              <DataGridTemplateColumn Header="{loc:Loc Key=Open}" Width="112" CanUserSort="False">
+                <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                  <Button Content="{Binding DataContext.MonthlyOpenDayLabel,RelativeSource={RelativeSource AncestorType=DataGrid}}" Command="{Binding DataContext.OpenMonthlyDayCommand,RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" MinHeight="34" Padding="8,4" Margin="4,2">
+                    <AutomationProperties.Name><MultiBinding StringFormat="{}{0}: {1:yyyy-MM-dd}"><Binding Path="DataContext.MonthlyOpenDayLabel" RelativeSource="{RelativeSource AncestorType=DataGrid}"/><Binding Path="Date"/></MultiBinding></AutomationProperties.Name>
+                  </Button>
+                </DataTemplate></DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+        </StackPanel>
+      </Expander>
+      <Separator Background="{DynamicResource Border}" Margin="0,0,0,24"/>
       <DockPanel Margin="0,0,0,12"><TextBlock Text="{Binding Story.StreakContext,Converter={StaticResource UiText}}" DockPanel.Dock="Right" Style="{StaticResource Muted}" VerticalAlignment="Bottom"/><StackPanel><TextBlock Text="{loc:Loc Key=s0B048979494CA881}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=sDBD52ABCF3FB94AB}" Style="{StaticResource SectionTitle}" Margin="0,3,0,0"/></StackPanel></DockPanel>
       <charts:HeatmapChart ItemsSource="{Binding Heatmap}" ItemClickCommand="{Binding SelectHeatmapDayCommand}" Height="140" AutomationProperties.Name="{loc:Loc Key=s410FA3DC578D18BC}" AutomationProperties.HelpText="{loc:Loc Key=s158D4CD3DD7C40D9}"/>
+      <Expander Header="{loc:Loc Key=s4B75D0B748F88A89}" Margin="0,4,0,10" AutomationProperties.Name="Exact daily activity values"><ListBox ItemsSource="{Binding Heatmap}" MaxHeight="220" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"><ListBox.ItemTemplate><DataTemplate><DockPanel Margin="0,2"><TextBlock Text="{Binding Detail}" DockPanel.Dock="Right"/><TextBlock Text="{Binding Label}"/></DockPanel></DataTemplate></ListBox.ItemTemplate></ListBox></Expander>
       <Grid Margin="0,8,0,28"><Grid.ColumnDefinitions><ColumnDefinition Width="170"/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{loc:Loc Key=sDEF339D57B2C5C5F}" Style="{StaticResource Eyebrow}"/><TextBlock FontSize="18" FontWeight="SemiBold"><Run Text="{Binding Story.ActiveLast30,Mode=OneWay}"/><Run Text="{loc:Loc Key=s2A222BD79B1A5483}"/></TextBlock></StackPanel><charts:StreakStripChart Grid.Column="1" ItemsSource="{Binding StreakTimeline}" Height="52" AutomationProperties.Name="{loc:Loc Key=s70297B40D2A4BDA2}" AutomationProperties.HelpText="{loc:Loc Key=sAC6B2F7DCBC92D87}"/></Grid>
       <Separator Background="{DynamicResource Border}" Margin="0,0,0,24"/>
       <DockPanel Margin="0,0,0,8"><ComboBox ItemTemplate="{StaticResource LocalizedOption}" DockPanel.Dock="Right" ItemsSource="{Binding PatternMetrics}" SelectedItem="{Binding PatternMetric}" Width="96" AutomationProperties.Name="{loc:Loc Key=s509568DCF931F622}"/><StackPanel><TextBlock Text="{loc:Loc Key=s22DD4204927D0E5B}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=s3383F6B599000B00}" Style="{StaticResource SectionTitle}" Margin="0,3,0,0"/></StackPanel></DockPanel>
       <TextBlock Text="{Binding PatternSummary,Converter={StaticResource UiText}}" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,5"/>
       <charts:MatrixChart ItemsSource="{Binding WeekHourMatrix}" Height="190" Margin="0,0,0,28" AutomationProperties.Name="{loc:Loc Key=s9D2AA82368D3E318}" AutomationProperties.HelpText="{loc:Loc Key=sDB9CFB328223555A}"/>
+      <Expander Header="{loc:Loc Key=s4B75D0B748F88A89}" Margin="0,0,0,14" AutomationProperties.Name="Exact week-hour matrix values"><ListBox ItemsSource="{Binding WeekHourMatrix}" MaxHeight="220" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Detail}" Margin="0,2"/></DataTemplate></ListBox.ItemTemplate></ListBox></Expander>
       <Separator Background="{DynamicResource Border}" Margin="0,0,0,24"/>
       <DockPanel Margin="0,0,0,14"><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><ComboBox ItemTemplate="{StaticResource LocalizedOption}" ItemsSource="{Binding TrendMetrics}" SelectedItem="{Binding TrendMetric}" Width="140" AutomationProperties.Name="{loc:Loc Key=s368B7E35FB91D370}"/><ComboBox ItemTemplate="{StaticResource LocalizedOption}" ItemsSource="{Binding Granularities}" SelectedItem="{Binding TrendGranularity}" Width="104" Margin="8,0,0,0" AutomationProperties.Name="{loc:Loc Key=sCDCA1831E69D6B5B}"/><ComboBox ItemTemplate="{StaticResource LocalizedOption}" ItemsSource="{Binding CompareModes}" SelectedItem="{Binding CompareMode}" Width="158" Margin="8,0,0,0" AutomationProperties.Name="{loc:Loc Key=sCB94AA26E7DF2CF9}"/></StackPanel><StackPanel><TextBlock Text="{loc:Loc Key=s8803FE8196CCD71F}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=sD05D4D6B5AB77E47}" Style="{StaticResource SectionTitle}" Margin="0,3,0,0"/><TextBlock Text="{Binding TrendSummary,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,3,0,0"/><TextBlock Text="{Binding ComparisonLegend,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,3,0,0"/></StackPanel></DockPanel>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding IsCustomComparison,Converter={StaticResource BoolVis}}" Margin="0,0,0,10"><TextBlock Text="{loc:Loc Key=sE3B8C1C8F4ED03A9}" VerticalAlignment="Center" Margin="0,0,8,0"/><DatePicker SelectedDate="{Binding CompareCustomStart}" Width="130"/><TextBlock Text="{loc:Loc Key=s663EA1BFFFE5038F}" VerticalAlignment="Center" Margin="7,0"/><DatePicker SelectedDate="{Binding CompareCustomEnd}" Width="130"/></StackPanel>
@@ -56,6 +95,14 @@
         <StackPanel Grid.Column="1"><TextBlock Text="{loc:Loc Key=sC2BCBF03212B97E8}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=sEA185A14F739D39E}" Style="{StaticResource Muted}" Visibility="{Binding NoPeriodData,Converter={StaticResource BoolVis}}" Margin="0,10,0,0"/><ItemsControl ItemsSource="{Binding StatisticsTopBooks}" AlternationCount="100" Margin="0,8,0,0"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,0,0,9"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/><ColumnDefinition Width="84"/></Grid.ColumnDefinitions><TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=ContentPresenter},Path=(ItemsControl.AlternationIndex),Converter={StaticResource OneBasedIndex}}" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"/><StackPanel Grid.Column="1" Margin="0,0,16,0"><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><ProgressBar Value="{Binding Share,Mode=OneWay}" Maximum="1" Height="3" Margin="0,5,0,0"/></StackPanel><TextBlock Grid.Column="2" Text="{Binding Seconds,Converter={StaticResource Duration}}" TextAlignment="Right" VerticalAlignment="Center"/></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel>
       </Grid>
       <Grid Margin="0,0,0,28"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel Margin="0,0,24,0"><TextBlock Text="{loc:Loc Key=s9CBC30685F171F8D}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=s80AD161DC9786ADF}" Style="{StaticResource Muted}" Margin="0,3,0,3"/><charts:ScatterPlotChart ItemsSource="{Binding ReadingStyleDays}" Height="165" AutomationProperties.Name="{loc:Loc Key=s517701CEB2124F68}"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="{loc:Loc Key=sC274854CF92D523F}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=s5899AFAC34BA38DB}" Style="{StaticResource Muted}" Margin="0,3,0,4"/><charts:SegmentedBandChart ItemsSource="{Binding BookAttention}" Height="82" AutomationProperties.Name="{loc:Loc Key=sC274854CF92D523F}"/></StackPanel></Grid>
+      <Separator Background="{DynamicResource Border}" Margin="0,0,0,24"/>
+      <TextBlock Text="{loc:Loc Key=s610D7D8B5E19A2CB}" Style="{StaticResource Eyebrow}"/>
+      <TextBlock Text="{loc:Loc Key=s8CEF1C6E832CA92E}" Style="{StaticResource SectionTitle}" Margin="0,3,0,5"/>
+      <TextBlock Text="{loc:Loc Key=s1411EE968A3D655B}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+      <Grid Margin="0,0,0,26"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <StackPanel Margin="0,0,22,0"><TextBlock Text="{loc:Loc Key=s8409421872147EA8}" FontWeight="SemiBold"/><TextBlock Text="{Binding AuthorCoverage}" Style="{StaticResource Muted}" Margin="0,3,0,6"/><ItemsControl ItemsSource="{Binding AuthorBreakdown}"><ItemsControl.ItemTemplate><DataTemplate><DockPanel Margin="0,3"><TextBlock Text="{Binding Seconds,Converter={StaticResource Duration}}" DockPanel.Dock="Right" Style="{StaticResource Muted}"/><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/></DockPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel>
+        <StackPanel Grid.Column="1"><TextBlock Text="{loc:Loc Key=s6CB574FA10B6EE20}" FontWeight="SemiBold"/><TextBlock Text="{Binding LanguageCoverage}" Style="{StaticResource Muted}" Margin="0,3,0,6"/><ItemsControl ItemsSource="{Binding LanguageBreakdown}"><ItemsControl.ItemTemplate><DataTemplate><DockPanel Margin="0,3"><TextBlock Text="{Binding Seconds,Converter={StaticResource Duration}}" DockPanel.Dock="Right" Style="{StaticResource Muted}"/><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/></DockPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel>
+      </Grid>
       <Separator Background="{DynamicResource Border}" Margin="0,0,0,24"/>
       <TextBlock Text="{loc:Loc Key=s06C91D7209E848FA}" Style="{StaticResource Eyebrow}"/>
       <TextBlock Text="{loc:Loc Key=s783ADF73B7F0C072}" Style="{StaticResource SectionTitle}" Margin="0,3,0,14"/>

@@ -16,24 +16,7 @@ public sealed class ExportService
 
     public Task ExportMonthlyMarkdownAsync(string path, int year, int month, IReadOnlyList<ReadingEvent> events, IReadOnlyList<Book> books, int sessionGapMinutes, CancellationToken token = default)
     {
-        var statistics = new StatisticsEngine();
-        var monthlyEvents = events.Where(e => { var local = statistics.ToLocal(e.Start); return local.Year == year && local.Month == month; }).ToArray();
-        var daily = statistics.Daily(monthlyEvents, TimeSpan.FromMinutes(sessionGapMinutes));
-        var sessions = statistics.BuildSessions(monthlyEvents, TimeSpan.FromMinutes(sessionGapMinutes));
-        var ranked = statistics.RankBooks(monthlyEvents, books);
-        var title = new DateTime(year, month, 1).ToString("MMMM yyyy");
-        var lines = new List<string>
-        {
-            $"# Readest Stats — {title}", "", $"Generated {DateTimeOffset.Now:MMM d, yyyy}", "",
-            "## Summary", "", $"- Reading time: {Formatters.Duration(monthlyEvents.Sum(e => e.DurationSeconds))}",
-            $"- Active days: {daily.Count}", $"- Sessions: {sessions.Count}", $"- Active books: {ranked.Count}", "", "## Books", ""
-        };
-        if (ranked.Count == 0) lines.Add("No reading activity was recorded this month.");
-        else lines.AddRange(ranked.Select((book, index) => $"{index + 1}. **{book.Title}** — {book.Authors} — {Formatters.Duration(book.Seconds)}"));
-        lines.AddRange(["", "## Daily activity", ""]);
-        if (daily.Count == 0) lines.Add("No active days.");
-        else lines.AddRange(daily.Select(day => $"- {day.Date:MMM d}: {Formatters.Duration(day.Seconds)} · {Formatters.Count(day.Sessions, "session")} · {Formatters.Count(day.Books, "book")}"));
-        lines.AddRange(["", "---", "Created locally by Readest Stats. Source reading data was not modified."]);
-        return File.WriteAllLinesAsync(path, lines, new UTF8Encoding(true), token);
+        var review = MonthlyReviewEngine.Build(events, books, year, month, sessionGapMinutes);
+        return File.WriteAllTextAsync(path, MonthlyReviewEngine.ToMarkdown(review), new UTF8Encoding(true), token);
     }
 }

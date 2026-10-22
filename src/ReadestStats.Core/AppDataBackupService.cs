@@ -48,7 +48,13 @@ public sealed class AppDataBackupService
         var files = new List<string>();
         using (var archive = ZipFile.Open(temp, ZipArchiveMode.Create))
         {
-            AddIfPresent(archive, _settingsPath, "settings.json", files);
+            if (File.Exists(_settingsPath))
+            {
+                using var input = File.OpenRead(_settingsPath);
+                using var output = archive.CreateEntry("settings.json").Open();
+                SettingsStore.WriteBackupJson(input, output);
+                files.Add("settings.json");
+            }
             if (File.Exists(snapshot))
             {
                 var data = new AppDatabase(snapshot).LoadManualData();
@@ -100,8 +106,17 @@ public sealed class AppDataBackupService
 
     public BackupManifest Inspect(string source)
     {
+        BackupReadLimits.ValidateArchiveFile(source);
         using var archive = ZipFile.OpenRead(source);
         return Verify(archive);
+    }
+
+    public BackupRestorePreview Preview(string source)
+    {
+        BackupReadLimits.ValidateArchiveFile(source);
+        using var archive = ZipFile.OpenRead(source);
+        var manifest = Verify(archive);
+        return BackupPreviewEngine.FromVerifiedArchive(archive, manifest, _settingsPath, _manualReadingPath, _databasePath, _coverDirectory);
     }
 
     public IReadOnlyList<BackupHistoryItem> ListAutomatic()
@@ -135,15 +150,16 @@ public sealed class AppDataBackupService
 
     public string BackupDirectory => Path.Combine(Path.GetDirectoryName(_settingsPath)!, "backups");
 
-    public void Restore(string source)
+    public void Restore(string source, string appVersion = "2.5.0")
     {
         Recovery().Recover();
+        BackupReadLimits.ValidateArchiveFile(source);
         using var archive = ZipFile.OpenRead(source);
         var manifest = Verify(archive);
         var recovery = Path.Combine(BackupDirectory, $"before-restore-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.zip");
         Recovery().Apply(archive, manifest.Files, () =>
         {
-            try { Create(recovery, "2.3.0"); }
+            try { Create(recovery, appVersion); }
             catch (Exception ex) when (ex is JsonException or SqliteException or InvalidDataException)
             {
                 // Preserve damaged live bytes without blocking a verified restore.
@@ -154,7 +170,7 @@ public sealed class AppDataBackupService
                 AddIfPresent(raw, _databasePath, "readest-stats.db", files);
                 AddIfPresent(raw, _databasePath + "-wal", "readest-stats.db-wal", files);
                 using var output = raw.CreateEntry("manifest.json").Open();
-                JsonSerializer.Serialize(output, new BackupManifest(1, "2.3.0", DateTimeOffset.UtcNow, files.ToArray()));
+                JsonSerializer.Serialize(output, new BackupManifest(1, appVersion, DateTimeOffset.UtcNow, files.ToArray()));
             }
             if (File.Exists(_databasePath))
                 try { new AppDatabase(_databasePath).Checkpoint(); } catch (SqliteException) { }
@@ -164,7 +180,7 @@ public sealed class AppDataBackupService
     private static BackupManifest ReadManifest(ZipArchive archive)
     {
         var entry = archive.GetEntry("manifest.json") ?? throw new InvalidDataException("This is not a Readest Stats backup.");
-        using var stream = entry.Open();
+        using var stream = new MemoryStream(BackupReadLimits.ReadSmallEntry(entry));
         var manifest = JsonSerializer.Deserialize<BackupManifest>(stream) ?? throw new InvalidDataException("The backup manifest is invalid.");
         if (manifest.SchemaVersion is not (1 or 2) || manifest.Files is null) throw new InvalidDataException("This backup version is not supported.");
         return manifest;
@@ -204,14 +220,16 @@ public sealed class AppDataBackupService
     private static BackupManifest Verify(ZipArchive archive)
     {
         var manifest = ReadManifest(archive);
+        BackupReadLimits.ValidateMetadata(archive, manifest.Files);
         if (manifest.Files.Distinct(StringComparer.OrdinalIgnoreCase).Count() != manifest.Files.Length || archive.Entries.GroupBy(e => e.FullName, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) throw new InvalidDataException("The backup contains duplicate entries.");
+        long totalRead = 0;
         foreach (var name in manifest.Files)
         {
             if (!RestoreTransaction.IsAllowed(name)) throw new InvalidDataException("The backup contains an unsupported path.");
             var entry = archive.GetEntry(name) ?? throw new InvalidDataException($"The backup is missing {name}.");
-            using var input = entry.Open(); var hash = Convert.ToHexString(SHA256.HashData(input));
+            var hash = BackupReadLimits.HashEntry(entry, ref totalRead);
             if (manifest.SchemaVersion == 2 && (manifest.Checksums is null || !manifest.Checksums.TryGetValue(name, out var expected) || !hash.Equals(expected, StringComparison.OrdinalIgnoreCase))) throw new InvalidDataException($"The backup failed verification: {name}.");
-            if (name.EndsWith(".json", StringComparison.Ordinal)) { using var data = entry.Open(); using var json = JsonDocument.Parse(data); if (json.RootElement.ValueKind != JsonValueKind.Object) throw new InvalidDataException("Invalid backup data."); }
+            if (name.EndsWith(".json", StringComparison.Ordinal)) { using var json = JsonDocument.Parse(BackupReadLimits.ReadSmallEntry(entry)); if (json.RootElement.ValueKind != JsonValueKind.Object) throw new InvalidDataException("Invalid backup data."); }
         }
         if (archive.Entries.Any(e => e.FullName != "manifest.json" && !manifest.Files.Contains(e.FullName, StringComparer.Ordinal))) throw new InvalidDataException("The backup contains unlisted files.");
         return manifest;

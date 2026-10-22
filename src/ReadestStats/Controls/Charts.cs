@@ -31,7 +31,14 @@ public sealed class BarChart : FrameworkElement
         for (var i = 0; i < items.Length; i++)
         {
             var h = plot.Height * Math.Max(0, items[i].Value) / max; var rect = new Rect(plot.Left + slot * i + (slot - width) / 2, plot.Bottom - h, width, h); dc.DrawRoundedRectangle(primary, IsKeyboardFocused && i == _selectedIndex ? new Pen((Brush)FindResource("Focus"), 2) : null, rect, Math.Min(2, width / 2), Math.Min(2, width / 2)); _hits.Add((new Rect(plot.Left + slot * i, plot.Top, slot, plot.Height), items[i]));
-            var step = Math.Max(1, (int)Math.Ceiling(items.Length / 7d)); if (i == 0 || i == items.Length - 1 || i % step == 0) DrawText(dc, items[i].Label, new(plot.Left + slot * i, plot.Bottom + 7), 10, textBrush, dpi);
+            var step = Math.Max(1, (int)Math.Ceiling(items.Length / 7d));
+            if (i == 0 || i == items.Length - 1 || i % step == 0)
+            {
+                // Categorical labels belong to their band's center, not its left edge.
+                var label = new FormattedText(items[i].Label, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                    new Typeface("Segoe UI"), 10, textBrush, dpi);
+                dc.DrawText(label, new(plot.Left + slot * (i + .5) - label.Width / 2, plot.Bottom + 7));
+            }
         }
     }
     protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(x => x.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : $"{hit.Item.Label}\n{hit.Item.Detail ?? Compact(hit.Item.Value)}"; }

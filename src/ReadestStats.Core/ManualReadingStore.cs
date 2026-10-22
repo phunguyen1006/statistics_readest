@@ -16,6 +16,7 @@ public sealed class ManualReadingStore
     }
     public string Path => _path;
     public string DatabasePath => _database.Path;
+    public string? LastMirrorError { get; private set; }
     public AppDatabaseHealth InspectDatabase() => _database.Inspect();
     public void CheckpointDatabase() => _database.Checkpoint();
     public void CaptureUndo(string action, ManualReadingData data) => _database.CaptureUndo(action, data);
@@ -32,58 +33,81 @@ public sealed class ManualReadingStore
 
     public async Task<ManualReadingData> LoadAsync(CancellationToken cancellationToken = default)
     {
+        if (_database.HasManualData())
+        {
+            var stored = _database.LoadManualData();
+            Normalize(stored);
+            return stored;
+        }
+        ManualReadingData data;
         try
         {
-            if (_database.HasManualData())
-            {
-                var stored = _database.LoadManualData();
-                Normalize(stored);
-                return stored;
-            }
-            if (!File.Exists(_path)) return new();
             await using var stream = File.OpenRead(_path);
-            var data = await JsonSerializer.DeserializeAsync<ManualReadingData>(stream, JsonOptions, cancellationToken) ?? new();
-            data.Books ??= [];
-            data.Sessions ??= [];
+            data = await JsonSerializer.DeserializeAsync<ManualReadingData>(stream, JsonOptions, cancellationToken)
+                ?? throw new InvalidDataException("The manual library file is empty.");
             Normalize(data);
-            _database.SaveManualData(data);
-            _database.Checkpoint();
-            return data;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        catch (FileNotFoundException) { return new(); }
+        catch (DirectoryNotFoundException) { return new(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
         {
-            TryRestoreBackup();
             try
             {
-                if (File.Exists(_path + ".bak"))
-                {
-                    await using var backup = File.OpenRead(_path + ".bak");
-                    var data = await JsonSerializer.DeserializeAsync<ManualReadingData>(backup, JsonOptions, cancellationToken) ?? new();
-                    Normalize(data);
-                    return data;
-                }
+                await using var backup = File.OpenRead(_path + ".bak");
+                data = await JsonSerializer.DeserializeAsync<ManualReadingData>(backup, JsonOptions, cancellationToken)
+                    ?? throw new InvalidDataException("The manual library backup is empty.");
+                Normalize(data);
             }
-            catch { }
-            return new();
+            catch (Exception backupError) when (backupError is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
+            {
+                throw new InvalidDataException("The manual library could not be read and no valid backup is available. The original data was left unchanged.", ex);
+            }
+            // Validate the backup first and keep damaged bytes for recovery.
+            try
+            {
+                File.Copy(_path, _path + ".corrupt", true);
+                File.Copy(_path + ".bak", _path, true);
+            }
+            catch (Exception mirrorError) when (mirrorError is IOException or UnauthorizedAccessException) { LastMirrorError = mirrorError.Message; }
         }
+        // Database failures must not be mistaken for a corrupt legacy JSON file.
+        _database.SaveManualData(data);
+        return data;
     }
 
     public async Task SaveAsync(ManualReadingData data, CancellationToken cancellationToken = default)
     {
-        await _writeLock.WaitAsync(cancellationToken);
+        await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             Normalize(data);
             _database.SaveManualData(data);
-            _database.Checkpoint();
-            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_path)!);
+            // The SQLite commit is authoritative. A failed JSON mirror must not
+            // make callers retry a transaction that was already saved.
             var temp = _path + ".tmp";
-            await using (var stream = File.Create(temp))
-                await JsonSerializer.SerializeAsync(stream, data, JsonOptions, cancellationToken);
-            if (File.Exists(_path)) File.Copy(_path, _path + ".bak", true);
-            File.Move(temp, _path, true);
+            try
+            {
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_path)!);
+                using (var stream = File.Create(temp))
+                    await JsonSerializer.SerializeAsync(stream, data, JsonOptions, cancellationToken).ConfigureAwait(false);
+                if (File.Exists(_path)) File.Copy(_path, _path + ".bak", true);
+                File.Move(temp, _path, true);
+                LastMirrorError = null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or OperationCanceledException)
+            {
+                LastMirrorError = ex.Message;
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+            }
         }
         finally { _writeLock.Release(); }
+    }
+
+    /// <summary>Drain already queued SQLite/mirror writes before restore. Suspend new mutations first.</summary>
+    public async Task WaitForWritesAsync(CancellationToken cancellationToken = default)
+    {
+        await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        _writeLock.Release();
     }
 
     private static void Normalize(ManualReadingData data)
@@ -139,14 +163,4 @@ public sealed class ManualReadingStore
         return candidate;
     }
 
-    private void TryRestoreBackup()
-    {
-        try
-        {
-            if (!File.Exists(_path + ".bak")) return;
-            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_path)!);
-            File.Copy(_path + ".bak", _path, true);
-        }
-        catch { }
-    }
 }

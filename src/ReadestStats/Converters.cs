@@ -8,6 +8,14 @@ using ReadestStats.Core;
 
 namespace ReadestStats;
 
+public sealed class PageWidthConverter : IValueConverter
+{
+    // Keep editorial grids fluid at normal sizes; scroll rather than clip at high DPI.
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        Math.Max(900, (value is double width && double.IsFinite(width) ? width : 0) - 52);
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
 public sealed class DurationConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value is double seconds ? Formatters.Duration(seconds) : "—";
@@ -93,19 +101,19 @@ public sealed class CoverImageConverter : IValueConverter
         try
         {
             var uri = new Uri(path, UriKind.Absolute);
-            var remote = uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
-            if (!remote && !File.Exists(path)) return null;
+            if (!uri.IsFile || uri.IsUnc || Path.GetPathRoot(uri.LocalPath) is not { Length: >= 2 } root || root[1] != ':') return null;
+            path = uri.LocalPath;
+            if (!File.Exists(path) || new FileInfo(path).Length is <= 0 or > ReadestStats.Core.CoverCacheService.MaxCoverBytes) return null;
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            if (remote) image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
             if (int.TryParse(parameter?.ToString(), out var width)) image.DecodePixelWidth = width;
             image.UriSource = uri;
             image.EndInit();
             if (image.CanFreeze) image.Freeze();
             return image;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or UriFormatException or System.Net.WebException) { return null; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or FormatException or ArgumentException or System.Net.WebException) { return null; }
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;

@@ -1,10 +1,10 @@
-# Readest Stats 2.3.0
+# Readest Stats 2.5.0
 
-[![Version](https://img.shields.io/badge/version-2.3.0-black)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
+![Version](https://img.shields.io/badge/version-2.5.0-black)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-555555)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-Readest Stats is an independent native Windows desktop companion for digital and physical reading. Version 2.3.0 preserves archived-book history, synchronizes comparison baselines across charts and tables, verifies recoverable backups, adds safer duplicate merging and affected-record review, expands live English/Vietnamese localization, and loads pages on demand—all without modifying Readest.
+Readest Stats is an independent native Windows desktop companion for digital and physical reading. Version 2.5.0 adds dependable no-repeat note rediscovery, recoverable physical-session drafts and optional focus targets, a searchable full journal, backup restore previews, privacy-controlled exports, and a source-aware monthly review—all without modifying Readest.
 
 The Statistics reading story combines a keyboard-accessible 365-day heatmap, a 30-day streak strip, a 24-hour reading clock, weekday rhythm, line-based selected-period and 12-month journeys, cumulative reading, direct period comparison, goal progress, session distribution, ranked reading-time bars, and personal records. Every chart is computed from observed event duration and local timestamps; unsupported genre, rating, word-count, and reading-speed dimensions are not guessed.
 
@@ -12,9 +12,30 @@ Other features include one-click opening of a selected local book in Readest, a 
 
 Manual books, timer segments, page ranges, session notes, and completed sessions are saved transactionally in `%LOCALAPPDATA%\\ReadestStats\\readest-stats.db`. A human-readable `manual-reading.json` recovery mirror and complete ZIP backups are retained. Existing v1.x JSON data migrates automatically on first launch. If a manual interval overlaps an imported Readest interval, the Readest interval wins in the combined view so reading time is not counted twice.
 
-The Notes tab combines highlights and annotations from Readest's per-book config.json files with notes written after physical-book sessions. It centers daily and shuffle-bag random-note rediscovery, includes history/back, source diversity, copy, lightweight search, heart-based favorites and private notes, and supports privacy-confirmed Markdown/JSON/CSV export. Personal curation is stored separately in `%LOCALAPPDATA%\\ReadestStats\\settings.json`.
+The Notes tab combines highlights and annotations from Readest's per-book config.json files with notes written after physical-book sessions. Random and same-book actions use the same eligibility-aware shuffle engine: excluded, hidden and snoozed notes stay out, and a pool is exhausted before a new cycle. The selected pool, current note, pending cycle and bounded history survive restart; Back/history navigation does not mark a note newly seen. Personal curation is stored separately in `%LOCALAPPDATA%\\ReadestStats\\settings.json`.
+
+## New in 2.5.0
+
+- **Random Notes:** one eligibility-aware no-repeat cycle, persistent pool/current/history across restarts, safe Back navigation, and explicit empty-pool feedback. Temporarily unavailable Readest notes are not discarded from saved discovery state.
+- **Physical sessions:** optional 1–720 minute focus intention, remaining/reached state in the global dock, no automatic stop. Finish pauses immediately; Cancel → Resume restarts the clock. Page/note drafts survive cancel/restart, and closing waits for final local saves rather than losing a debounce-pending edit.
+- **Focused notes:** a large read-only reader with Back/Next, hearts, keyboard shortcuts and separate public highlight/citation versus private-writing copy actions. Physical-session notes are visible in spotlights. Snooze/exclude changes offer one-step Undo and an End snooze action; expiry updates while the app stays open without changing seen history.
+- **Full journal:** book, inclusive local-date and accent-insensitive title/author/note filters across all sessions, truthful visible/total counts, and global search beyond the former 250-session cutoff. Quick date ranges and selected-row details show the full note, exact timing and segments, with book/calendar links. Page/note/edition corrections keep recorded seconds and pauses; explicit time edits scale them, and a failed save retains the original session/progress.
+- **Restore preview:** checksum/schema status and actual current → backup books, sessions, notes, goals, curation, timers and covers. Restore is replacement, not merge; absent domains are explicitly described. Inspection does not change live data. Existing writes finish before replacement, with new edits/timers suspended until reload completes.
+- **Sharing controls:** current filters or entire library, private writing off by default, and a separately selected full portable physical archive. The live preview counts actual exportable notes and separate books/sessions; zero-item scopes are disabled. Shareable library output removes machine-specific cover/source paths; CSV text is neutralized against formula interpretation. All exports/backups remain unencrypted.
+- **Monthly review:** select or step between months in Statistics, with zero-baseline daily-minute bars, exact sortable daily values, source availability/last-refresh context and Markdown export. Open an exact day in Activity without changing the top source/range filters. Current months compare equal elapsed time; completed months compare the preceding full month. Reports use the same local-boundary clipping as charts and are independent of the top date filter.
+- **Storage clarity:** Settings separates Readest refresh/last failed attempt, authoritative SQLite saves, recovery-mirror warnings/retry and verified automatic-backup status. Offline refresh keeps the last good data.
 
 ## Screenshots
+
+### v2.5.0 — monthly review, physical journal and focused notes
+
+These examples use synthetic test data, not private reading history.
+
+| Monthly review — dark mode | Full physical journal — light mode |
+| --- | --- |
+| ![Source-aware monthly review](docs/screenshots/monthly-review-dark.png) | ![Searchable full physical journal](docs/screenshots/physical-journal-light.png) |
+
+![Focused note reader with explicit private-writing controls](docs/screenshots/focused-note-dark.png)
 
 ### Overview — dark mode
 
@@ -32,7 +53,7 @@ The Notes tab combines highlights and annotations from Readest's per-book config
 
 ## Download
 
-Download `ReadestStats.exe` from the [latest GitHub release](https://github.com/phunguyen1006/statistics_readest/releases/latest). The application is self-contained for Windows x64 and does not require a separate .NET runtime.
+Download the versioned `ReadestStats-v<version>.exe` from the [latest published GitHub release](https://github.com/phunguyen1006/statistics_readest/releases/latest), or open the local build listed below. The application is self-contained for Windows x64 and does not require a separate .NET runtime.
 
 Local builds are retained side by side:
 
@@ -59,8 +80,10 @@ artifacts\v2.1.0\ReadestStats-v2.1.0.exe
 artifacts\v2.1.0\ReadestStats-v2.1.0-win-x64.zip
 artifacts\v2.2.0\ReadestStats-v2.2.0.exe
 artifacts\v2.2.0\ReadestStats-v2.2.0-win-x64.zip
-artifacts\v2.3.0\ReadestStats-v2.3.0.exe
-artifacts\v2.3.0\ReadestStats-v2.3.0-win-x64.zip
+artifacts\v2.4.0\ReadestStats-v2.4.0.exe
+artifacts\v2.4.0\ReadestStats-v2.4.0-win-x64.zip
+artifacts\v2.5.0\ReadestStats-v2.5.0.exe
+artifacts\v2.5.0\ReadestStats-v2.5.0-win-x64.zip
 ```
 
 ## Data safety
@@ -73,6 +96,10 @@ The default data location is:
 
 Readest Stats also checks Readest's `customRootDir` setting and allows selecting `statistics.db` manually.
 
+Google Books API keys are protected for the current Windows user rather than saved as plaintext. Legacy settings migrate on load. New normal settings/ZIP backups omit API keys; enter the key again after a restore. Older backups and emergency damaged-file recovery copies may retain original credential bytes and should be kept private. Backups themselves are not encrypted and contain personal reading/session/curation data. Windows protection does not defend against another process running as the same Windows user.
+
+Backup import enforces file-count and streaming size limits before touching live data. CSV imports and cover downloads are bounded; cover previews use locally cached files, and imported metadata can only open HTTP/HTTPS web pages. If Readest is not installed, the app never launches a library-supplied book path through Windows file associations.
+
 Page numbers and total-page values can change with pagination, font size, layout, or reading-engine behavior. Therefore page-based progress and completion are not used as trustworthy primary metrics. Finished-book statistics use the explicit status selected by the user on the Books page. The experimental page-metrics option is off by default.
 
 ## Statistics methodology
@@ -82,6 +109,10 @@ The earlier statistics audit was informed by BookOrbit's summary-and-chart organ
 ## Refresh and local state
 
 Refresh can be manual, triggered by Readest database changes, or run on a 30-second, 1-minute, or 5-minute interval. Refreshing happens in the background and preserves the last good dataset if the source is briefly busy or unavailable. A complete ZIP backup contains settings, goals, physical books, sessions, notes, and cached covers; restore keeps recovery copies of the replaced local files.
+
+Each refresh reconciles the full local Readest history, including edits/deletions of old events. A configured Readest custom root takes precedence over a stale auto-detected path; an explicitly selected database stays selected. A file-watcher failure falls back to periodic refresh. This is local refresh, not cloud or cross-device synchronization.
+
+The backup covers Readest Stats-owned data, including manual-session notes and note-curation settings. It does **not** copy the original Readest statistics database, book files, or per-book `config.json` highlights/annotations; back up Readest separately. Unreadable settings/manual-library files are reported instead of silently replaced with an empty library. SQLite remains authoritative when a JSON recovery mirror cannot be updated.
 
 ## Build
 

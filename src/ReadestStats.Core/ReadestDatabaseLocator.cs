@@ -16,13 +16,11 @@ public sealed class ReadestDatabaseLocator
     public string AppDataDirectory => Path.Combine(_local, "ReadestStats");
     public string SettingsPath => Path.Combine(AppDataDirectory, "settings.json");
 
-    public async Task<string?> LocateAsync(string? savedPath = null, CancellationToken cancellationToken = default)
+    public async Task<string?> LocateAsync(string? savedPath = null, CancellationToken cancellationToken = default, bool preferSavedPath = true)
     {
-        if (IsDatabase(savedPath)) return Path.GetFullPath(savedPath!);
+        if (preferSavedPath && IsDatabase(savedPath)) return Path.GetFullPath(savedPath!);
 
         var defaultPath = Path.Combine(_roaming, "com.bilingify.readest", "Readest", "statistics.db");
-        if (IsDatabase(defaultPath)) return defaultPath;
-
         var settingsPath = Path.Combine(_roaming, "com.bilingify.readest", "settings.json");
         if (File.Exists(settingsPath))
         {
@@ -36,7 +34,9 @@ public sealed class ReadestDatabaseLocator
                     if (!string.IsNullOrWhiteSpace(custom))
                     {
                         var candidate = Path.Combine(custom, "Readest", "statistics.db");
-                        if (IsDatabase(candidate)) return Path.GetFullPath(candidate);
+                        // A configured custom root is authoritative. Do not silently use
+                        // an older default database while the custom drive is unavailable.
+                        return IsDatabase(candidate) ? Path.GetFullPath(candidate) : null;
                     }
                 }
             }
@@ -44,6 +44,13 @@ public sealed class ReadestDatabaseLocator
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }
+
+        // A legacy saved path outside the standard location may have been
+        // chosen manually before DatabasePathIsManual was introduced.
+        if (IsDatabase(savedPath) && !string.Equals(Path.GetFullPath(savedPath!), Path.GetFullPath(defaultPath), StringComparison.OrdinalIgnoreCase))
+            return Path.GetFullPath(savedPath!);
+        if (IsDatabase(defaultPath)) return defaultPath;
+        if (IsDatabase(savedPath)) return Path.GetFullPath(savedPath!);
 
         foreach (var root in PortableCandidates())
         {

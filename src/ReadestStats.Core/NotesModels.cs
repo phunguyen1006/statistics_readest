@@ -91,7 +91,7 @@ public sealed class ReadestNotesRepository
                 "Unknown author",
                 ReadestLibraryLocator.FindBookFile(_databasePath, hash),
                 ReadestLibraryLocator.FindCoverFile(_databasePath, hash));
-            var json = await ReadJsonWithRetryAsync(configPath, cancellationToken);
+            using var json = await ReadJsonWithRetryAsync(configPath, cancellationToken);
             if (json is null) { failed++; continue; }
             if (!json.RootElement.TryGetProperty("booknotes", out var notes) || notes.ValueKind != JsonValueKind.Array) { skipped++; continue; }
             var index = 0;
@@ -143,7 +143,7 @@ public sealed class ReadestNotesRepository
     {
         var result = new Dictionary<string, ReadestBookMetadata>(StringComparer.OrdinalIgnoreCase);
         var path = Path.Combine(root, "Books", "library.json");
-        var json = await ReadJsonWithRetryAsync(path, token);
+        using var json = await ReadJsonWithRetryAsync(path, token);
         if (json is null || json.RootElement.ValueKind != JsonValueKind.Array) return result;
         foreach (var item in json.RootElement.EnumerateArray())
         {
@@ -153,8 +153,12 @@ public sealed class ReadestNotesRepository
             var title = ReadString(item, "title");
             var author = ReadString(item, "author");
             var bookPath = ReadString(item, "filePath");
-            if (!string.IsNullOrWhiteSpace(bookPath) && !Path.IsPathRooted(bookPath)) bookPath = Path.GetFullPath(Path.Combine(root, bookPath));
-            if (string.IsNullOrWhiteSpace(bookPath) || !File.Exists(bookPath)) bookPath = ReadestLibraryLocator.FindBookFile(Path.Combine(root, "statistics.db"), hash);
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(bookPath) && !Path.IsPathRooted(bookPath)) bookPath = Path.GetFullPath(Path.Combine(root, bookPath));
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException) { bookPath = null; }
+            if (!ReadestLibraryLocator.IsLocalBookFile(bookPath) || !File.Exists(bookPath!)) bookPath = ReadestLibraryLocator.FindBookFile(Path.Combine(root, "statistics.db"), hash);
             result[hash] = new ReadestBookMetadata(hash, string.IsNullOrWhiteSpace(title) ? "Untitled book" : title, string.IsNullOrWhiteSpace(author) ? "Unknown author" : author, bookPath, ReadestLibraryLocator.FindCoverFile(Path.Combine(root, "statistics.db"), hash));
         }
         return result;
@@ -196,9 +200,15 @@ public sealed class ReadestNotesRepository
     private static DateTimeOffset? ReadDateTime(JsonElement item, string name)
     {
         if (!item.TryGetProperty(name, out var value) || value.ValueKind == JsonValueKind.Null) return null;
-        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var number)) return number > 100_000_000_000 ? DateTimeOffset.FromUnixTimeMilliseconds(number) : DateTimeOffset.FromUnixTimeSeconds(number);
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var number)) return SafeUnixTime(number);
         var text = value.ToString();
-        if (long.TryParse(text, out number)) return number > 100_000_000_000 ? DateTimeOffset.FromUnixTimeMilliseconds(number) : DateTimeOffset.FromUnixTimeSeconds(number);
+        if (long.TryParse(text, out number)) return SafeUnixTime(number);
         return DateTimeOffset.TryParse(text, out var parsed) ? parsed : null;
+    }
+
+    private static DateTimeOffset? SafeUnixTime(long value)
+    {
+        try { return value is > 100_000_000_000 or < -100_000_000_000 ? DateTimeOffset.FromUnixTimeMilliseconds(value) : DateTimeOffset.FromUnixTimeSeconds(value); }
+        catch (ArgumentOutOfRangeException) { return null; }
     }
 }

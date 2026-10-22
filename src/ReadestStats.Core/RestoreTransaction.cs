@@ -25,11 +25,14 @@ public sealed class RestoreTransaction(string settingsPath, string manualPath)
         Directory.CreateDirectory(Root);
         try
         {
+            long totalExtracted = 0;
             foreach (var name in files)
             {
                 if (!IsAllowed(name)) throw new InvalidDataException("Invalid restore path.");
                 var staged = Path.Combine(Root, "new", name); Directory.CreateDirectory(Path.GetDirectoryName(staged)!);
-                archive.GetEntry(name)!.ExtractToFile(staged, true);
+                using var input = archive.GetEntry(name)!.Open();
+                using var output = new FileStream(staged, FileMode.Create, FileAccess.Write, FileShare.None);
+                totalExtracted += BackupReadLimits.CopyBounded(input, output, BackupReadLimits.EntryLimit(name), BackupReadLimits.MaxTotalBytes - totalExtracted);
             }
             var dbPath = Path.Combine(Root, "new", "readest-stats.db");
             if (File.Exists(dbPath)) { using var db = AppDataBackupService.Connect(dbPath, SqliteOpenMode.ReadOnly); AppDataBackupService.ValidateDatabase(db); }

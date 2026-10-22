@@ -6,7 +6,7 @@ public sealed class AnalyticsEngine
     private readonly DateRangeService _ranges;
     public AnalyticsEngine(TimeZoneInfo? zone = null) { _statistics = new(zone); _ranges = new(zone); }
 
-    public IReadOnlyList<ReadingEvent> Filter(IEnumerable<ReadingEvent> source, ResolvedDateRange range) => source.Where(e => e.Start >= range.Start && e.Start < range.End && e.DurationSeconds > 0).ToArray();
+    public IReadOnlyList<ReadingEvent> Filter(IEnumerable<ReadingEvent> source, ResolvedDateRange range) => ReadingEventWindow.Clip(source, range.Start, range.End);
     public PeriodMetrics Metrics(IReadOnlyList<ReadingEvent> source, ResolvedDateRange range, int gapMinutes)
     {
         var events = Filter(source, range); var daily = _statistics.Daily(events, TimeSpan.FromMinutes(gapMinutes)); var sessions = _statistics.BuildSessions(events, TimeSpan.FromMinutes(gapMinutes)); var total = events.Sum(e => e.DurationSeconds);
@@ -15,7 +15,7 @@ public sealed class AnalyticsEngine
 
     public ComparisonResult Compare(IReadOnlyList<ReadingEvent> source, ResolvedDateRange range)
     {
-        var current = source.Where(e => e.Start >= range.Start && e.Start < range.End).Sum(e => e.DurationSeconds); var previous = source.Where(e => e.Start >= range.PreviousStart && e.Start < range.PreviousEnd).Sum(e => e.DurationSeconds); var baseline = previous > 0;
+        var current = ReadingEventWindow.Clip(source, range.Start, range.End).Sum(e => e.DurationSeconds); var previous = ReadingEventWindow.Clip(source, range.PreviousStart, range.PreviousEnd).Sum(e => e.DurationSeconds); var baseline = previous > 0;
         return new(current, previous, current - previous, baseline ? (current - previous) / previous * 100 : null, baseline);
     }
 
@@ -38,12 +38,12 @@ public sealed class AnalyticsEngine
 
     public ReadingWindow CommonWindow(IReadOnlyList<ReadingEvent> events, ResolvedDateRange range, int windowHours = 2)
     {
-        var filtered = Filter(events, range); var hourly = Enumerable.Range(0, 24).Select(h => filtered.Where(e => _statistics.ToLocal(e.Start).Hour == h).Sum(e => e.DurationSeconds)).ToArray(); var best = Enumerable.Range(0, 24).Select(h => new { Hour = h, Seconds = Enumerable.Range(0, windowHours).Sum(i => hourly[(h + i) % 24]) }).MaxBy(x => x.Seconds)!; var total = hourly.Sum(); return new(best.Hour, windowHours, best.Seconds, total <= 0 ? 0 : best.Seconds / total);
+        var filtered = Filter(events, range); var hourly = _statistics.HourlySeconds(filtered); var best = Enumerable.Range(0, 24).Select(h => new { Hour = h, Seconds = Enumerable.Range(0, windowHours).Sum(i => hourly[(h + i) % 24]) }).MaxBy(x => x.Seconds)!; var total = hourly.Sum(); return new(best.Hour, windowHours, best.Seconds, total <= 0 ? 0 : best.Seconds / total);
     }
 
     public YearInReading Year(IReadOnlyList<ReadingEvent> all, IReadOnlyList<Book> books, int year, int gapMinutes)
     {
-        var events = all.Where(e => _statistics.ToLocal(e.Start).Year == year).ToArray(); var daily = _statistics.Daily(events, TimeSpan.FromMinutes(gapMinutes)); var sessions = _statistics.BuildSessions(events, TimeSpan.FromMinutes(gapMinutes)); var months = Enumerable.Range(1, 12).Select(m => new ChartPoint(new DateTime(year, m, 1).ToString("MMM"), daily.Where(d => d.Date.Month == m).Sum(d => d.Seconds) / 3600, Formatters.Duration(daily.Where(d => d.Date.Month == m).Sum(d => d.Seconds)))).ToArray(); var rankings = _statistics.RankBooks(events, books); var dates = daily.Select(d => d.Date).ToArray(); var heatStart = new DateOnly(year, 1, 1); var map = daily.ToDictionary(d => d.Date); var heat = Enumerable.Range(0, DateTime.IsLeapYear(year) ? 366 : 365).Select(i => { var date = heatStart.AddDays(i); var d = map.GetValueOrDefault(date); return new ChartPoint(date.ToString("MMM d, yyyy"), (d?.Seconds ?? 0) / 60, d is null ? "No activity" : Formatters.Duration(d.Seconds)); }).ToArray(); var hourly = Enumerable.Range(0, 24).Select(h => new ChartPoint($"{h:00}:00–{(h + 1) % 24:00}:00", events.Where(e => _statistics.ToLocal(e.Start).Hour == h).Sum(e => e.DurationSeconds))).ToArray(); var weekdays = Enum.GetValues<DayOfWeek>().Select(day => new ChartPoint(day.ToString(), events.Where(e => _statistics.ToLocal(e.Start).DayOfWeek == day).Sum(e => e.DurationSeconds))).ToArray();
+        var events = ReadingEventWindow.Clip(all, _ranges.ToUtc(new DateOnly(year, 1, 1)), _ranges.ToUtc(new DateOnly(year + 1, 1, 1))); var daily = _statistics.Daily(events, TimeSpan.FromMinutes(gapMinutes)); var sessions = _statistics.BuildSessions(events, TimeSpan.FromMinutes(gapMinutes)); var months = Enumerable.Range(1, 12).Select(m => new ChartPoint(new DateTime(year, m, 1).ToString("MMM"), daily.Where(d => d.Date.Month == m).Sum(d => d.Seconds) / 3600, Formatters.Duration(daily.Where(d => d.Date.Month == m).Sum(d => d.Seconds)))).ToArray(); var rankings = _statistics.RankBooks(events, books); var dates = daily.Select(d => d.Date).ToArray(); var heatStart = new DateOnly(year, 1, 1); var map = daily.ToDictionary(d => d.Date); var heat = Enumerable.Range(0, DateTime.IsLeapYear(year) ? 366 : 365).Select(i => { var date = heatStart.AddDays(i); var d = map.GetValueOrDefault(date); return new ChartPoint(date.ToString("MMM d, yyyy"), (d?.Seconds ?? 0) / 60, d is null ? "No activity" : Formatters.Duration(d.Seconds)); }).ToArray(); var hourlySeconds = _statistics.HourlySeconds(events); var hourly = Enumerable.Range(0, 24).Select(h => new ChartPoint($"{h:00}:00–{(h + 1) % 24:00}:00", hourlySeconds[h])).ToArray(); var weekdays = Enum.GetValues<DayOfWeek>().Select(day => new ChartPoint(day.ToString(), daily.Where(item => item.Date.DayOfWeek == day).Sum(item => item.Seconds))).ToArray();
         return new(year, events.Sum(e => e.DurationSeconds), daily.Count, sessions.Count, events.Select(e => e.BookId).Distinct().Count(), dates.Length == 0 ? 0 : _statistics.Streaks(dates, dates.Max()).Longest, daily.MaxBy(d => d.Seconds), months.MaxBy(m => m.Value), rankings.FirstOrDefault(), hourly.MaxBy(h => h.Value), weekdays.MaxBy(d => d.Value), months, heat, rankings.Take(5).ToArray());
     }
 
@@ -59,13 +59,14 @@ public sealed class AnalyticsEngine
             return (Key: g.Key, Label: label);
         }).ToArray();
         var readingUnit = unit == "Month" ? "h" : "min";
-        var eventBuckets = filtered.GroupBy(e => Key(DateOnly.FromDateTime(_statistics.ToLocal(e.Start).DateTime))).ToDictionary(g => g.Key, g => g.ToArray());
+        var eventBuckets = filtered.SelectMany(e => _statistics.SplitByLocalDate(e).Select(slice => (Event: e, slice.Date, slice.Seconds)))
+            .GroupBy(slice => Key(slice.Date)).ToDictionary(g => g.Key, g => g.ToArray());
         var sessionBuckets = sessions.GroupBy(s => Key(DateOnly.FromDateTime(_statistics.ToLocal(s.Start).DateTime))).ToDictionary(g => g.Key, g => g.Count());
         return dates.Select(bucket =>
         {
             var bucketEvents = eventBuckets.GetValueOrDefault(bucket.Key) ?? [];
-            var seconds = bucketEvents.Sum(e => e.DurationSeconds);
-            var value = metric switch { "Sessions" => sessionBuckets.GetValueOrDefault(bucket.Key), "Active books" => bucketEvents.Select(e => e.BookId).Distinct().Count(), _ => readingUnit == "h" ? seconds / 3600d : seconds / 60d };
+            var seconds = bucketEvents.Sum(e => e.Seconds);
+            var value = metric switch { "Sessions" => sessionBuckets.GetValueOrDefault(bucket.Key), "Active books" => bucketEvents.Select(e => e.Event.BookId).Distinct().Count(), _ => readingUnit == "h" ? seconds / 3600d : seconds / 60d };
             var valueUnit = metric switch { "Sessions" => "sessions", "Active books" => "books", _ => readingUnit };
             return new ChartPoint(bucket.Label, value, metric == "Reading time" ? Formatters.Duration(seconds) : $"{value:0} {valueUnit}", valueUnit);
         }).ToArray();

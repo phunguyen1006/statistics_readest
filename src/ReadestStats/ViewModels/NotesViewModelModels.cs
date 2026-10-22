@@ -22,14 +22,23 @@ public sealed class NoteRow : ObservableObject
     public string? BookPath => Source.BookPath;
     public string? CoverPath => Source.CoverPath;
     public string Text => Source.Text;
+    // Session notes have no highlighted text; never substitute separate personal writing here.
+    public string PreviewContent => NoteReaderContent.Preview(Source, Note);
     public string Note
     {
         get => _sourceNote;
-        set { if (Set(ref _sourceNote, value ?? "")) Raise(nameof(HasComment)); }
+        set
+        {
+            if (!Set(ref _sourceNote, value ?? "")) return;
+            Raise(nameof(HasComment));
+            Raise(nameof(PreviewContent));
+            Raise(nameof(HasSeparateComment));
+        }
     }
     public bool IsManual => Id.StartsWith("manual:", StringComparison.OrdinalIgnoreCase);
     public bool IsReadest => !IsManual;
     public bool HasComment => !string.IsNullOrWhiteSpace(Note);
+    public bool HasSeparateComment => HasHighlight && HasComment;
     public string TypeLabel => Source.TypeLabel;
     public string ColorLabel => Source.ColorLabel;
     public int? Page => Source.Page;
@@ -74,6 +83,28 @@ public sealed class NoteRow : ObservableObject
     {
         State.ExcludeFromRandom = !State.ExcludeFromRandom;
         Raise(nameof(ExcludeFromRandom)); Raise(nameof(RandomEligibilityLabel));
+    }
+
+    public void RestoreRandomCuration(DateTimeOffset? snoozedUntilUtc, bool excluded)
+    {
+        State.SnoozedUntilUtc = snoozedUntilUtc;
+        State.ExcludeFromRandom = excluded;
+        RefreshTemporalState();
+        Raise(nameof(ExcludeFromRandom));
+        Raise(nameof(RandomEligibilityLabel));
+    }
+
+    public void ClearSnooze()
+    {
+        State.SnoozedUntilUtc = null;
+        RefreshTemporalState();
+    }
+
+    // A derived label refresh only: expiry does not rewrite persisted timestamps.
+    public void RefreshTemporalState()
+    {
+        Raise(nameof(IsSnoozed));
+        Raise(nameof(SnoozeLabel));
     }
 
     public void MarkSeen()

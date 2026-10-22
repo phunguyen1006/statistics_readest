@@ -26,7 +26,7 @@ public sealed class VisualizationEngine
         var now = TimeZoneInfo.ConvertTime(current ?? DateTimeOffset.Now, _zone);
         var today = DateOnly.FromDateTime(now.DateTime);
         var allDaily = precomputedDaily ?? _statistics.Daily(allEvents, TimeSpan.FromMinutes(sessionGapMinutes));
-        var periodEvents = allEvents.Where(e => e.DurationSeconds > 0 && e.Start >= range.Start && e.Start < range.End).ToArray();
+        var periodEvents = ReadingEventWindow.Clip(allEvents, range.Start, range.End);
         var periodDaily = _statistics.Daily(periodEvents, TimeSpan.FromMinutes(sessionGapMinutes));
 
         var streak = BuildStreakTimeline(allDaily, today);
@@ -37,9 +37,7 @@ public sealed class VisualizationEngine
             ? $"{activeLast30} of the last 30 days were active"
             : $"Current run started {streakStart:MMM d} · {activeLast30} of 30 days active";
 
-        var hourlySeconds = Enumerable.Range(0, 24)
-            .Select(hour => periodEvents.Where(item => _statistics.ToLocal(item.Start).Hour == hour).Sum(item => item.DurationSeconds))
-            .ToArray();
+        var hourlySeconds = _statistics.HourlySeconds(periodEvents);
         var bestWindow = Enumerable.Range(0, 24)
             .Select(hour => new { Hour = hour, Seconds = hourlySeconds[hour] + hourlySeconds[(hour + 1) % 24] })
             .MaxBy(item => item.Seconds);
@@ -51,7 +49,7 @@ public sealed class VisualizationEngine
         var weekdayTotals = weekdayOrder.Select(day => new
         {
             Day = day,
-            Seconds = periodEvents.Where(item => _statistics.ToLocal(item.Start).DayOfWeek == day).Sum(item => item.DurationSeconds)
+            Seconds = periodDaily.Where(item => item.Date.DayOfWeek == day).Sum(item => item.Seconds)
         }).ToArray();
         var bestWeekday = weekdayTotals.MaxBy(item => item.Seconds);
         var peakWeekday = bestWeekday is null || bestWeekday.Seconds <= 0
@@ -113,7 +111,9 @@ public sealed class VisualizationEngine
 
     private IReadOnlyList<ChartPoint> BuildMonthlyJourney(IReadOnlyList<ReadingEvent> events, int year, int sessionGapMinutes)
     {
-        var daily = _statistics.Daily(events.Where(item => _statistics.ToLocal(item.Start).Year == year), TimeSpan.FromMinutes(sessionGapMinutes));
+        var ranges = new DateRangeService(_zone);
+        var yearEvents = ReadingEventWindow.Clip(events, ranges.ToUtc(new DateOnly(year, 1, 1)), ranges.ToUtc(new DateOnly(year + 1, 1, 1)));
+        var daily = _statistics.Daily(yearEvents, TimeSpan.FromMinutes(sessionGapMinutes));
         return Enumerable.Range(1, 12).Select(month =>
         {
             var seconds = daily.Where(item => item.Date.Month == month).Sum(item => item.Seconds);

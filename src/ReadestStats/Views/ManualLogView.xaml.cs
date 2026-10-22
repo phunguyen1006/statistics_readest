@@ -39,6 +39,12 @@ public partial class ManualLogView : UserControl
         if (DataContext is ManualLogViewModel viewModel && sender is Button { DataContext: ManualSessionRow row }) new SessionEditorWindow(viewModel, row) { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 
+    private void EditSelectedSession_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ManualLogViewModel { SelectedJournalSession: { } row } viewModel)
+            new SessionEditorWindow(viewModel, row) { Owner = Window.GetWindow(this) }.ShowDialog();
+    }
+
     private void DeleteBook_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not ManualLogViewModel viewModel || sender is not Button { DataContext: ManualBook book }) return;

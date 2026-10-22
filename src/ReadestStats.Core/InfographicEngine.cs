@@ -20,10 +20,13 @@ public sealed class InfographicEngine
     {
         var filtered = InRange(events, range);
         var sessions = _statistics.BuildSessions(filtered, TimeSpan.FromMinutes(gapMinutes));
+        var hourly = filtered.SelectMany(_statistics.SplitByLocalHour)
+            .GroupBy(slice => (slice.Date.DayOfWeek, slice.Hour))
+            .ToDictionary(group => group.Key, group => group.Sum(slice => slice.Seconds));
         var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
         return days.SelectMany((day, row) => Enumerable.Range(0, 24).Select(hour =>
         {
-            var seconds = filtered.Where(item => Local(item.Start).DayOfWeek == day && Local(item.Start).Hour == hour).Sum(item => item.DurationSeconds);
+            var seconds = hourly.GetValueOrDefault((day, hour));
             var count = sessions.Count(item => Local(item.Start).DayOfWeek == day && Local(item.Start).Hour == hour);
             var value = sessionsMetric ? count : seconds / 60d;
             return new MatrixCell(day.ToString()[..3], $"{hour:00}", row, hour, value, count,
@@ -34,8 +37,9 @@ public sealed class InfographicEngine
     public IReadOnlyList<TimelineSpan> DayTimeline(IReadOnlyList<ReadingEvent> events, IReadOnlyList<Book> books, DateOnly date, int gapMinutes)
     {
         var titles = books.ToDictionary(book => book.Id, book => string.IsNullOrWhiteSpace(book.Title) ? "Untitled" : book.Title);
-        var sessions = _statistics.BuildSessions(events, TimeSpan.FromMinutes(gapMinutes))
-            .Where(item => DateOnly.FromDateTime(Local(item.Start).DateTime) == date)
+        var ranges = new DateRangeService(_zone);
+        var dayEvents = ReadingEventWindow.Clip(events, ranges.ToUtc(date), ranges.ToUtc(date.AddDays(1)));
+        var sessions = _statistics.BuildSessions(dayEvents, TimeSpan.FromMinutes(gapMinutes))
             .OrderBy(item => item.Start)
             .ToArray();
         return sessions.Select((session, lane) =>
@@ -96,13 +100,17 @@ public sealed class InfographicEngine
         string Key(DateOnly date) => span <= 45 ? date.ToString("yyyy-MM-dd") : date.AddDays(-(((int)date.DayOfWeek + 6) % 7)).ToString("yyyy-MM-dd");
         string Label(string key) => DateOnly.Parse(key).ToString(span <= 45 ? "d" : "MMM d");
         var keys = Enumerable.Range(0, Math.Max(1, span)).Select(range.StartDate.AddDays).Select(Key).Distinct().ToArray();
+        var slices = filtered.SelectMany((item, index) => _statistics.SplitByLocalDate(item)
+            .Select(slice => (slice.BookId, slice.Date, slice.Seconds, EventIndex: index)))
+            .GroupBy(slice => (slice.BookId, Period: Key(slice.Date)))
+            .ToDictionary(group => group.Key, group => (Seconds: group.Sum(slice => slice.Seconds), Count: group.Select(slice => slice.EventIndex).Distinct().Count()));
         return ranked.SelectMany((book, row) => keys.Select((key, column) =>
         {
-            var bucket = filtered.Where(item => item.BookId == book.Id && Key(DateOnly.FromDateTime(Local(item.Start).DateTime)) == key).ToArray();
-            var seconds = bucket.Sum(item => item.DurationSeconds);
+            var bucket = slices.GetValueOrDefault((book.Id, key));
+            var seconds = bucket.Seconds;
             var unit = span <= 45 ? DateOnly.Parse(key).ToString("MMM d") : $"Week of {DateOnly.Parse(key):MMM d}";
-            return new MatrixCell(book.Title, Label(key), row, column, seconds / 60d, bucket.Length,
-                $"{book.Title}\n{unit} · {Formatters.Duration(seconds)} · {Formatters.Count(bucket.Length, "activity event")}");
+            return new MatrixCell(book.Title, Label(key), row, column, seconds / 60d, bucket.Count,
+                $"{book.Title}\n{unit} · {Formatters.Duration(seconds)} · {Formatters.Count(bucket.Count, "activity event")}");
         })).ToArray();
     }
 
@@ -138,14 +146,18 @@ public sealed class InfographicEngine
 
     public IReadOnlyList<DumbbellDatum> PeriodDumbbells(IReadOnlyList<ReadingEvent> events, ResolvedDateRange range, int gapMinutes)
     {
-        var current = events.Where(item => item.DurationSeconds > 0 && item.Start >= range.Start && item.Start < range.End).ToArray();
-        var previous = events.Where(item => item.DurationSeconds > 0 && item.Start >= range.PreviousStart && item.Start < range.PreviousEnd).ToArray();
+        var current = ReadingEventWindow.Clip(events, range.Start, range.End);
+        var previous = ReadingEventWindow.Clip(events, range.PreviousStart, range.PreviousEnd);
         var gap = TimeSpan.FromMinutes(gapMinutes);
+        var currentDays = _statistics.Daily(current, gap).Count;
+        var previousDays = _statistics.Daily(previous, gap).Count;
+        var currentSessions = _statistics.BuildSessions(current, gap).Count;
+        var previousSessions = _statistics.BuildSessions(previous, gap).Count;
         return new[]
         {
             new DumbbellDatum("Reading time", current.Sum(item => item.DurationSeconds), previous.Sum(item => item.DurationSeconds), Formatters.Duration(current.Sum(item => item.DurationSeconds)), Formatters.Duration(previous.Sum(item => item.DurationSeconds))),
-            new DumbbellDatum("Active days", current.Select(_statistics.LocalDate).Distinct().Count(), previous.Select(_statistics.LocalDate).Distinct().Count(), current.Select(_statistics.LocalDate).Distinct().Count().ToString(), previous.Select(_statistics.LocalDate).Distinct().Count().ToString()),
-            new DumbbellDatum("Sessions", _statistics.BuildSessions(current, gap).Count, _statistics.BuildSessions(previous, gap).Count, _statistics.BuildSessions(current, gap).Count.ToString(), _statistics.BuildSessions(previous, gap).Count.ToString()),
+            new DumbbellDatum("Active days", currentDays, previousDays, currentDays.ToString(), previousDays.ToString()),
+            new DumbbellDatum("Sessions", currentSessions, previousSessions, currentSessions.ToString(), previousSessions.ToString()),
             new DumbbellDatum("Books active", current.Select(item => item.BookId).Distinct().Count(), previous.Select(item => item.BookId).Distinct().Count(), current.Select(item => item.BookId).Distinct().Count().ToString(), previous.Select(item => item.BookId).Distinct().Count().ToString())
         };
     }
@@ -173,14 +185,18 @@ public sealed class InfographicEngine
         }).ToArray();
     }
 
-    public IReadOnlyList<ChartPoint> BestDays(IReadOnlyList<ReadingEvent> events, int year, int gapMinutes, int count = 5) =>
-        _statistics.Daily(events.Where(item => Local(item.Start).Year == year), TimeSpan.FromMinutes(gapMinutes))
+    public IReadOnlyList<ChartPoint> BestDays(IReadOnlyList<ReadingEvent> events, int year, int gapMinutes, int count = 5)
+    {
+        var ranges = new DateRangeService(_zone);
+        var yearEvents = ReadingEventWindow.Clip(events, ranges.ToUtc(new DateOnly(year, 1, 1)), ranges.ToUtc(new DateOnly(year + 1, 1, 1)));
+        return _statistics.Daily(yearEvents, TimeSpan.FromMinutes(gapMinutes))
             .OrderByDescending(item => item.Seconds).Take(count)
             .Select(item => new ChartPoint(item.Date.ToString("MMM d"), item.Seconds / 60d, $"{item.Date:MMM d, yyyy} · {Formatters.Duration(item.Seconds)} · {Formatters.Count(item.Sessions, "session")}"))
             .ToArray();
+    }
 
     private IReadOnlyList<ReadingEvent> InRange(IReadOnlyList<ReadingEvent> events, ResolvedDateRange range) =>
-        events.Where(item => item.DurationSeconds > 0 && item.Start >= range.Start && item.Start < range.End).ToArray();
+        ReadingEventWindow.Clip(events, range.Start, range.End);
 
     private DateTimeOffset Local(DateTimeOffset value) => TimeZoneInfo.ConvertTime(value, _zone);
 }

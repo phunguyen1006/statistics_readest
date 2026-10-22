@@ -3,8 +3,8 @@
              xmlns:loc="clr-namespace:ReadestStats.Localization" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:core="clr-namespace:ReadestStats.Core;assembly=ReadestStats.Core"
              UseLayoutRounding="True">
-  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="26,22,26,32">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+    <StackPanel Margin="26,22,26,32" Width="{Binding ViewportWidth,RelativeSource={RelativeSource AncestorType=ScrollViewer},Converter={StaticResource PageWidth}}">
       <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel>
@@ -33,6 +33,8 @@
           <TextBlock Text="{Binding ActiveSessionState,Converter={StaticResource UiText}}" Style="{StaticResource Eyebrow}"/>
           <TextBlock Text="{Binding ElapsedLabel}" FontSize="32" FontWeight="SemiBold" FontFamily="Cascadia Mono,Consolas" Margin="0,6,0,4" AutomationProperties.Name="{loc:Loc Key=s658ABC7E0F58A138}"/>
           <TextBlock Text="{loc:Loc Key=sB5E106890B0F85A2}" Style="{StaticResource Muted}"/>
+          <TextBlock Text="{Binding FocusTargetLabel}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0" Visibility="{Binding HasFocusTarget,Converter={StaticResource BoolVis}}"/>
+          <ProgressBar Value="{Binding FocusProgressPercent,Mode=OneWay}" Maximum="100" Margin="0,7,0,0" Visibility="{Binding HasFocusTarget,Converter={StaticResource BoolVis}}"/>
         </StackPanel>
 
         <Border Grid.Column="2" Style="{StaticResource EditorialAside}" Margin="0,0,18,0" Padding="14">
@@ -49,10 +51,19 @@
         </StackPanel>
       </Grid>
 
+      <StackPanel Margin="0,16,0,0" MaxWidth="500" HorizontalAlignment="Left" Visibility="{Binding CanSelectBook,Converter={StaticResource BoolVis}}">
+        <TextBlock Text="{Binding TargetMinutesLabel}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/>
+        <TextBox Text="{Binding TargetMinutes,UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left" MaxLength="3" AutomationProperties.Name="{Binding TargetMinutesLabel}"/>
+        <TextBlock Text="{Binding FocusTargetHint}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+        <TextBlock Text="{Binding TargetError}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,4,0,0" AutomationProperties.LiveSetting="Assertive"/>
+      </StackPanel>
+
       <Border Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1" CornerRadius="8" Padding="18" Visibility="{Binding IsFinishing,Converter={StaticResource BoolVis}}">
         <StackPanel>
           <TextBlock Text="{loc:Loc Key=s62BE4F9582F3E00E}" Style="{StaticResource SectionTitle}" Margin="0,0,0,3"/>
           <TextBlock Text="{loc:Loc Key=s61BC7F8F2CE92EB9}" Style="{StaticResource Muted}" Margin="0,0,0,16"/>
+          <TextBlock Text="{Binding ActiveBookTitle}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+          <TextBlock Text="{Binding FinishDraftHint}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12" AutomationProperties.LiveSetting="Polite"/>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
             <StackPanel><TextBlock Text="{loc:Loc Key=sFB63090493C8E1F2}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding FinishStartPage,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{loc:Loc Key=s7C14C7592D042FFA}"/></StackPanel>
@@ -80,7 +91,7 @@
           <ListBox ItemsSource="{Binding SearchResults}" SelectedItem="{Binding SelectedSearchResult}" Height="190" Background="Transparent" BorderThickness="0" Margin="0,12,0,0" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True">
             <ListBox.ItemTemplate>
               <DataTemplate DataType="{x:Type core:BookMetadataResult}">
-                <Grid Margin="2,5"><Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Width="34" Height="48" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="1"><Image Source="{Binding CoverUrl}" Stretch="UniformToFill" AutomationProperties.Name="{Binding Title}"/></Border><StackPanel Grid.Column="1" Margin="10,0,14,0"><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding SecondaryLabel}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/></StackPanel><TextBlock Grid.Column="2" Text="{Binding Source}" Style="{StaticResource Eyebrow}" VerticalAlignment="Center"/></Grid>
+                <Grid Margin="2,5"><Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Width="34" Height="48" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="1"><Image Source="{Binding CoverUrl,Converter={StaticResource CoverImage},ConverterParameter=68}" Stretch="UniformToFill" AutomationProperties.Name="{Binding Title}"/></Border><StackPanel Grid.Column="1" Margin="10,0,14,0"><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding SecondaryLabel}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/></StackPanel><TextBlock Grid.Column="2" Text="{Binding Source}" Style="{StaticResource Eyebrow}" VerticalAlignment="Center"/></Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
@@ -107,25 +118,59 @@
           <ListBox ItemsSource="{Binding Books}" SelectedItem="{Binding SelectedBook}" Background="Transparent" BorderThickness="0" MaxHeight="340" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True">
             <ListBox.ItemTemplate>
               <DataTemplate DataType="{x:Type core:ManualBook}">
-                <Grid Margin="2,6"><Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Width="34" Height="48" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1"><Image Source="{Binding CoverUrl}" Stretch="UniformToFill" AutomationProperties.Name="{Binding Title}"/></Border><StackPanel Grid.Column="1" Margin="10,0,10,0"><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Authors}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding CurrentPage,StringFormat=Page {0}}" Style="{StaticResource Muted}"/></StackPanel><StackPanel Grid.Column="2" Orientation="Horizontal"><Button Content="{loc:Loc Key=s262121C5372BE8AF}" Click="EditBook_Click" DataContext="{Binding}" Margin="0,0,6,0" VerticalAlignment="Center" AutomationProperties.Name="{loc:Loc Key=s1306ED0BEF16B5F3}"/><Button Content="{loc:Loc Key=s6197595503F01EE2}" Click="DeleteBook_Click" DataContext="{Binding}" VerticalAlignment="Center" AutomationProperties.Name="{loc:Loc Key=s46B3E59CF78D2746}"/></StackPanel></Grid>
+                <Grid Margin="2,6"><Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border Width="34" Height="48" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1"><Image Source="{Binding CoverUrl,Converter={StaticResource CoverImage},ConverterParameter=68}" Stretch="UniformToFill" AutomationProperties.Name="{Binding Title}"/></Border><StackPanel Grid.Column="1" Margin="10,0,10,0"><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Authors}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding CurrentPage,StringFormat=Page {0}}" Style="{StaticResource Muted}"/></StackPanel><StackPanel Grid.Column="2" Orientation="Horizontal"><Button Content="{loc:Loc Key=s262121C5372BE8AF}" Click="EditBook_Click" DataContext="{Binding}" Margin="0,0,6,0" VerticalAlignment="Center" AutomationProperties.Name="{loc:Loc Key=s1306ED0BEF16B5F3}"/><Button Content="{loc:Loc Key=s6197595503F01EE2}" Click="DeleteBook_Click" DataContext="{Binding}" VerticalAlignment="Center" AutomationProperties.Name="{loc:Loc Key=s46B3E59CF78D2746}"/></StackPanel></Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
         </StackPanel>
 
         <StackPanel Grid.Column="2">
-          <TextBlock Text="{loc:Loc Key=s6D75F9724959434F}" Style="{StaticResource Eyebrow}"/>
-          <Grid Margin="0,5,0,12"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{loc:Loc Key=s2874729554B87A32}" Style="{StaticResource SectionTitle}"/><Button Grid.Column="1" Content="{loc:Loc Key=s805463AC207E4647}" Command="{Binding UndoDeleteSessionCommand}" Margin="0,0,6,0" Padding="10,5" MinHeight="30" Visibility="{Binding CanUndoDeleteSession,Converter={StaticResource BoolVis}}"/><Button Grid.Column="2" Content="{loc:Loc Key=s9557D6B1CF66A4FC}" Click="AddPastSession_Click" Padding="10,5" MinHeight="30" AutomationProperties.Name="{loc:Loc Key=sE6A50AFA973AAEA4}"/></Grid>
-          <DataGrid ItemsSource="{Binding RecentSessions}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="360" AutomationProperties.Name="{loc:Loc Key=s454E460689175CCE}">
+          <TextBlock Text="{Binding JournalEyebrow}" Style="{StaticResource Eyebrow}"/>
+          <Grid Margin="0,5,0,12"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding JournalTitle}" Style="{StaticResource SectionTitle}"/><Button Grid.Column="1" Content="{loc:Loc Key=s805463AC207E4647}" Command="{Binding UndoDeleteSessionCommand}" Margin="0,0,6,0" Padding="10,5" MinHeight="30" Visibility="{Binding CanUndoDeleteSession,Converter={StaticResource BoolVis}}"/><Button Grid.Column="2" Content="{loc:Loc Key=s9557D6B1CF66A4FC}" Click="AddPastSession_Click" Padding="10,5" MinHeight="30" AutomationProperties.Name="{loc:Loc Key=sE6A50AFA973AAEA4}"/></Grid>
+          <TextBlock Text="{Binding JournalSearchLabel}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/>
+          <TextBox Text="{Binding JournalSearch,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{Binding JournalSearchLabel}"/>
+          <TextBlock Text="{Binding JournalPresetLabel}" Style="{StaticResource Eyebrow}" Margin="0,10,0,6"/>
+          <ComboBox ItemsSource="{Binding JournalDatePresets}" SelectedItem="{Binding SelectedJournalPreset,Mode=TwoWay}" AutomationProperties.Name="{Binding JournalPresetLabel}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+          <Grid Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="10"/><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <StackPanel><TextBlock Text="{Binding JournalBookLabel}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><ComboBox ItemsSource="{Binding JournalBooks}" SelectedItem="{Binding SelectedJournalBook}" AutomationProperties.Name="{Binding JournalBookLabel}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
+            <StackPanel Grid.Column="2"><TextBlock Text="{Binding JournalFromLabel}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><DatePicker SelectedDate="{Binding JournalFrom,Mode=TwoWay}" AutomationProperties.Name="{Binding JournalFromLabel}"/></StackPanel>
+            <StackPanel Grid.Column="4"><TextBlock Text="{Binding JournalThroughLabel}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><DatePicker SelectedDate="{Binding JournalThrough,Mode=TwoWay}" AutomationProperties.Name="{Binding JournalThroughLabel}"/></StackPanel>
+          </Grid>
+          <DockPanel Margin="0,8,0,10"><Button Content="{Binding ClearJournalFiltersLabel}" Command="{Binding ClearJournalFiltersCommand}" DockPanel.Dock="Right" Padding="8,4" MinHeight="30"/><TextBlock Text="{Binding JournalSummary}" Style="{StaticResource Muted}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,8,0" AutomationProperties.LiveSetting="Polite"/></DockPanel>
+          <DataGrid ItemsSource="{Binding RecentSessions}" SelectedItem="{Binding SelectedJournalSession,Mode=TwoWay}" SelectionMode="Single" AutoGenerateColumns="False" IsReadOnly="True" Height="360" EnableRowVirtualization="True" EnableColumnVirtualization="True" ScrollViewer.CanContentScroll="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="{Binding JournalTitle}">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="{loc:Loc Key=s0E87632CD46BD490}" Binding="{Binding DateLabel}" Width="1.2*"/>
+              <DataGridTextColumn Header="{loc:Loc Key=s0E87632CD46BD490}" Binding="{Binding DateLabel}" SortMemberPath="StartedAt" Width="1.2*"/>
               <DataGridTextColumn Header="{loc:Loc Key=s92719FE0CF8CD515}" Binding="{Binding BookTitle}" Width="1.6*"/>
-              <DataGridTextColumn Header="{loc:Loc Key=s336074805FC85398}" Binding="{Binding DurationLabel}" Width="*"/>
-              <DataGridTextColumn Header="{loc:Loc Key=sBFA062DE040F55A1}" Binding="{Binding PageRangeLabel}" Width="*"/>
+              <DataGridTextColumn Header="{loc:Loc Key=s336074805FC85398}" Binding="{Binding DurationLabel}" SortMemberPath="DurationSeconds" Width="*"/>
+              <DataGridTextColumn Header="{loc:Loc Key=sBFA062DE040F55A1}" Binding="{Binding PageRangeLabel}" SortMemberPath="StartPage" Width="*"/>
               <DataGridTemplateColumn Header="" Width="132"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Button Content="{loc:Loc Key=s262121C5372BE8AF}" Click="EditSession_Click" DataContext="{Binding}" Padding="8,4" MinHeight="28" Margin="0,0,5,0" AutomationProperties.Name="{loc:Loc Key=s856D74BF8A4F99AA}"/><Button Content="{loc:Loc Key=s6197595503F01EE2}" Click="DeleteSession_Click" DataContext="{Binding}" Padding="8,4" MinHeight="28" AutomationProperties.Name="{loc:Loc Key=s8BAACE39134C37CE}"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
-          <TextBlock Text="{loc:Loc Key=sF351A6E13D590346}" Style="{StaticResource Muted}" Margin="0,10,0,0" Visibility="{Binding HasSessions,Converter={StaticResource InverseBoolVis}}"/>
+          <TextBlock Text="{Binding JournalEmptyMessage}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,10,0,0" Visibility="{Binding HasSessions,Converter={StaticResource InverseBoolVis}}"/>
+          <StackPanel Margin="0,22,0,0" Visibility="{Binding HasSelectedJournalSession,Converter={StaticResource BoolVis}}">
+            <Separator Background="{DynamicResource Border}" Margin="0,0,0,18"/>
+            <TextBlock Text="{Binding SelectedSessionDetailLabel}" Style="{StaticResource Eyebrow}"/>
+            <TextBlock Text="{Binding SelectedSessionHeading}" Style="{StaticResource SectionTitle}" TextWrapping="Wrap" Margin="0,5,0,4"/>
+            <TextBlock Text="{Binding SelectedSessionPages,Converter={StaticResource UiText}}" Style="{StaticResource Muted}"/>
+            <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="{Binding SessionStartLabel}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding SelectedSessionStart}" TextWrapping="Wrap" Margin="0,5,0,0"/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Text="{Binding SessionEndLabel}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding SelectedSessionEnd}" TextWrapping="Wrap" Margin="0,5,0,0"/></StackPanel>
+            </Grid>
+            <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="{Binding SessionActiveLabel}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding SelectedSessionActive}" TextWrapping="Wrap" Margin="0,5,0,0"/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Text="{Binding SessionElapsedLabel}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding SelectedSessionElapsed}" TextWrapping="Wrap" Margin="0,5,0,0"/></StackPanel>
+              <StackPanel Grid.Column="4"><TextBlock Text="{Binding SessionPauseLabel}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding SelectedSessionPauses}" TextWrapping="Wrap" Margin="0,5,0,0"/></StackPanel>
+            </Grid>
+            <TextBlock Text="{Binding SessionSegmentsLabel}" Style="{StaticResource Eyebrow}" Margin="0,16,0,7"/>
+            <ListBox ItemsSource="{Binding SelectedSessionSegments}" MaxHeight="160" Background="Transparent" BorderThickness="0" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="{Binding SessionSegmentsLabel}"><ListBox.ItemTemplate><DataTemplate><Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="24"/><ColumnDefinition/><ColumnDefinition Width="128"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Number}" Style="{StaticResource Muted}"/><TextBlock Grid.Column="1" Text="{Binding TimeLabel}" TextWrapping="Wrap" Margin="0,0,12,0"/><TextBlock Grid.Column="2" Text="{Binding DurationLabel}" TextWrapping="Wrap"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
+            <TextBlock Text="{Binding SessionNoteLabel}" Style="{StaticResource Eyebrow}" Margin="0,16,0,7"/>
+            <TextBox Text="{Binding SelectedSessionNote,Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="220" VerticalScrollBarVisibility="Auto" Background="Transparent" BorderThickness="1" Padding="8" AutomationProperties.Name="{Binding SessionNoteLabel}"/>
+            <WrapPanel Margin="0,12,0,0">
+              <Button Content="{Binding EditJournalSessionLabel}" Click="EditSelectedSession_Click" Margin="0,0,8,8" AutomationProperties.Name="{Binding EditJournalSessionLabel}"/>
+              <Button Content="{Binding OpenJournalBookLabel}" Command="{Binding OpenJournalBookCommand}" Margin="0,0,8,8" AutomationProperties.Name="{Binding OpenJournalBookLabel}"/>
+              <Button Content="{Binding OpenJournalDayLabel}" Command="{Binding OpenJournalDayCommand}" Margin="0,0,0,8" AutomationProperties.Name="{Binding OpenJournalDayLabel}"/>
+            </WrapPanel>
+          </StackPanel>
         </StackPanel>
       </Grid>
       <Border Style="{StaticResource EditorialSection}" Margin="0,20,0,0" Visibility="{Binding HasDuplicateGroups,Converter={StaticResource BoolVis}}"><StackPanel><TextBlock Text="{loc:Loc Key=sF5EBF414CB522324}" Style="{StaticResource Eyebrow}"/><TextBlock Text="{loc:Loc Key=s2D89FE1F7E105745}" Style="{StaticResource SectionTitle}" Margin="0,4,0,8"/><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ComboBox ItemsSource="{Binding DuplicateGroups}" SelectedItem="{Binding SelectedDuplicateGroup}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox><Button Grid.Column="1" Content="{loc:Loc Key=sF46AA67EE3CA8365}" Command="{Binding MergeDuplicateBooksCommand}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/></Grid><TextBlock Text="{loc:Loc Key=sA3BE0D4E66DE75AD}" Style="{StaticResource Muted}" Margin="0,12,0,5"/><ComboBox ItemsSource="{Binding SelectedDuplicateGroup.Books}" SelectedItem="{Binding MergePrimary}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox><TextBlock Text="{Binding MergePreview,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/></StackPanel></Border>

@@ -13,14 +13,21 @@ public partial class MainWindow : Window
     private bool _wasMaximized;
     private Rect _boundsBeforeFullScreen;
     private readonly Dictionary<string, FrameworkElement> _pages = [];
+    private bool _closingConfirmed;
+    private bool _closingInProgress;
     public int LoadedPageCount => _pages.Count;
 
     public MainWindow()
     {
         InitializeComponent();
         RestorePlacement();
+        if (WindowState == WindowState.Normal)
+        {
+            Width = Math.Min(Width, SystemParameters.WorkArea.Width);
+            Height = Math.Min(Height, SystemParameters.WorkArea.Height);
+        }
         PreviewKeyDown += HandlePreviewKeyDown;
-        Closing += (_, _) => SavePlacement();
+        Closing += SaveBeforeClosing;
         DataContextChanged += (_, args) =>
         {
             if (args.OldValue is MainViewModel old) old.PropertyChanged -= ViewModelChanged;
@@ -28,6 +35,29 @@ public partial class MainWindow : Window
             if (args.NewValue is MainViewModel current) { current.PropertyChanged += ViewModelChanged; ShowPage(current); }
         };
         Closed += (_, _) => { if (DataContext is MainViewModel vm) vm.PropertyChanged -= ViewModelChanged; };
+    }
+
+    private async void SaveBeforeClosing(object? sender, CancelEventArgs e)
+    {
+        if (_closingConfirmed || DataContext is not MainViewModel vm) { SavePlacement(); return; }
+        e.Cancel = true;
+        if (vm.IsRestoring) return;
+        if (_closingInProgress) return;
+        _closingInProgress = true;
+        vm.SetClosingInteraction(true);
+        try
+        {
+            await vm.FlushPreferencesAsync();
+            _closingConfirmed = true;
+            Close();
+        }
+        catch (Exception)
+        {
+            Localization.UiDialog.Show(Localization.Localizer.Instance.IsVietnamese
+                ? "Chưa lưu được những thay đổi cuối cùng. Cửa sổ vẫn mở để giữ bản nháp; hãy kiểm tra dung lượng/quyền ghi rồi thử đóng lại."
+                : "The final changes could not be saved. The window stays open to keep your draft; check free space/write access and try closing again.", "Readest Stats", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally { _closingInProgress = false; vm.SetClosingInteraction(false); }
     }
 
     private void ViewModelChanged(object? sender, PropertyChangedEventArgs e)
@@ -41,9 +71,16 @@ public partial class MainWindow : Window
         {
             page = vm.SelectedPage switch
             {
-                "Activity" => new ActivityView(), "Sessions" => new SessionsView(), "Manual log" => new ManualLogView { DataContext = vm.Manual },
-                "Books" => new BooksView(), "Notes" => new NotesView(), "Goals" => new GoalsView(), "Statistics" => new StatisticsView(),
-                "Year in Reading" => new YearView(), "Settings" => new SettingsView(), _ => new OverviewView()
+                "Activity" => new ActivityView { DataContext = vm.ActivityPage },
+                "Sessions" => new SessionsView { DataContext = vm.SessionsPage },
+                "Manual log" => new ManualLogView { DataContext = vm.Manual },
+                "Books" => new BooksView { DataContext = vm.BooksPage },
+                "Notes" => new NotesView { DataContext = vm.NotesPage },
+                "Goals" => new GoalsView { DataContext = vm.GoalsPage },
+                "Statistics" => new StatisticsView { DataContext = vm.StatisticsPage },
+                "Year in Reading" => new YearView { DataContext = vm.YearPage },
+                "Settings" => new SettingsView { DataContext = vm.SettingsPage },
+                _ => new OverviewView { DataContext = vm.Overview }
             };
             _pages.Add(vm.SelectedPage, page);
         }
@@ -77,6 +114,7 @@ public partial class MainWindow : Window
 
     private void HandlePreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (_closingInProgress || DataContext is MainViewModel { CanInteract: false }) { e.Handled = true; return; }
         if (e.Key != Key.F11 && !(e.Key == Key.Escape && _isFullScreen)) return;
         ToggleFullScreen();
         e.Handled = true;

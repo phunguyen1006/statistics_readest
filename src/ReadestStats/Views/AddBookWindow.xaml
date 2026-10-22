@@ -3,7 +3,7 @@
         xmlns:loc="clr-namespace:ReadestStats.Localization" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:core="clr-namespace:ReadestStats.Core;assembly=ReadestStats.Core"
         Title="{loc:Loc Key=sDEE651456D4B794D}"
-        Width="1080" Height="760" MinWidth="900" MinHeight="650"
+        Width="1080" Height="760" MinWidth="620" MinHeight="430"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{DynamicResource AppBackground}" UseLayoutRounding="True">
   <Window.Resources>
@@ -42,7 +42,7 @@
     <Grid Grid.Row="2">
       <Grid.ColumnDefinitions><ColumnDefinition Width="1.7*"/><ColumnDefinition Width="1"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
 
-      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,18,0">
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="0,0,18,0">
         <ListBox ItemsSource="{Binding SearchResults}" SelectedItem="{Binding SelectedSearchResult}"
                  Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  AutomationProperties.Name="{loc:Loc Key=sD9168293F0E50C26}">
@@ -60,11 +60,12 @@
             <DataTemplate DataType="{x:Type core:BookMetadataResult}">
               <StackPanel>
                 <Border Width="96" Height="138" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1" HorizontalAlignment="Left">
-                  <Image Source="{Binding CoverUrl}" Stretch="UniformToFill" AutomationProperties.Name="{Binding Title}"/>
+                  <Image Source="{Binding CachedCoverPath,Converter={StaticResource CoverImage},ConverterParameter=192}" Stretch="UniformToFill" AutomationProperties.Name="{Binding Title}"/>
                 </Border>
                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="38" Margin="0,9,0,3"/>
                 <TextBlock Text="{Binding Authors}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/>
                 <TextBlock Text="{Binding PublishedDate}" Style="{StaticResource Muted}"/>
+                <TextBlock Text="{Binding Isbn13}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" ToolTip="ISBN-13"/>
                 <TextBlock Text="{Binding Source}" Style="{StaticResource Eyebrow}" Margin="0,6,0,0"/>
               </StackPanel>
             </DataTemplate>
@@ -78,12 +79,14 @@
         <StackPanel>
           <TextBlock Text="{loc:Loc Key=s324D378A354F3BDB}" Style="{StaticResource Eyebrow}"/>
           <TextBlock Text="{loc:Loc Key=s987F164DAA6758EF}" Style="{StaticResource SectionTitle}" Margin="0,5,0,14"/>
+          <TextBlock Text="{Binding EditionComparison}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12" AutomationProperties.Name="Selected edition comparison"/>
           <TextBlock Text="{loc:Loc Key=sCFDAF547AB9DAF12}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftTitle,UpdateSourceTrigger=PropertyChanged}"/>
           <TextBlock Text="{loc:Loc Key=s636485868971EAC5}" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftAuthors,UpdateSourceTrigger=PropertyChanged}"/>
           <TextBlock Text="{loc:Loc Key=sCC89081F21235248}" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftTotalPages,UpdateSourceTrigger=PropertyChanged}"/>
           <TextBlock Text="{loc:Loc Key=s4F03A060B7EB0329}" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftPublisher,UpdateSourceTrigger=PropertyChanged}"/>
           <Grid Margin="0,12,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{loc:Loc Key=sB04E5EA201BB040C}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftPublishedDate,UpdateSourceTrigger=PropertyChanged}"/></StackPanel><StackPanel Grid.Column="2"><TextBlock Text="{loc:Loc Key=sA4EF304BA42A200B}" Style="{StaticResource Eyebrow}" Margin="0,0,0,6"/><TextBox Text="{Binding DraftLanguage,UpdateSourceTrigger=PropertyChanged}"/></StackPanel></Grid>
           <TextBlock Text="{loc:Loc Key=sE2BEE5ED8084CC09}" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><TextBox Text="{Binding DraftGoodreadsUrl,UpdateSourceTrigger=PropertyChanged}"/>
+          <TextBlock Text="{loc:Loc Key=s7EAEC5937CED3E10}" Style="{StaticResource Eyebrow}" Margin="0,12,0,6"/><Button Content="{loc:Loc Key=sDD6CBE31997A4E6E}" Click="ChooseCover_Click" HorizontalAlignment="Left" AutomationProperties.Name="Choose a local cover image"/><TextBlock Text="{Binding DraftCoverPath}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
           <TextBlock Text="{Binding DraftError,Converter={StaticResource UiText}}" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"/>
         </StackPanel>
       </ScrollViewer>

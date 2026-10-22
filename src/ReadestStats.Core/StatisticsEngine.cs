@@ -68,7 +68,7 @@ public sealed class StatisticsEngine
             .Select(group => new DailyStat(group.Key, group.Sum(item => item.Seconds), group.Select(item => item.BookId).Distinct().Count(), sessionDates.GetValueOrDefault(group.Key))).ToArray();
     }
 
-    private IEnumerable<(DateOnly Date, double Seconds, long BookId)> SplitByLocalDate(ReadingEvent readingEvent)
+    internal IEnumerable<(DateOnly Date, double Seconds, long BookId)> SplitByLocalDate(ReadingEvent readingEvent)
     {
         var cursor = readingEvent.Start;
         var end = readingEvent.End;
@@ -83,6 +83,44 @@ public sealed class StatisticsEngine
             yield return (date, (segmentEnd - cursor).TotalSeconds, readingEvent.BookId);
             cursor = segmentEnd;
         }
+    }
+
+    internal IEnumerable<(DateOnly Date, int Hour, double Seconds, long BookId)> SplitByLocalHour(ReadingEvent readingEvent)
+    {
+        var cursor = readingEvent.Start;
+        var end = readingEvent.End;
+        while (cursor < end)
+        {
+            var local = ToLocal(cursor);
+            var ticksToHour = TimeSpan.TicksPerHour - local.TimeOfDay.Ticks % TimeSpan.TicksPerHour;
+            var segmentEnd = cursor.AddTicks(Math.Min(ticksToHour, (end - cursor).Ticks));
+
+            // Advance on the UTC timeline, not an ambiguous/nonexistent wall-clock time.
+            // A DST or base-offset transition can precede the next local hour boundary.
+            if (_zone.GetUtcOffset(cursor) != _zone.GetUtcOffset(segmentEnd))
+            {
+                var offset = _zone.GetUtcOffset(cursor);
+                var lower = cursor.UtcTicks;
+                var upper = segmentEnd.UtcTicks;
+                while (upper - lower > 1)
+                {
+                    var middle = lower + (upper - lower) / 2;
+                    if (_zone.GetUtcOffset(new DateTimeOffset(middle, TimeSpan.Zero)) == offset) lower = middle;
+                    else upper = middle;
+                }
+                segmentEnd = new DateTimeOffset(upper, TimeSpan.Zero);
+            }
+
+            yield return (DateOnly.FromDateTime(local.DateTime), local.Hour, (segmentEnd - cursor).TotalSeconds, readingEvent.BookId);
+            cursor = segmentEnd;
+        }
+    }
+
+    internal double[] HourlySeconds(IEnumerable<ReadingEvent> events)
+    {
+        var totals = new double[24];
+        foreach (var slice in events.SelectMany(SplitByLocalHour)) totals[slice.Hour] += slice.Seconds;
+        return totals;
     }
 
     private IEnumerable<DateOnly> TouchedLocalDates(DateTimeOffset start, DateTimeOffset end)
@@ -116,7 +154,7 @@ public sealed class StatisticsEngine
         var seconds = (periodEnd - periodStart).TotalSeconds;
         var previousStart = periodStart.AddSeconds(-seconds);
         var list = source.ToList();
-        double Sum(DateTimeOffset a, DateTimeOffset b) => list.Where(e => e.Start >= a && e.Start < b).Sum(e => e.DurationSeconds);
+        double Sum(DateTimeOffset a, DateTimeOffset b) => ReadingEventWindow.Clip(list, a, b).Sum(e => e.DurationSeconds);
         var current = Sum(periodStart, periodEnd);
         var previous = Sum(previousStart, periodStart);
         return new(current, previous, previous <= 0 ? null : (current - previous) / previous * 100);
@@ -134,10 +172,12 @@ public sealed class StatisticsEngine
         var end = current;
         var comparison = Compare(events, start, end);
         var sessions = BuildSessions(events, sessionGap);
-        var periodEvents = events.Where(e => e.Start >= start && e.Start < end).ToArray();
+        var periodEvents = ReadingEventWindow.Clip(events, start, end);
         var totalSeconds = periodEvents.Sum(e => e.DurationSeconds);
-        var hourly = Enumerable.Range(0, 24).Select(h => { var value = periodEvents.Where(e => ToLocal(e.Start).Hour == h).Sum(e => e.DurationSeconds); return new ChartPoint($"{h:00}:00", value / 60d, $"{Formatters.Duration(value)} · {(totalSeconds <= 0 ? 0 : value / totalSeconds * 100):0.#}% of period"); }).ToArray();
-        var weekdays = Enumerable.Range(1, 7).Select(i => (Day: (DayOfWeek)(i % 7), Name: ((DayOfWeek)(i % 7)).ToString())).Select(x => new ChartPoint(x.Name[..3], periodEvents.Where(e => ToLocal(e.Start).DayOfWeek == x.Day).Sum(e => e.DurationSeconds) / 60d)).ToArray();
+        var hourlySeconds = HourlySeconds(periodEvents);
+        var periodDaily = Daily(periodEvents, sessionGap);
+        var hourly = Enumerable.Range(0, 24).Select(h => { var value = hourlySeconds[h]; return new ChartPoint($"{h:00}:00", value / 60d, $"{Formatters.Duration(value)} · {(totalSeconds <= 0 ? 0 : value / totalSeconds * 100):0.#}% of period"); }).ToArray();
+        var weekdays = Enumerable.Range(1, 7).Select(i => (Day: (DayOfWeek)(i % 7), Name: ((DayOfWeek)(i % 7)).ToString())).Select(x => new ChartPoint(x.Name[..3], periodDaily.Where(day => day.Date.DayOfWeek == x.Day).Sum(day => day.Seconds) / 60d)).ToArray();
         var records = Records(events, books, daily, sessions, hourly, weekdays);
         var insights = Insights(events, daily, sessions, hourly, weekdays, streaks.Current, current);
         return new(events.Sum(e => e.DurationSeconds), daily.FirstOrDefault(d => d.Date == today)?.Seconds ?? 0, streaks.Current, streaks.Longest, daily.Count, events.Select(e => e.BookId).Distinct().Count(), comparison, daily.Where(d => d.Date >= today.AddDays(-(rangeDays - 1))).ToArray(), hourly, weekdays, records, insights);
@@ -149,14 +189,15 @@ public sealed class StatisticsEngine
         var sessions = BuildSessions(periodEvents, sessionGap);
         var streaks = Streaks(daily.Select(d => d.Date), range.EndDate);
         var totalSeconds = periodEvents.Sum(e => e.DurationSeconds);
+        var hourlySeconds = HourlySeconds(periodEvents);
         var hourly = Enumerable.Range(0, 24).Select(hour =>
         {
-            var value = periodEvents.Where(e => ToLocal(e.Start).Hour == hour).Sum(e => e.DurationSeconds);
+            var value = hourlySeconds[hour];
             return new ChartPoint($"{hour:00}:00", value / 60d, $"{Formatters.Duration(value)} · {(totalSeconds <= 0 ? 0 : value / totalSeconds * 100):0.#}% of period", "min");
         }).ToArray();
         var weekdays = Enumerable.Range(1, 7)
             .Select(index => (Day: (DayOfWeek)(index % 7), Name: ((DayOfWeek)(index % 7)).ToString()))
-            .Select(item => new ChartPoint(item.Name[..3], periodEvents.Where(e => ToLocal(e.Start).DayOfWeek == item.Day).Sum(e => e.DurationSeconds) / 60d, Unit: "min"))
+            .Select(item => new ChartPoint(item.Name[..3], daily.Where(day => day.Date.DayOfWeek == item.Day).Sum(day => day.Seconds) / 60d, Unit: "min"))
             .ToArray();
         var comparison = new PeriodComparison(totalSeconds, 0, null);
         return new(totalSeconds, daily.FirstOrDefault(d => d.Date == range.EndDate)?.Seconds ?? 0, streaks.Current, streaks.Longest,
@@ -179,7 +220,7 @@ public sealed class StatisticsEngine
         {
             var list = g.ToList();
             var latest = list.MaxBy(e => e.StartTime)!;
-            return new BookSummary(b.Id, string.IsNullOrWhiteSpace(b.Title) ? "Untitled" : b.Title, string.IsNullOrWhiteSpace(b.Authors) ? "Unknown author" : b.Authors, list.Sum(e => e.DurationSeconds), list.Select(LocalDate).Distinct().Count(), list.Min(e => e.Start), list.Max(e => e.Start), list.Count, list.Select(e => e.Page).Distinct().Count(), latest.Page, latest.TotalPages, total <= 0 ? 0 : list.Sum(e => e.DurationSeconds) / total);
+            return new BookSummary(b.Id, string.IsNullOrWhiteSpace(b.Title) ? "Untitled" : b.Title, string.IsNullOrWhiteSpace(b.Authors) ? "Unknown author" : b.Authors, list.Sum(e => e.DurationSeconds), list.SelectMany(SplitByLocalDate).Select(slice => slice.Date).Distinct().Count(), list.Min(e => e.Start), list.Max(e => e.Start), list.Count, list.Select(e => e.Page).Distinct().Count(), latest.Page, latest.TotalPages, total <= 0 ? 0 : list.Sum(e => e.DurationSeconds) / total);
         }).OrderByDescending(x => x.Seconds).ToArray();
     }
 
@@ -242,8 +283,8 @@ public sealed class StatisticsEngine
         var thisWeek = local.Date.AddDays(-(((int)local.DayOfWeek + 6) % 7));
         var thisStart = ToUtc(thisWeek);
         var lastStart = thisStart.AddDays(-7);
-        var current = events.Where(e => e.Start >= thisStart && e.Start <= now).Sum(e => e.DurationSeconds);
-        var previous = events.Where(e => e.Start >= lastStart && e.Start < thisStart).Sum(e => e.DurationSeconds);
+        var current = ReadingEventWindow.Clip(events, thisStart, now).Sum(e => e.DurationSeconds);
+        var previous = ReadingEventWindow.Clip(events, lastStart, thisStart).Sum(e => e.DurationSeconds);
         if (previous > 0) result.Add($"You read {Math.Abs((current - previous) / previous * 100):0}% {(current >= previous ? "more" : "less")} this week than last week.");
         if (hourly.Max(x => x.Value) > 0) { var h = hourly.MaxBy(x => x.Value)!; result.Add($"Your most active reading time is {h.Label}–{(int.Parse(h.Label[..2]) + 1) % 24:00}:00."); }
         if (hourly.Max(x => x.Value) > 0)

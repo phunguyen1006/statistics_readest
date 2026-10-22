@@ -1,0 +1,113 @@
+<Window x:Class="ReadestStats.Views.NoteReaderWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Style="{StaticResource {x:Type Window}}"
+        Title="{Binding NoteReaderTitle}" Width="820" Height="760" MinWidth="540" MinHeight="440"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        KeyboardNavigation.TabNavigation="Cycle" AutomationProperties.Name="{Binding NoteReaderTitle}">
+  <Window.InputBindings>
+    <KeyBinding Key="Right" Modifiers="Alt" Command="{Binding RandomNoteCommand}"/>
+    <KeyBinding Key="Left" Modifiers="Alt" Command="{Binding PreviousRandomNoteCommand}"/>
+    <KeyBinding Key="N" Modifiers="Control" Command="{Binding RandomNoteCommand}"/>
+    <KeyBinding Key="H" Modifiers="Control+Shift" Command="{Binding ToggleReaderFavoriteCommand}"/>
+    <KeyBinding Key="C" Modifiers="Control+Shift" Command="{Binding CopyReaderQuoteCommand}"/>
+    <KeyBinding Key="Z" Modifiers="Control+Alt" Command="{Binding UndoNoteCurationCommand}"/>
+  </Window.InputBindings>
+  <Window.Resources>
+    <Style x:Key="ReaderFocus" TargetType="Control">
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Control">
+        <Rectangle Margin="-3" Stroke="{DynamicResource Focus}" StrokeThickness="2" RadiusX="7" RadiusY="7"/>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="ReaderButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="FocusVisualStyle" Value="{StaticResource ReaderFocus}"/>
+      <Setter Property="MinHeight" Value="36"/>
+    </Style>
+    <Style x:Key="ReaderBody" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+      <Setter Property="IsReadOnly" Value="True"/>
+      <Setter Property="IsReadOnlyCaretVisible" Value="False"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="AcceptsReturn" Value="True"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+      <Setter Property="FontSize" Value="18"/>
+      <Setter Property="TextBlock.LineHeight" Value="28"/>
+      <Setter Property="VerticalScrollBarVisibility" Value="Disabled"/>
+      <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+      <Setter Property="ContextMenu" Value="{x:Null}"/>
+      <Setter Property="FocusVisualStyle" Value="{StaticResource ReaderFocus}"/>
+    </Style>
+    <Style x:Key="ReaderHeart" TargetType="Button" BasedOn="{StaticResource ReaderButton}">
+      <Setter Property="Width" Value="42"/><Setter Property="Height" Value="42"/>
+      <Setter Property="Padding" Value="10"/><Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="HeartBody" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource Border}"
+                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}">
+          <Viewbox><Path x:Name="HeartGlyph" Data="M12,21.1 L10.55,19.78 C5.4,15.11 2,12.03 2,8.25 C2,5.17 4.42,2.75 7.5,2.75 C9.24,2.75 10.91,3.56 12,4.84 C13.09,3.56 14.76,2.75 16.5,2.75 C19.58,2.75 22,5.17 22,8.25 C22,12.03 18.6,15.11 13.45,19.78 Z"
+                        Stroke="{DynamicResource TextPrimary}" Fill="Transparent" StrokeThickness="1.7" StrokeLineJoin="Round"/></Viewbox>
+        </Border>
+        <ControlTemplate.Triggers>
+          <DataTrigger Binding="{Binding SelectedNote.IsFavorite}" Value="True"><Setter TargetName="HeartGlyph" Property="Fill" Value="{DynamicResource TextPrimary}"/></DataTrigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HeartBody" Property="Background" Value="{DynamicResource SurfaceHover}"/></Trigger>
+          <Trigger Property="IsPressed" Value="True"><Setter TargetName="HeartBody" Property="Background" Value="{DynamicResource SurfaceActive}"/></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="HeartBody" Property="BorderBrush" Value="{DynamicResource Focus}"/><Setter TargetName="HeartBody" Property="BorderThickness" Value="2"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+  </Window.Resources>
+  <Border Background="{DynamicResource AppBackground}" Padding="30,24">
+    <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="0,0,0,20" Margin="0,0,0,20">
+        <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <StackPanel Margin="0,0,18,0">
+            <TextBlock Text="{Binding NoteReaderTitle}" Style="{StaticResource Eyebrow}"/>
+            <TextBlock Text="{Binding SelectedNote.BookTitle}" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,5,0,5"/>
+            <WrapPanel><TextBlock Text="{Binding SelectedNote.Authors}" Style="{StaticResource Muted}" Margin="0,0,12,0"/><TextBlock Text="{Binding SelectedNote.PageLabel,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" Margin="0,0,12,0"/><TextBlock Text="{Binding SelectedNote.DisplayDate}" Style="{StaticResource Muted}"/></WrapPanel>
+          </StackPanel>
+          <Button Grid.Column="1" Style="{StaticResource ReaderHeart}" Command="{Binding ToggleReaderFavoriteCommand}"
+                  ToolTip="{Binding SelectedNote.FavoriteLabel,Converter={StaticResource UiText}}" AutomationProperties.Name="{Binding SelectedNote.FavoriteLabel,Converter={StaticResource UiText}}" VerticalAlignment="Top"/>
+        </Grid>
+      </Border>
+      <ScrollViewer Grid.Row="1" x:Name="ReaderScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,18">
+        <StackPanel MaxWidth="620" HorizontalAlignment="Center" Margin="4,3,16,8">
+          <TextBlock Text="{Binding ReaderContentLabel}" Style="{StaticResource Eyebrow}" Margin="0,0,0,10"/>
+          <TextBox x:Name="SourceContent" Text="{Binding SelectedNote.PreviewContent,Mode=OneWay}" Style="{StaticResource ReaderBody}"
+                   AutomationProperties.Name="{Binding ReaderContentLabel}" Visibility="{Binding ReaderHasSourceContent,Converter={StaticResource BoolVis}}"/>
+          <TextBlock Text="{Binding ReaderEmptyContentLabel}" Style="{StaticResource Muted}" Visibility="{Binding ReaderHasSourceContent,Converter={StaticResource InverseBoolVis}}"/>
+          <StackPanel Visibility="{Binding SelectedNote.HasSeparateComment,Converter={StaticResource BoolVis}}" Margin="0,24,0,0">
+            <Separator Background="{DynamicResource Border}" Margin="0,0,0,18"/>
+            <TextBlock Text="{Binding ReaderPrivateCommentLabel}" Style="{StaticResource Eyebrow}" Margin="0,0,0,10"/>
+            <TextBox Text="{Binding SelectedNote.Note,Mode=OneWay}" Style="{StaticResource ReaderBody}" FontSize="16" AutomationProperties.Name="{Binding ReaderPrivateCommentLabel}"/>
+          </StackPanel>
+          <StackPanel Visibility="{Binding SelectedNote.HasPersonalNote,Converter={StaticResource BoolVis}}" Margin="0,24,0,0">
+            <Separator Background="{DynamicResource Border}" Margin="0,0,0,18"/>
+            <TextBlock Text="{Binding ReaderPersonalWritingLabel}" Style="{StaticResource Eyebrow}" Margin="0,0,0,10"/>
+            <TextBox Text="{Binding SelectedNote.PersonalNote,Mode=OneWay}" Style="{StaticResource ReaderBody}" FontSize="16" AutomationProperties.Name="{Binding ReaderPersonalWritingLabel}"/>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+      <Border Grid.Row="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="0,18,0,0">
+        <StackPanel>
+          <WrapPanel Margin="0,0,0,8">
+            <Button x:Name="PreviousButton" Content="{Binding ReaderPreviousLabel}" Command="{Binding PreviousRandomNoteCommand}" Style="{StaticResource ReaderButton}" Margin="0,0,8,6" ToolTip="Alt + ←" AutomationProperties.Name="{Binding ReaderPreviousLabel}"/>
+            <Button x:Name="NextButton" Content="{Binding ReaderNextLabel}" Command="{Binding RandomNoteCommand}" Style="{StaticResource ReaderButton}" Margin="0,0,8,6" ToolTip="Alt + →" AutomationProperties.Name="{Binding ReaderNextLabel}"/>
+            <Button Content="{Binding CopyReaderQuoteLabel}" Command="{Binding CopyReaderQuoteCommand}" Style="{StaticResource ReaderButton}" Margin="0,0,8,6" ToolTip="Ctrl + Shift + C" AutomationProperties.Name="{Binding CopyReaderQuoteLabel}"/>
+            <Button Content="{Binding CopyReaderPrivateWritingLabel}" Command="{Binding CopyReaderPrivateWritingCommand}" Style="{StaticResource ReaderButton}" Margin="0,0,8,6" ToolTip="{Binding CopyReaderPrivateWritingHint}" AutomationProperties.Name="{Binding CopyReaderPrivateWritingLabel}" Visibility="{Binding ReaderHasPrivateWriting,Converter={StaticResource BoolVis}}"/>
+            <Button x:Name="CloseButton" Content="{Binding ReaderCloseLabel}" IsCancel="True" Click="Close_Click" Style="{StaticResource ReaderButton}" Margin="0,0,0,6" ToolTip="Esc" AutomationProperties.Name="{Binding ReaderCloseLabel}"/>
+          </WrapPanel>
+          <DockPanel Margin="0,0,0,8" Visibility="{Binding HasNoteCurationUndo,Converter={StaticResource BoolVis}}">
+            <Button DockPanel.Dock="Right" Content="{Binding UndoNoteCurationLabel}" Command="{Binding UndoNoteCurationCommand}" Style="{StaticResource ReaderButton}" Margin="10,0,0,0" ToolTip="Ctrl + Alt + Z" AutomationProperties.Name="{Binding UndoNoteCurationLabel}"/>
+            <TextBlock Text="{Binding NoteCurationUndoLabel}" Style="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+          </DockPanel>
+          <TextBlock Text="{Binding NotesStatus,Converter={StaticResource UiText}}" Style="{StaticResource Muted}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" Margin="0,0,0,5"/>
+          <TextBlock Text="{Binding ReaderPrivacyLabel}" Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding ReaderShortcutsLabel}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Border>
+</Window>

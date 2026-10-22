@@ -24,7 +24,10 @@ public sealed class BookMetadataService
         var openLibraryTask = TrySearchAsync(() => SearchOpenLibraryAsync(query, cancellationToken));
         await Task.WhenAll(googleTask, openLibraryTask);
         return googleTask.Result.Concat(openLibraryTask.Result)
-            .GroupBy(item => !string.IsNullOrWhiteSpace(item.Isbn13) ? "isbn:" + item.Isbn13 : $"{item.Title}|{item.Authors}|{item.PublishedDate}", StringComparer.OrdinalIgnoreCase)
+            // Editions without an ISBN must not be collapsed merely because their titles match.
+            .GroupBy(item => !string.IsNullOrWhiteSpace(item.Isbn13) ? "isbn:" + NormalizeIsbn(item.Isbn13) :
+                !string.IsNullOrWhiteSpace(item.Isbn10) ? "isbn:" + NormalizeIsbn(item.Isbn10) :
+                $"edition:{item.Source}:{item.ExternalId}", StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(ResultQuality).First())
             .OrderByDescending(item => Relevance(item, query))
             .ThenByDescending(ResultQuality)
@@ -45,9 +48,12 @@ public sealed class BookMetadataService
         score += authors.Contains(needle, StringComparison.Ordinal) ? 250 : 0;
         var tokens = needle.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         score += tokens.Count(token => title.Contains(token, StringComparison.Ordinal)) * 35;
-        if (needle.Replace("-", "", StringComparison.Ordinal).All(char.IsDigit) && (item.Isbn10 == needle || item.Isbn13 == needle)) score += 1200;
+        var isbn = NormalizeIsbn(query);
+        if (isbn.Length is 10 or 13 && (NormalizeIsbn(item.Isbn10) == isbn || NormalizeIsbn(item.Isbn13) == isbn)) score += 1200;
         return score;
     }
+
+    public static string NormalizeIsbn(string? value) => new((value ?? "").Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant).ToArray());
 
     private static int ResultQuality(BookMetadataResult item) =>
         (item.PageCount is > 0 ? 5 : 0) + (item.CoverUrl is not null ? 4 : 0) +
