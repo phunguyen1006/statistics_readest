@@ -276,74 +276,74 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public string[] ThemeOptions { get; } = ["Dark", "Light", "System"];
     public string[] LanguageOptions { get; } = ["System", "English", "Tiếng Việt"];
 
-    public ObservableCollection<ChartPoint> Trend { get; } = [];
-    public ObservableCollection<ChartPoint> ComparisonTrend { get; } = [];
-    public ObservableCollection<ChartPoint> Heatmap { get; } = [];
-    public ObservableCollection<ChartPoint> Hourly { get; } = [];
-    public ObservableCollection<ChartPoint> Weekdays { get; } = [];
-    public ObservableCollection<PersonalRecord> Records { get; } = [];
-    public ObservableCollection<InsightItem> QuickInsights { get; } = [];
-    public ObservableCollection<InsightItem> AllInsights { get; } = [];
-    public ObservableCollection<ChartPoint> SessionHistogram { get; } = [];
-    public ObservableCollection<ChartPoint> TimeBlocks { get; } = [];
-    public ObservableCollection<ChartPoint> CompletionTimeline { get; } = [];
-    public ObservableCollection<ChartPoint> StreakTimeline { get; } = [];
-    public ObservableCollection<ChartPoint> CumulativeJourney { get; } = [];
-    public ObservableCollection<ChartPoint> MonthlyJourney { get; } = [];
-    public ObservableCollection<ChartPoint> ComparisonBars { get; } = [];
-    public ObservableCollection<BookRow> StatisticsTopBooks { get; } = [];
-    public ObservableCollection<SessionDisplay> Sessions { get; } = [];
-    public ObservableCollection<BookFilterOption> SessionBookOptions { get; } = [new(null, "All books")];
-    public ObservableCollection<ChartPoint> SessionTimeline { get; } = [];
-    public ObservableCollection<BookRow> Books { get; } = [];
-    public ObservableCollection<BookFocusItem> ContinueReading { get; } = [];
-    public ObservableCollection<BookFocusItem> ActiveReadingPlans { get; } = [];
-    public ObservableCollection<PaceDatum> SelectedPlanAdherence { get; } = [];
-    public ObservableCollection<ReadingCycleRow> SelectedBookCycles { get; } = [];
-    public ObservableCollection<ChartPoint> BookTrend { get; } = [];
-    public ObservableCollection<ChartPoint> BookHourly { get; } = [];
-    public ObservableCollection<ChartPoint> BookWeekdays { get; } = [];
-    public ObservableCollection<SessionDisplay> BookSessions { get; } = [];
-    public ObservableCollection<CalendarDayItem> CalendarDays { get; } = [];
-    public ObservableCollection<string> WeekdayHeaders { get; } = [];
-    public ObservableCollection<ChartPoint> ActivityMonthTrend { get; } = [];
-    public ObservableCollection<SessionDisplay> DaySessions { get; } = [];
-    public ObservableCollection<ChartPoint> DayBooks { get; } = [];
-    public ObservableCollection<GoalEditor> Goals { get; } = [];
-    public ObservableCollection<GoalArchive> GoalArchives { get; } = [];
-    public ObservableCollection<ChartPoint> YearMonths { get; } = [];
-    public ObservableCollection<ChartPoint> YearHeatmap { get; } = [];
-    public ObservableCollection<BookSummary> YearTopBooks { get; } = [];
-    public ObservableCollection<DataQualityCheck> DataQualityChecks { get; } = [];
-    public ObservableCollection<DataHealthIssue> HealthIssues { get; } = [];
+    public ObservableCollection<ChartPoint> Trend { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> ComparisonTrend { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> Heatmap { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> Hourly { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> Weekdays { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<PersonalRecord> Records { get; } = new RangeObservableCollection<PersonalRecord>();
+    public ObservableCollection<InsightItem> QuickInsights { get; } = new RangeObservableCollection<InsightItem>();
+    public ObservableCollection<InsightItem> AllInsights { get; } = new RangeObservableCollection<InsightItem>();
+    public ObservableCollection<ChartPoint> SessionHistogram { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> TimeBlocks { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> CompletionTimeline { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> StreakTimeline { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> CumulativeJourney { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> MonthlyJourney { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> ComparisonBars { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<BookRow> StatisticsTopBooks { get; } = new RangeObservableCollection<BookRow>();
+    public ObservableCollection<SessionDisplay> Sessions { get; } = new RangeObservableCollection<SessionDisplay>();
+    public ObservableCollection<BookFilterOption> SessionBookOptions { get; } = new RangeObservableCollection<BookFilterOption>([new(null, "All books")]);
+    public ObservableCollection<ChartPoint> SessionTimeline { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<BookRow> Books { get; } = new RangeObservableCollection<BookRow>();
+    public ObservableCollection<BookFocusItem> ContinueReading { get; } = new RangeObservableCollection<BookFocusItem>();
+    public ObservableCollection<BookFocusItem> ActiveReadingPlans { get; } = new RangeObservableCollection<BookFocusItem>();
+    public ObservableCollection<PaceDatum> SelectedPlanAdherence { get; } = new RangeObservableCollection<PaceDatum>();
+    public ObservableCollection<ReadingCycleRow> SelectedBookCycles { get; } = new RangeObservableCollection<ReadingCycleRow>();
+    public ObservableCollection<ChartPoint> BookTrend { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> BookHourly { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> BookWeekdays { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<SessionDisplay> BookSessions { get; } = new RangeObservableCollection<SessionDisplay>();
+    public ObservableCollection<CalendarDayItem> CalendarDays { get; } = new RangeObservableCollection<CalendarDayItem>();
+    public ObservableCollection<string> WeekdayHeaders { get; } = new RangeObservableCollection<string>();
+    public ObservableCollection<ChartPoint> ActivityMonthTrend { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<SessionDisplay> DaySessions { get; } = new RangeObservableCollection<SessionDisplay>();
+    public ObservableCollection<ChartPoint> DayBooks { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<GoalEditor> Goals { get; } = new RangeObservableCollection<GoalEditor>();
+    public ObservableCollection<GoalArchive> GoalArchives { get; } = new RangeObservableCollection<GoalArchive>();
+    public ObservableCollection<ChartPoint> YearMonths { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> YearHeatmap { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<BookSummary> YearTopBooks { get; } = new RangeObservableCollection<BookSummary>();
+    public ObservableCollection<DataQualityCheck> DataQualityChecks { get; } = new RangeObservableCollection<DataQualityCheck>();
+    public ObservableCollection<DataHealthIssue> HealthIssues { get; } = new RangeObservableCollection<DataHealthIssue>();
     private DataQualityCheck? _selectedHealthCheck;
     public DataQualityCheck? SelectedHealthCheck { get => _selectedHealthCheck; private set { Set(ref _selectedHealthCheck, value); Raise(nameof(HasSelectedHealthCheck)); } }
     public bool HasSelectedHealthCheck => SelectedHealthCheck is not null;
     public ParameterCommand<DataHealthIssue> OpenHealthIssueCommand { get; }
-    public ObservableCollection<BackupHistoryItem> BackupHistory { get; } = [];
-    public ObservableCollection<MatrixCell> WeekHourMatrix { get; } = [];
-    public ObservableCollection<TimelineSpan> DayTimeline { get; } = [];
-    public ObservableCollection<DotDatum> SessionDots { get; } = [];
-    public ObservableCollection<DotDatum> ReadingStyleDays { get; } = [];
-    public ObservableCollection<CompositionPart> BookAttention { get; } = [];
-    public ObservableCollection<CompositionPart> SourceComposition { get; } = [];
-    public ObservableCollection<ChartPoint> PhysicalPageProgress { get; } = [];
-    public ObservableCollection<CompositionPart> YearBookAttention { get; } = [];
+    public ObservableCollection<BackupHistoryItem> BackupHistory { get; } = new RangeObservableCollection<BackupHistoryItem>();
+    public ObservableCollection<MatrixCell> WeekHourMatrix { get; } = new RangeObservableCollection<MatrixCell>();
+    public ObservableCollection<TimelineSpan> DayTimeline { get; } = new RangeObservableCollection<TimelineSpan>();
+    public ObservableCollection<DotDatum> SessionDots { get; } = new RangeObservableCollection<DotDatum>();
+    public ObservableCollection<DotDatum> ReadingStyleDays { get; } = new RangeObservableCollection<DotDatum>();
+    public ObservableCollection<CompositionPart> BookAttention { get; } = new RangeObservableCollection<CompositionPart>();
+    public ObservableCollection<CompositionPart> SourceComposition { get; } = new RangeObservableCollection<CompositionPart>();
+    public ObservableCollection<ChartPoint> PhysicalPageProgress { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<CompositionPart> YearBookAttention { get; } = new RangeObservableCollection<CompositionPart>();
     public bool HasPhysicalPageProgress => PhysicalPageProgress.Count > 0;
     public string SourceCompositionSummary => SourceComposition.Count == 0 ? "No reading in this period." : string.Join(" · ", SourceComposition.Select(item => item.Detail));
-    public ObservableCollection<MatrixCell> BookDayMatrix { get; } = [];
-    public ObservableCollection<ChartPoint> ReadingFingerprint { get; } = [];
-    public ObservableCollection<ChartPoint> RollingMomentum { get; } = [];
-    public ObservableCollection<DumbbellDatum> PeriodDumbbells { get; } = [];
-    public ObservableCollection<ChartPoint> SessionStaircase { get; } = [];
-    public ObservableCollection<PaceDatum> GoalPace { get; } = [];
-    public ObservableCollection<ChartPoint> BestReadingDays { get; } = [];
-    public ObservableCollection<NoteRow> Notes { get; } = [];
-    public ObservableCollection<NoteRow> RandomNoteHistory { get; } = [];
-    public ObservableCollection<GlobalSearchResult> GlobalSearchResults { get; } = [];
-    public ObservableCollection<ChartPoint> NotesByBook { get; } = [];
-    public ObservableCollection<ChartPoint> NotesByMonth { get; } = [];
-    public ObservableCollection<ChartPoint> NotesByType { get; } = [];
+    public ObservableCollection<MatrixCell> BookDayMatrix { get; } = new RangeObservableCollection<MatrixCell>();
+    public ObservableCollection<ChartPoint> ReadingFingerprint { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> RollingMomentum { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<DumbbellDatum> PeriodDumbbells { get; } = new RangeObservableCollection<DumbbellDatum>();
+    public ObservableCollection<ChartPoint> SessionStaircase { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<PaceDatum> GoalPace { get; } = new RangeObservableCollection<PaceDatum>();
+    public ObservableCollection<ChartPoint> BestReadingDays { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<NoteRow> Notes { get; } = new RangeObservableCollection<NoteRow>();
+    public ObservableCollection<NoteRow> RandomNoteHistory { get; } = new RangeObservableCollection<NoteRow>();
+    public ObservableCollection<GlobalSearchResult> GlobalSearchResults { get; } = new RangeObservableCollection<GlobalSearchResult>();
+    public ObservableCollection<ChartPoint> NotesByBook { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> NotesByMonth { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<ChartPoint> NotesByType { get; } = new RangeObservableCollection<ChartPoint>();
     public ManualLogViewModel Manual { get; }
 
     public ParameterCommand<string> NavigateCommand { get; }
@@ -451,7 +451,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public string ComparisonText => Comparison is null ? (CompareMode == "Off" ? "Comparison off" : "Select a valid comparison range") : !Comparison.HasBaseline ? "No reading in comparison period" : $"{Comparison.PercentDelta:+0.#;-0.#;0}% · {ComparisonPeriodLabel}";
     public string ComparisonPeriodLabel => ResolveComparisonRange() is { } range ? $"{range.StartDate:d} – {range.EndDate:d}" : "—";
     public string ComparisonHeading => "SELECTED COMPARISON";
-    public ObservableCollection<ChartPoint> ComparisonData { get; } = [];
+    public ObservableCollection<ChartPoint> ComparisonData { get; } = new RangeObservableCollection<ChartPoint>();
     public string AbsoluteDeltaText => Comparison is null ? "—" : $"{(Comparison.AbsoluteDelta >= 0 ? "+" : "−")}{Formatters.Duration(Math.Abs(Comparison.AbsoluteDelta))}";
     public double SessionsPerActiveDay => Period is null || Period.ActiveDays == 0 ? 0 : (double)Period.SessionCount / Period.ActiveDays;
     public int FinishedInRange => _resolvedRange is null ? 0 : CompletedBookDates().Count(date => date >= _resolvedRange.Start && date < _resolvedRange.End);
@@ -792,11 +792,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _readestNotes = await notesTask;
             SetReadestNotesSnapshotAuthority(_notesRepository?.LastDiagnostics.FilesFailed == 0);
             _readestEvents = fresh;
-            ApplySourceSelection(false);
+            await Task.Run(() => ApplySourceSelection(false), token);
             Diagnostics = diagnostics;
             if (_goalEngine.SyncYearArchives(_settings, _events, completedBooks: CompletedBookDates())) await SaveSettingsDataAsync(token);
             BuildNotes();
-            RecalculateAll();
+            await Task.Run(RecalculateAll, token);
             LastSync = DateTimeOffset.Now;
             RecordRefreshSuccess();
             RaiseV24SourceStatus();
@@ -2330,7 +2330,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         foreach (var property in new[] { nameof(NoPeriodData), nameof(HasData), nameof(HasPhysicalPageProgress), nameof(SourceCompositionSummary), nameof(CurrentStreak), nameof(LongestStreak), nameof(CurrentStreakLabel), nameof(LongestStreakLabel), nameof(HasComparisonTrend), nameof(ComparisonText), nameof(ComparisonLegend), nameof(ReadingPeriodSummary) }) Raise(property);
     }
     private static string Friendly(Exception ex) => ex switch { UnauthorizedAccessException => "Permission denied while reading the database.", IOException => ex.Message, Microsoft.Data.Sqlite.SqliteException => "The database is locked, corrupted, or incompatible.", _ => ex.Message };
-    private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> values) { target.Clear(); foreach (var value in values) target.Add(value); }
+    private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> values)
+    {
+        if (target is RangeObservableCollection<T> range)
+        {
+            range.ReplaceRange(values);
+            return;
+        }
+        target.Clear();
+        foreach (var value in values) target.Add(value);
+    }
     private void RaiseConnectionState() { Raise(nameof(IsConnected)); Raise(nameof(NoPeriodData)); Raise(nameof(HasData)); RaiseV24SourceStatus(); RaiseV25Status(); OpenFolderCommand.Refresh(); }
     private void RaiseSettings() { Raise(nameof(SessionGapMinutes)); Raise(nameof(MinimumSessionSeconds)); Raise(nameof(FirstDayOfWeek)); Raise(nameof(ExperimentalPageMetrics)); Raise(nameof(CompactMode)); Raise(nameof(Use24HourTime)); Raise(nameof(ReduceMotion)); Raise(nameof(AutomaticBackups)); Raise(nameof(BackupRetentionDays)); Raise(nameof(Theme)); Raise(nameof(Language)); Raise(nameof(RefreshMode)); Raise(nameof(SelectedRange)); Raise(nameof(SelectedSource)); Raise(nameof(GoogleBooksApiKey)); Raise(nameof(CompareMode)); Raise(nameof(CompareCustomStart)); Raise(nameof(CompareCustomEnd)); }
     private bool _disposed;

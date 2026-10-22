@@ -60,8 +60,8 @@ public sealed partial class MainViewModel
     private MonthlyReview? _monthlyReview;
     private RelayCommand? _previousReviewMonthCommand, _nextReviewMonthCommand, _currentReviewMonthCommand;
     private ParameterCommand<DailyStat>? _openMonthlyDayCommand;
-    public ObservableCollection<ChartPoint> MonthlyReviewDays { get; } = [];
-    public ObservableCollection<DailyStat> MonthlyReviewDaily { get; } = [];
+    public ObservableCollection<ChartPoint> MonthlyReviewDays { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<DailyStat> MonthlyReviewDaily { get; } = new RangeObservableCollection<DailyStat>();
     public DateTime LatestReportDate => DateTime.Today;
     public DateTime EarliestReportDate => new(2, 1, 1);
     private static DateTime CurrentReportMonth => new(DateTime.Today.Year, DateTime.Today.Month, 1);

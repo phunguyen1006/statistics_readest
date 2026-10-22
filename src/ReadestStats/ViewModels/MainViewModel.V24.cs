@@ -21,11 +21,11 @@ public sealed partial class MainViewModel
     private DateTimeOffset? _manualLastUpdated;
     private static string V24Text(string english, string vietnamese) => Localization.Localizer.Instance.IsVietnamese ? vietnamese : english;
 
-    public ObservableCollection<AuditEventRow> AuditEvents { get; } = [];
-    public ObservableCollection<AuditEventRow> DayAuditEvents { get; } = [];
-    public ObservableCollection<ChartPoint> WeeklyRecapDays { get; } = [];
-    public ObservableCollection<MetadataBreakdown> AuthorBreakdown { get; } = [];
-    public ObservableCollection<MetadataBreakdown> LanguageBreakdown { get; } = [];
+    public ObservableCollection<AuditEventRow> AuditEvents { get; } = new RangeObservableCollection<AuditEventRow>();
+    public ObservableCollection<AuditEventRow> DayAuditEvents { get; } = new RangeObservableCollection<AuditEventRow>();
+    public ObservableCollection<ChartPoint> WeeklyRecapDays { get; } = new RangeObservableCollection<ChartPoint>();
+    public ObservableCollection<MetadataBreakdown> AuthorBreakdown { get; } = new RangeObservableCollection<MetadataBreakdown>();
+    public ObservableCollection<MetadataBreakdown> LanguageBreakdown { get; } = new RangeObservableCollection<MetadataBreakdown>();
     public AsyncCommand ToggleAuditEventCommand { get; private set; } = null!;
     public AsyncCommand ExportWeeklyRecapCommand { get; private set; } = null!;
     public AuditEventRow? SelectedAuditEvent

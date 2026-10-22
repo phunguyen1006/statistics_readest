@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 
 namespace ReadestStats.ViewModels;
@@ -18,7 +19,15 @@ public sealed class AsyncCommand(Func<Task> action, Func<bool>? canExecute = nul
     public bool CanExecute(object? parameter) => !_running && (canExecute?.Invoke() ?? true);
     public event EventHandler? CanExecuteChanged;
     public async void Execute(object? parameter) { if (!CanExecute(parameter)) return; _running = true; CanExecuteChanged?.Invoke(this, EventArgs.Empty); try { await action(); } finally { _running = false; CanExecuteChanged?.Invoke(this, EventArgs.Empty); } }
-    public void Refresh() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    public void Refresh()
+    {
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(Refresh);
+            return;
+        }
+        CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    }
 }
 
 public sealed class RelayCommand(Action action, Func<bool>? canExecute = null) : ICommand
@@ -26,7 +35,15 @@ public sealed class RelayCommand(Action action, Func<bool>? canExecute = null) :
     public bool CanExecute(object? parameter) => canExecute?.Invoke() ?? true;
     public void Execute(object? parameter) => action();
     public event EventHandler? CanExecuteChanged;
-    public void Refresh() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    public void Refresh()
+    {
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(Refresh);
+            return;
+        }
+        CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    }
 }
 
 public sealed class ParameterCommand<T>(Action<T?> action, Func<T?, bool>? canExecute = null) : ICommand
@@ -34,5 +51,13 @@ public sealed class ParameterCommand<T>(Action<T?> action, Func<T?, bool>? canEx
     public bool CanExecute(object? parameter) => canExecute?.Invoke((T?)parameter) ?? true;
     public void Execute(object? parameter) => action((T?)parameter);
     public event EventHandler? CanExecuteChanged;
-    public void Refresh() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    public void Refresh()
+    {
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(Refresh);
+            return;
+        }
+        CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    }
 }

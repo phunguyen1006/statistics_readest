@@ -138,11 +138,11 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
         new("seven", "Last 7 days", "7 ngày gần đây"), new("month", "This month", "Tháng này"),
         new("custom", "Custom dates", "Ngày tùy chọn")
     ];
-    public ObservableCollection<SessionSegmentRow> SelectedSessionSegments { get; } = [];
+    public ObservableCollection<SessionSegmentRow> SelectedSessionSegments { get; } = new RangeObservableCollection<SessionSegmentRow>();
     public bool IsCorrectingSession => _isCorrectingSession;
-    public ObservableCollection<ManualBook> Books { get; } = [];
+    public ObservableCollection<ManualBook> Books { get; } = new RangeObservableCollection<ManualBook>();
     public IReadOnlyList<ManualBook> AllBooks => _data.Books;
-    public ObservableCollection<ManualSessionRow> RecentSessions { get; } = [];
+    public ObservableCollection<ManualSessionRow> RecentSessions { get; } = new RangeObservableCollection<ManualSessionRow>();
     public IReadOnlyList<ManualReadingSession> FilteredJournalSessions
     {
         get
@@ -151,11 +151,11 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
             return RecentSessions.Where(row => sessionsById.ContainsKey(row.Id)).Select(row => sessionsById[row.Id]).ToArray();
         }
     }
-    public ObservableCollection<ManualJournalBookOption> JournalBooks { get; } = [];
-    public ObservableCollection<BookMetadataResult> SearchResults { get; } = [];
-    public ObservableCollection<OperationJournalEntry> ActivityLog { get; } = [];
-    public ObservableCollection<DuplicateBookGroup> DuplicateGroups { get; } = [];
-    public ObservableCollection<ManualBook> ArchivedBooks { get; } = [];
+    public ObservableCollection<ManualJournalBookOption> JournalBooks { get; } = new RangeObservableCollection<ManualJournalBookOption>();
+    public ObservableCollection<BookMetadataResult> SearchResults { get; } = new RangeObservableCollection<BookMetadataResult>();
+    public ObservableCollection<OperationJournalEntry> ActivityLog { get; } = new RangeObservableCollection<OperationJournalEntry>();
+    public ObservableCollection<DuplicateBookGroup> DuplicateGroups { get; } = new RangeObservableCollection<DuplicateBookGroup>();
+    public ObservableCollection<ManualBook> ArchivedBooks { get; } = new RangeObservableCollection<ManualBook>();
     public AsyncCommand RestoreArchivedBookCommand { get; }
     public ManualBook? SelectedArchivedBook { get => _selectedArchivedBook; set { if (Set(ref _selectedArchivedBook, value)) RestoreArchivedBookCommand.Refresh(); } }
     public bool HasArchivedBooks => ArchivedBooks.Count > 0;
@@ -1523,7 +1523,16 @@ public sealed class ManualLogViewModel : ObservableObject, IDisposable
         var value = TimeSpan.FromSeconds(Math.Max(0, seconds));
         return value.TotalHours >= 1 ? $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}" : $"{value.Minutes:00}:{value.Seconds:00}";
     }
-    private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> source) { target.Clear(); foreach (var item in source) target.Add(item); }
+    private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> source)
+    {
+        if (target is RangeObservableCollection<T> range)
+        {
+            range.ReplaceRange(source);
+            return;
+        }
+        target.Clear();
+        foreach (var item in source) target.Add(item);
+    }
 
     public void Dispose()
     {
