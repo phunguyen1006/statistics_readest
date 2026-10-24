@@ -12,39 +12,46 @@ public sealed class SettingsStore
 
     public async Task<AppSettings> LoadAsync(CancellationToken cancellationToken = default)
     {
-        try
+        for (var attempt = 0; ; attempt++)
         {
-            await using var stream = File.OpenRead(_path);
-            using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            var settings = json.RootElement.Deserialize<AppSettings>(JsonOptions)
-                ?? throw new InvalidDataException("Readest Stats settings are empty. Restore a settings backup before continuing.");
-            var migrateKey = false;
-            ApiKeyWarning = null;
-            if (!string.IsNullOrWhiteSpace(settings.GoogleBooksApiKeyProtected))
+            try
             {
-                if (LocalSecretProtection.TryUnprotect(settings.GoogleBooksApiKeyProtected, out var key)) settings.GoogleBooksApiKey = key;
-                else ApiKeyWarning = "The saved Google Books API key is unavailable for this Windows account. Enter it again in Settings.";
+                await using var stream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var settings = json.RootElement.Deserialize<AppSettings>(JsonOptions)
+                    ?? throw new InvalidDataException("Readest Stats settings are empty. Restore a settings backup before continuing.");
+                var migrateKey = false;
+                ApiKeyWarning = null;
+                if (!string.IsNullOrWhiteSpace(settings.GoogleBooksApiKeyProtected))
+                {
+                    if (LocalSecretProtection.TryUnprotect(settings.GoogleBooksApiKeyProtected, out var key)) settings.GoogleBooksApiKey = key;
+                    else ApiKeyWarning = "The saved Google Books API key is unavailable for this Windows account. Enter it again in Settings.";
+                }
+                else if (json.RootElement.TryGetProperty("GoogleBooksApiKey", out var legacy) && legacy.ValueKind == JsonValueKind.String)
+                {
+                    settings.GoogleBooksApiKey = legacy.GetString();
+                    migrateKey = !string.IsNullOrWhiteSpace(settings.GoogleBooksApiKey);
+                }
+                Normalize(settings);
+                GoalEngine.Migrate(settings);
+                if (migrateKey)
+                {
+                    // Close the read handle before atomically replacing the legacy file.
+                    await stream.DisposeAsync();
+                    await SaveAsync(settings, cancellationToken);
+                }
+                return settings;
             }
-            else if (json.RootElement.TryGetProperty("GoogleBooksApiKey", out var legacy) && legacy.ValueKind == JsonValueKind.String)
+            catch (FileNotFoundException) { return new(); }
+            catch (DirectoryNotFoundException) { return new(); }
+            catch (IOException ex) when (attempt < 4 && (ex.HResult & 0xFFFF) is 32 or 33)
             {
-                settings.GoogleBooksApiKey = legacy.GetString();
-                migrateKey = !string.IsNullOrWhiteSpace(settings.GoogleBooksApiKey);
+                await Task.Delay(25 * (attempt + 1), cancellationToken).ConfigureAwait(false);
             }
-            Normalize(settings);
-            GoalEngine.Migrate(settings);
-            if (migrateKey)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
             {
-                // Close the read handle before atomically replacing the legacy file.
-                await stream.DisposeAsync();
-                await SaveAsync(settings, cancellationToken);
+                throw new InvalidDataException("Readest Stats settings could not be read. The original file was left unchanged; restore a settings backup before continuing.", ex);
             }
-            return settings;
-        }
-        catch (FileNotFoundException) { return new(); }
-        catch (DirectoryNotFoundException) { return new(); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
-        {
-            throw new InvalidDataException("Readest Stats settings could not be read. The original file was left unchanged; restore a settings backup before continuing.", ex);
         }
     }
 

@@ -32,7 +32,6 @@ public sealed class SettingsViewModel : ObservableObject
     public MainViewModel Main => _main;
     public ManualLogViewModel Manual => _main.Manual;
 
-    public double ViewportWidth { get => _main.ViewportWidth; set => _main.ViewportWidth = value; }
     public string StorageHealthHeading => _main.StorageHealthHeading;
     public string RefreshHealthLabel => _main.RefreshHealthLabel;
     public string BackupHealthLabel => _main.BackupHealthLabel;
@@ -45,13 +44,13 @@ public sealed class SettingsViewModel : ObservableObject
     public ICommand RedetectCommand => _main.RedetectCommand;
     public ICommand OpenFolderCommand => _main.OpenFolderCommand;
     public string Status => _main.Status;
-    public DiagnosticsInfo Diagnostics => _main.Diagnostics;
+    public DatabaseDiagnostics? Diagnostics => _main.Diagnostics;
     public int AllSessionCount => _main.AllSessionCount;
     public string PageMetricReliability => _main.PageMetricReliability;
-    public DataQualityReport DataQuality => _main.DataQuality;
+    public DataQualityReport? DataQuality => _main.DataQuality;
     public ObservableCollection<DataQualityCheck> DataQualityChecks => _main.DataQualityChecks;
     public bool HasSelectedHealthCheck => _main.HasSelectedHealthCheck;
-    public DataQualityCheck? SelectedHealthCheck { get => _main.SelectedHealthCheck; set => _main.SelectedHealthCheck = value; }
+    public DataQualityCheck? SelectedHealthCheck => _main.SelectedHealthCheck;
     public ObservableCollection<DataHealthIssue> HealthIssues => _main.HealthIssues;
     public ICommand ReviewDataQualityCommand => _main.ReviewDataQualityCommand;
     public ICommand OpenHealthIssueCommand => _main.OpenHealthIssueCommand;
@@ -86,8 +85,8 @@ public sealed class SettingsViewModel : ObservableObject
     public bool AutomaticBackups { get => _main.AutomaticBackups; set => _main.AutomaticBackups = value; }
     public ICommand OpenLogsCommand => _main.OpenLogsCommand;
     public int BackupRetentionDays { get => _main.BackupRetentionDays; set => _main.BackupRetentionDays = value; }
-    public ObservableCollection<BackupSnapshot> BackupHistory => _main.BackupHistory;
-    public BackupSnapshot? SelectedBackup { get => _main.SelectedBackup; set => _main.SelectedBackup = value; }
+    public ObservableCollection<BackupHistoryItem> BackupHistory => _main.BackupHistory;
+    public BackupHistoryItem? SelectedBackup { get => _main.SelectedBackup; set => _main.SelectedBackup = value; }
     public ICommand RestoreSelectedBackupCommand => _main.RestoreSelectedBackupCommand;
     public ICommand DeleteSelectedBackupCommand => _main.DeleteSelectedBackupCommand;
     public ICommand OpenBackupFolderCommand => _main.OpenBackupFolderCommand;

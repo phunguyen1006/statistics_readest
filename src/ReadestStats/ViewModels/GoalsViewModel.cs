@@ -20,13 +20,12 @@ public sealed class GoalsViewModel : ObservableObject
     }
 
     public MainViewModel Main => _main;
-    public double ViewportWidth { get => _main.ViewportWidth; set => _main.ViewportWidth = value; }
     public ICommand SaveGoalsCommand => _main.SaveGoalsCommand;
-    public YearBookGoal CurrentYearBookGoal => _main.CurrentYearBookGoal;
-    public string GoalPace => _main.GoalPace;
+    public YearBookGoalSummary? CurrentYearBookGoal => _main.CurrentYearBookGoal;
+    public ObservableCollection<PaceDatum> GoalPace => _main.GoalPace;
     public bool HasActiveReadingPlans => _main.HasActiveReadingPlans;
-    public ObservableCollection<ActiveReadingPlanItem> ActiveReadingPlans => _main.ActiveReadingPlans;
+    public ObservableCollection<BookFocusItem> ActiveReadingPlans => _main.ActiveReadingPlans;
     public ICommand OpenFocusBookCommand => _main.OpenFocusBookCommand;
-    public ObservableCollection<GoalEditorItem> Goals => _main.Goals;
-    public ObservableCollection<GoalArchiveItem> GoalArchives => _main.GoalArchives;
+    public ObservableCollection<GoalEditor> Goals => _main.Goals;
+    public ObservableCollection<GoalArchive> GoalArchives => _main.GoalArchives;
 }

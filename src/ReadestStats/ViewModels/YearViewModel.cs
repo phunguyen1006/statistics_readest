@@ -24,17 +24,16 @@ public sealed class YearViewModel : ObservableObject
     }
 
     public MainViewModel Main => _main;
-    public double ViewportWidth { get => _main.ViewportWidth; set => _main.ViewportWidth = value; }
     public ICommand PreviousYearCommand => _main.PreviousYearCommand;
     public int Year { get => _main.Year; set => _main.Year = value; }
     public ICommand NextYearCommand => _main.NextYearCommand;
-    public YearSummary YearSummary => _main.YearSummary;
+    public YearInReading? YearSummary => _main.YearSummary;
     public string YearLongestStreakLabel => _main.YearLongestStreakLabel;
-    public YearBookGoal YearBookGoal => _main.YearBookGoal;
+    public YearBookGoalSummary? YearBookGoal => _main.YearBookGoal;
     public ObservableCollection<ChartPoint> YearHeatmap => _main.YearHeatmap;
     public ObservableCollection<ChartPoint> YearMonths => _main.YearMonths;
     public ObservableCollection<ChartPoint> BestReadingDays => _main.BestReadingDays;
-    public ObservableCollection<ChartPoint> YearBookAttention => _main.YearBookAttention;
+    public ObservableCollection<CompositionPart> YearBookAttention => _main.YearBookAttention;
     public string YearTopBook => _main.YearTopBook;
     public string YearBestMonth => _main.YearBestMonth;
     public string YearFavoriteHour => _main.YearFavoriteHour;

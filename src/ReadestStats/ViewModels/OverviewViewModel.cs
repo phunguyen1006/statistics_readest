@@ -29,8 +29,7 @@ public sealed class OverviewViewModel : ObservableObject
     }
 
     public MainViewModel Main => _main;
-    public double ViewportWidth { get => _main.ViewportWidth; set => _main.ViewportWidth = value; }
-    public ReadingPeriod? Period => _main.Period;
+    public PeriodMetrics? Period => _main.Period;
     public bool NoPeriodData => _main.NoPeriodData;
     public string ReadingPeriodSummary => _main.ReadingPeriodSummary;
     public string ComparisonText => _main.ComparisonText;
@@ -42,13 +41,12 @@ public sealed class OverviewViewModel : ObservableObject
     public WeeklyRecap? WeeklyRecap => _main.WeeklyRecap;
     public ICommand ExportWeeklyRecapCommand => _main.ExportWeeklyRecapCommand;
     public ObservableCollection<ChartPoint> Trend => _main.Trend;
-    public ComparisonMetrics? Comparison => _main.Comparison;
+    public ComparisonResult? Comparison => _main.Comparison;
     public ObservableCollection<ChartPoint> ComparisonTrend => _main.ComparisonTrend;
     public ObservableCollection<ChartPoint> ComparisonData => _main.ComparisonData;
-    public ObservableCollection<ChartPoint> PeriodDumbbells => _main.PeriodDumbbells;
-    public ObservableCollection<InsightItem> PeriodInsights => _main.PeriodInsights;
-    public ObservableCollection<BookSlice> TopBooks => _main.TopBooks;
-    public ObservableCollection<BookSlice> RecentBooks => _main.RecentBooks;
+    public ObservableCollection<DumbbellDatum> PeriodDumbbells => _main.PeriodDumbbells;
+    public ObservableCollection<InsightItem> QuickInsights => _main.QuickInsights;
+    public ObservableCollection<BookFocusItem> ContinueReading => _main.ContinueReading;
     public ICommand OpenInsightCommand => _main.OpenInsightCommand;
     public ICommand NavigateCommand => _main.NavigateCommand;
 }

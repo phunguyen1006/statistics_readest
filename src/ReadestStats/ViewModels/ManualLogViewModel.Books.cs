@@ -353,7 +353,8 @@ public sealed partial class ManualLogViewModel
     private void OpenMetadata()
     {
         if (SelectedSearchResult is not { InfoUrl: { } url } || !ExternalLinkPolicy.TryGetWebUri(url, out var uri)) return;
-        ExternalLinkPolicy.Open(uri);
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri!.AbsoluteUri) { UseShellExecute = true }); }
+        catch (Exception ex) { Status = "Could not open the metadata page."; _log("Open metadata error: " + ex); }
     }
 
     public async Task<string> RefreshBookMetadataAsync(long id)

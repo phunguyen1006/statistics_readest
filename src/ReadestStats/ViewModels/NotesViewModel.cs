@@ -28,7 +28,6 @@ public sealed class NotesViewModel : ObservableObject
     }
 
     public MainViewModel Main => _main;
-    public double ViewportWidth { get => _main.ViewportWidth; set => _main.ViewportWidth = value; }
     public ICommand RefreshNotesCommand => _main.RefreshNotesCommand;
     public string NotesSummary => _main.NotesSummary;
     public NoteRow? DailyNote => _main.DailyNote;

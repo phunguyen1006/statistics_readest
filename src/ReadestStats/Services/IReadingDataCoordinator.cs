@@ -12,11 +12,11 @@ public interface IReadingDataCoordinator
     int MinimumSessionSeconds { get; set; }
 
     IReadOnlyList<ReadingEvent> Events { get; }
-    IReadOnlyList<BookModel> BookModels { get; }
+    IReadOnlyList<Book> BookModels { get; }
     IReadOnlyList<ReadingEvent> PeriodEvents { get; }
-    IReadOnlyList<DailyReading> AllDaily { get; }
-    ReadingPeriod? Period { get; }
-    ComparisonMetrics? Comparison { get; }
+    IReadOnlyList<DailyStat> AllDaily { get; }
+    PeriodMetrics? Period { get; }
+    ComparisonResult? Comparison { get; }
     AppSettings Settings { get; }
     bool IsConnected { get; }
     bool IsBusy { get; }

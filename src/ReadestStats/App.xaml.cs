@@ -26,6 +26,15 @@ public partial class App : Application
 
         // Register ViewModels
         services.AddSingleton<MainViewModel>();
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().Overview);
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().ActivityPage);
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().SessionsPage);
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().BooksPage);
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().NotesPage);
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().GoalsPage);
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().StatisticsPage);
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().YearPage);
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().SettingsPage);
 
         // Register Views
         services.AddTransient<MainWindow>();

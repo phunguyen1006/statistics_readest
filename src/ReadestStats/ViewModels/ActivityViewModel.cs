@@ -23,19 +23,18 @@ public sealed class ActivityViewModel : ObservableObject
     }
 
     public MainViewModel Main => _main;
-    public double ViewportWidth { get => _main.ViewportWidth; set => _main.ViewportWidth = value; }
     public ICommand PreviousMonthCommand => _main.PreviousMonthCommand;
     public string MonthLabel => _main.MonthLabel;
     public ICommand NextMonthCommand => _main.NextMonthCommand;
     public ICommand TodayCommand => _main.TodayCommand;
     public string MonthSummary => _main.MonthSummary;
     public ObservableCollection<ChartPoint> ActivityMonthTrend => _main.ActivityMonthTrend;
-    public string[] WeekdayHeaders => _main.WeekdayHeaders;
-    public ObservableCollection<CalendarDayDisplay> CalendarDays => _main.CalendarDays;
+    public ObservableCollection<string> WeekdayHeaders => _main.WeekdayHeaders;
+    public ObservableCollection<CalendarDayItem> CalendarDays => _main.CalendarDays;
     public ICommand SelectDayCommand => _main.SelectDayCommand;
-    public CalendarDayDisplay? SelectedDay => _main.SelectedDay;
-    public ObservableCollection<ActivitySessionDisplay> DayTimeline => _main.DayTimeline;
-    public ObservableCollection<BookSlice> DayBooks => _main.DayBooks;
+    public DayDetails? SelectedDay => _main.SelectedDay;
+    public ObservableCollection<TimelineSpan> DayTimeline => _main.DayTimeline;
+    public ObservableCollection<ChartPoint> DayBooks => _main.DayBooks;
     public ICommand NavigateCommand => _main.NavigateCommand;
     public ObservableCollection<AuditEventRow> DayAuditEvents => _main.DayAuditEvents;
     public AuditEventRow? SelectedAuditEvent { get => _main.SelectedAuditEvent; set => _main.SelectedAuditEvent = value; }

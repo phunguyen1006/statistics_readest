@@ -33,10 +33,10 @@ public sealed class BooksViewModel : ObservableObject
     public string BookFilter { get => _main.BookFilter; set => _main.BookFilter = value; }
     public string[] BookSorts => _main.BookSorts;
     public string BookSort { get => _main.BookSort; set => _main.BookSort = value; }
-    public ObservableCollection<ChartPoint> BookAttention => _main.BookAttention;
-    public ObservableCollection<ChartPoint> BookDayMatrix => _main.BookDayMatrix;
-    public ObservableCollection<BookSlice> Books => _main.Books;
-    public BookSlice? SelectedBook { get => _main.SelectedBook; set => _main.SelectedBook = value; }
+    public ObservableCollection<CompositionPart> BookAttention => _main.BookAttention;
+    public ObservableCollection<MatrixCell> BookDayMatrix => _main.BookDayMatrix;
+    public ObservableCollection<BookRow> Books => _main.Books;
+    public BookRow? SelectedBook { get => _main.SelectedBook; set => _main.SelectedBook = value; }
     public string SelectedBookOpenLabel => _main.SelectedBookOpenLabel;
     public ICommand OpenBookInReadestCommand => _main.OpenBookInReadestCommand;
     public ICommand StartSelectedManualSessionCommand => _main.StartSelectedManualSessionCommand;
@@ -47,24 +47,24 @@ public sealed class BooksViewModel : ObservableObject
     public ICommand StartRereadCommand => _main.StartRereadCommand;
     public string LinkEditionLabel => _main.LinkEditionLabel;
     public ICommand LinkSelectedEditionCommand => _main.LinkSelectedEditionCommand;
-    public BookMetadataResult? LinkCandidate => _main.LinkCandidate;
+    public BookRow? LinkCandidate => _main.LinkCandidate;
     public ICommand UnlinkSelectedEditionCommand => _main.UnlinkSelectedEditionCommand;
     public bool IsSelectedBookLinked => _main.IsSelectedBookLinked;
     public ICommand RefreshSelectedMetadataCommand => _main.RefreshSelectedMetadataCommand;
     public DateTime? SelectedBookCompletedDate { get => _main.SelectedBookCompletedDate; set => _main.SelectedBookCompletedDate = value; }
     public string OpenBookStatus => _main.OpenBookStatus;
     public string SelectedBookCycleSummary => _main.SelectedBookCycleSummary;
-    public ObservableCollection<ReadingCycleItem> SelectedBookCycles => _main.SelectedBookCycles;
+    public ObservableCollection<ReadingCycleRow> SelectedBookCycles => _main.SelectedBookCycles;
     public ICommand SkipTodayPlanCommand => _main.SkipTodayPlanCommand;
     public string SelectedPlanTodayLabel => _main.SelectedPlanTodayLabel;
-    public string SelectedPlanAdherence => _main.SelectedPlanAdherence;
+    public ObservableCollection<PaceDatum> SelectedPlanAdherence => _main.SelectedPlanAdherence;
     public ReadingPlanProgress SelectedBookPlan => _main.SelectedBookPlan;
-    public string SelectedBookPlanGoal => _main.SelectedBookPlanGoal;
+    public GoalProgress? SelectedBookPlanGoal => _main.SelectedBookPlanGoal;
     public DateTime? SelectedPlanStartDate { get => _main.SelectedPlanStartDate; set => _main.SelectedPlanStartDate = value; }
     public DateTime? SelectedPlanTargetDate { get => _main.SelectedPlanTargetDate; set => _main.SelectedPlanTargetDate = value; }
-    public int SelectedPlanDailyMinutes { get => _main.SelectedPlanDailyMinutes; set => _main.SelectedPlanDailyMinutes = value; }
+    public double SelectedPlanDailyMinutes { get => _main.SelectedPlanDailyMinutes; set => _main.SelectedPlanDailyMinutes = value; }
     public int SelectedPlanDailyPages { get => _main.SelectedPlanDailyPages; set => _main.SelectedPlanDailyPages = value; }
-    public bool SelectedPlanUsesPages { get => _main.SelectedPlanUsesPages; set => _main.SelectedPlanUsesPages = value; }
+    public bool SelectedPlanUsesPages => _main.SelectedPlanUsesPages;
     public bool SelectedPlanMonday { get => _main.SelectedPlanMonday; set => _main.SelectedPlanMonday = value; }
     public bool SelectedPlanTuesday { get => _main.SelectedPlanTuesday; set => _main.SelectedPlanTuesday = value; }
     public bool SelectedPlanWednesday { get => _main.SelectedPlanWednesday; set => _main.SelectedPlanWednesday = value; }
@@ -72,12 +72,12 @@ public sealed class BooksViewModel : ObservableObject
     public bool SelectedPlanFriday { get => _main.SelectedPlanFriday; set => _main.SelectedPlanFriday = value; }
     public bool SelectedPlanSaturday { get => _main.SelectedPlanSaturday; set => _main.SelectedPlanSaturday = value; }
     public bool SelectedPlanSunday { get => _main.SelectedPlanSunday; set => _main.SelectedPlanSunday = value; }
-    public string SelectedPlanPriority { get => _main.SelectedPlanPriority; set => _main.SelectedPlanPriority = value; }
+    public int SelectedPlanPriority { get => _main.SelectedPlanPriority; set => _main.SelectedPlanPriority = value; }
     public string ReadingPlanPauseLabel => _main.ReadingPlanPauseLabel;
     public ICommand ToggleReadingPlanPauseCommand => _main.ToggleReadingPlanPauseCommand;
     public ICommand RemoveReadingPlanCommand => _main.RemoveReadingPlanCommand;
     public ICommand SaveReadingPlanCommand => _main.SaveReadingPlanCommand;
-    public BookAnalyticsDetail BookDetail => _main.BookDetail;
+    public BookDetail? BookDetail => _main.BookDetail;
     public ObservableCollection<ChartPoint> BookTrend => _main.BookTrend;
     public ObservableCollection<ChartPoint> BookHourly => _main.BookHourly;
     public ObservableCollection<ChartPoint> BookWeekdays => _main.BookWeekdays;

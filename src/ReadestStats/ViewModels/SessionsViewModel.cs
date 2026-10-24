@@ -21,20 +21,20 @@ public sealed class SessionsViewModel : ObservableObject
     }
 
     public MainViewModel Main => _main;
-    public ReadingPeriod? Period => _main.Period;
-    public SessionDistribution SessionProfile => _main.SessionProfile;
-    public string SessionsPerActiveDay => _main.SessionsPerActiveDay;
-    public ObservableCollection<string> SessionBookOptions => _main.SessionBookOptions;
-    public string SessionBook { get => _main.SessionBook; set => _main.SessionBook = value; }
+    public PeriodMetrics? Period => _main.Period;
+    public SessionProfile? SessionProfile => _main.SessionProfile;
+    public double SessionsPerActiveDay => _main.SessionsPerActiveDay;
+    public ObservableCollection<BookFilterOption> SessionBookOptions => _main.SessionBookOptions;
+    public BookFilterOption SessionBook { get => _main.SessionBook; set => _main.SessionBook = value; }
     public string[] SessionDurations => _main.SessionDurations;
     public string SessionDuration { get => _main.SessionDuration; set => _main.SessionDuration = value; }
     public string SessionSearch { get => _main.SessionSearch; set => _main.SessionSearch = value; }
     public string[] SessionSorts => _main.SessionSorts;
     public string SessionSort { get => _main.SessionSort; set => _main.SessionSort = value; }
-    public ObservableCollection<ChartPoint> SessionDots => _main.SessionDots;
-    public ObservableCollection<ChartPoint> ReadingStyleDays => _main.ReadingStyleDays;
+    public ObservableCollection<DotDatum> SessionDots => _main.SessionDots;
+    public ObservableCollection<DotDatum> ReadingStyleDays => _main.ReadingStyleDays;
     public ObservableCollection<SessionDisplay> Sessions => _main.Sessions;
     public SessionDisplay? SelectedSession { get => _main.SelectedSession; set => _main.SelectedSession = value; }
-    public ObservableCollection<SessionTimelineSegment> SessionTimeline => _main.SessionTimeline;
+    public ObservableCollection<ChartPoint> SessionTimeline => _main.SessionTimeline;
     public ICommand OpenSessionBookCommand => _main.OpenSessionBookCommand;
 }
