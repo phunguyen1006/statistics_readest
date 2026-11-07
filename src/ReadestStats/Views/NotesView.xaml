@@ -75,7 +75,7 @@
   </UserControl.Resources>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-    <StackPanel Margin="26,22,26,30" Width="{Binding ViewportWidth,RelativeSource={RelativeSource AncestorType=ScrollViewer},Converter={StaticResource PageWidth}}" MaxWidth="1380">
+    <StackPanel Margin="26,22,26,30" Width="{Binding ViewportWidth,RelativeSource={RelativeSource AncestorType=ScrollViewer},Converter={StaticResource PageWidth},ConverterParameter=Responsive}" MaxWidth="1380">
       <DockPanel Margin="0,0,0,18">
         <Button DockPanel.Dock="Right"
                 Content="{loc:Loc Key=sD6CC0A088C07683C}"
@@ -92,14 +92,9 @@
         </StackPanel>
       </DockPanel>
 
-      <Grid Margin="0,0,0,22" Height="230">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition/>
-          <ColumnDefinition Width="16"/>
-          <ColumnDefinition/>
-        </Grid.ColumnDefinitions>
+      <charts:AdaptiveColumnsPanel Columns="2" Spacing="16" Margin="0,0,0,22">
 
-        <Border Style="{StaticResource NoteSpotlight}">
+        <Border Style="{StaticResource NoteSpotlight}" MinHeight="210">
           <Grid>
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto"/>
@@ -128,7 +123,7 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="2" Style="{StaticResource NoteSpotlight}">
+        <Border Grid.Column="2" Style="{StaticResource NoteSpotlight}" MinHeight="210">
           <Grid>
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto"/>
@@ -145,9 +140,9 @@
             <WrapPanel Grid.Row="2"><Button Content="{loc:Loc Key=s37377C6D3A432F8A}" Command="{Binding RandomNoteCommand}" HorizontalAlignment="Left" Padding="10,5" MinHeight="30" FontSize="12" ToolTip="{loc:Loc Key=s7D0857E4AF3A0BA1}" AutomationProperties.Name="{loc:Loc Key=sBBAD0110868D0A25}"/><Button Content="{loc:Loc Key=s3C482346F3750276}" Command="{Binding PreviousRandomNoteCommand}" Padding="10,5" MinHeight="30" FontSize="12" Margin="6,0,0,0" AutomationProperties.Name="{loc:Loc Key=s7097182C7174D7FC}"/><Button Content="{Binding OpenNoteReaderLabel}" Command="{Binding OpenRandomNoteReaderCommand}" Margin="6,0,0,0" Padding="10,5" MinHeight="30" FontSize="12" AutomationProperties.Name="{Binding OpenNoteReaderLabel}"/></WrapPanel>
           </Grid>
         </Border>
-      </Grid>
+      </charts:AdaptiveColumnsPanel>
 
-      <Border Style="{StaticResource EditorialSection}" Margin="0,0,0,20"><StackPanel><TextBlock Text="{loc:Loc Key=sEDBC19F22446EFBF}" Style="{StaticResource Eyebrow}"/><ItemsControl ItemsSource="{Binding RandomNoteHistory}" Margin="0,8,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Command="{Binding DataContext.OpenRediscoveryHistoryCommand,RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" HorizontalContentAlignment="Stretch" Margin="0,0,8,0" Padding="10,7"><StackPanel><TextBlock Text="{Binding BookTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding PreviewContent}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+      <Border Style="{StaticResource EditorialSection}" Margin="0,0,0,20"><StackPanel><TextBlock Text="{loc:Loc Key=sEDBC19F22446EFBF}" Style="{StaticResource Eyebrow}"/><ItemsControl ItemsSource="{Binding RandomNoteHistory}" Margin="0,8,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="{Binding ActualWidth,RelativeSource={RelativeSource AncestorType=UserControl},Converter={StaticResource AdaptiveColumns},ConverterParameter=Metrics}"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Command="{Binding DataContext.OpenRediscoveryHistoryCommand,RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" HorizontalContentAlignment="Stretch" Margin="0,0,8,0" Padding="10,7"><StackPanel><TextBlock Text="{Binding BookTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding PreviewContent}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
 
       <Grid Margin="0,0,0,20">
         <Grid.ColumnDefinitions>
@@ -181,13 +176,8 @@
       </DockPanel>
       <TextBlock Text="{Binding NotesReaderShortcutsLabel}" Style="{StaticResource Muted}" Margin="0,0,0,10" TextWrapping="Wrap"/>
       <Expander Header="{loc:Loc Key=s35652C0294E70E37}" Margin="0,0,0,10" AutomationProperties.Name="{loc:Loc Key=sC87CA0A79B80F16C}"><Grid Margin="0,8,0,2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions><TextBox Text="{Binding NoteSearch,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{loc:Loc Key=sE3141B03AFB003AF}"/><ComboBox ItemTemplate="{StaticResource LocalizedOption}" Grid.Column="1" ItemsSource="{Binding NoteScopeOptions}" SelectedItem="{Binding NoteScope}" Margin="8,0,0,0" AutomationProperties.Name="{loc:Loc Key=s3EB55F19C21505B3}"/></Grid></Expander>
-      <Grid Height="430" Margin="0,0,0,26">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="1.35*"/>
-          <ColumnDefinition Width="1*"/>
-        </Grid.ColumnDefinitions>
-
-        <Grid>
+      <charts:AdaptiveColumnsPanel Columns="2" Spacing="16" Margin="0,0,0,26">
+        <Grid Height="430">
           <ListBox ItemsSource="{Binding Notes}"
                    SelectedItem="{Binding NoteListSelection,Mode=OneWay}"
                    SelectionChanged="Notes_SelectionChanged"
@@ -279,7 +269,7 @@
           </StackPanel>
         </Grid>
 
-        <Border Grid.Column="1" Style="{StaticResource EditorialAside}" Margin="20,0,0,0">
+        <Border Grid.Column="1" Style="{StaticResource EditorialAside}" Height="430">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
               <TextBlock Text="{loc:Loc Key=s75986CAECFDF887A}" Style="{StaticResource Eyebrow}"/>
@@ -330,7 +320,7 @@
             </StackPanel>
           </ScrollViewer>
         </Border>
-      </Grid>
+      </charts:AdaptiveColumnsPanel>
 
       <Border Style="{StaticResource EditorialSection}" Padding="0,0,0,22" Margin="0,0,0,22">
         <StackPanel>
@@ -345,12 +335,7 @@
               <TextBlock Text="{loc:Loc Key=s8D66A8F64CF06CAC}" Style="{StaticResource SectionTitle}" Margin="0,3,0,0"/>
             </StackPanel>
           </DockPanel>
-          <Grid>
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="1.2*"/>
-              <ColumnDefinition Width="1.2*"/>
-              <ColumnDefinition/>
-            </Grid.ColumnDefinitions>
+          <charts:AdaptiveColumnsPanel Columns="3">
             <StackPanel Margin="0,0,22,0">
               <TextBlock Text="{loc:Loc Key=sA1E8237E6D8CD835}" Style="{StaticResource Eyebrow}"/>
               <charts:BarChart ItemsSource="{Binding NotesByBook}" Height="150" MaxBarWidth="22" AutomationProperties.Name="{loc:Loc Key=sA1E8237E6D8CD835}"/>
@@ -363,7 +348,7 @@
               <TextBlock Text="{loc:Loc Key=s7BC86827AB5F89B2}" Style="{StaticResource Eyebrow}"/>
               <charts:BarChart ItemsSource="{Binding NotesByType}" Height="150" MaxBarWidth="18" AutomationProperties.Name="{loc:Loc Key=s75F3D889DA9C7B1E}"/>
             </StackPanel>
-          </Grid>
+          </charts:AdaptiveColumnsPanel>
         </StackPanel>
       </Border>
     </StackPanel>

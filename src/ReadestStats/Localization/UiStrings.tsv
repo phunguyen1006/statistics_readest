@@ -89,6 +89,8 @@ Partial	Một phần
 Missed	Chưa đạ
 Reading time by source	Thời gian đọc theo nguồn
 Monday	Thứ Hai
+Chart	Biểu đồ
+Use arrow keys to explore the chart.	Dùng các phím mũi tên để xem biểu đồ.
 Tuesday	Thứ Ba
 Wednesday	Thứ Tư
 Thursday	Thứ Năm
@@ -841,3 +843,12 @@ READING EVENTS ON THIS DAY	CÁC SỰ KIỆN ĐỌC TRONG NGÀY
 Review in Data Health	Xem trong Tình trạng dữ liệu
 Snoozed	Đang tạm ẩn
 Excluded from random	Loại khỏi ngẫu nhiên
+
+{0} active day	{0} ngày đọc
+{0} active days	{0} ngày đọc
+{0} session	{0} phiên
+{0} sessions	{0} phiên
+{0} activity event	{0} sự kiện hoạt động
+{0} activity events	{0} sự kiện hoạt động
+{0} book active	{0} sách được đọc
+{0} books active	{0} sách được đọc

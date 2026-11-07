@@ -1,6 +1,6 @@
-# Readest Stats 2.5 — Design System
+# Readest Stats 2.6 — Design System
 
-This file is the implementation reference for every screen. It supersedes the former blue dashboard theme.
+This file is the implementation reference for every screen. It supersedes the former blue dashboard theme and the historical `readest-stats-notes-library/MASTER.md`.
 
 ## Product character
 
@@ -19,21 +19,23 @@ This file is the implementation reference for every screen. It supersedes the fo
 | Surface | `#111111` | menus, dialogs, and raised controls |
 | SurfaceRaised | `#151515` | controls and nested regions |
 | SurfaceHover | `#1A1A1A` | hover state |
-| SurfacePressed | `#222222` | pressed/selected state |
+| SurfacePressed | `#242424` | pressed/selected state |
 | Border | `#2B2B2B` | separators |
-| BorderStrong | `#4A4A4A` | focus and strong boundaries |
+| BorderStrong | `#595959` | strong boundaries |
 | TextPrimary | `#F5F5F5` | headings and primary values |
-| TextSecondary | `#C4C4C4` | body and supporting data |
-| TextMuted | `#949494` | metadata |
-| TextDisabled | `#6B6B6B` | disabled state |
-| Primary | `#FFFFFF` | selected markers and key chart series |
+| TextSecondary | `#D0D0D0` | body and supporting data |
+| TextMuted | `#A3A3A3` | metadata |
+| TextDisabled | `#737373` | disabled state |
+| Primary | `#F5F5F5` | selected markers and key chart series |
+
+Light theme uses `#F4F4F4` background, `#FFFFFF` surface, `#111111` primary text, `#333333` secondary text, `#5F5F5F` muted text, and `#D4D4D4` borders. `ThemeManager` and dynamic resources define the complete runtime palettes.
 
 Status is never communicated by color alone. Use words and restrained arrows/check marks only in textual status values.
 
 ## Typography
 
-- Use installed Windows fonts only: Segoe UI for interface text; Cascadia Mono or Consolas for file paths and tabular technical values.
-- Scale: 11 metadata, 12 labels, 13 body, 15 navigation, 18 section values, 20 page title, 28–32 primary KPI.
+- Use installed Windows fonts only: Segoe UI Variable with Segoe UI fallback for interface text; Cascadia Mono or Consolas for file paths and tabular technical values.
+- Scale: 11 metadata, 12 labels, 13 body, 15 navigation, 18 section values, 20 page title, and 28–42 primary KPI.
 - Use semibold for hierarchy; avoid excessive uppercase except short eyebrow labels.
 - Use tabular figures in data tables where practical.
 
@@ -41,14 +43,14 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 
 - Window minimum: 640×350 logical pixels; primary QA targets remain 1366×768 and 1440×900 at normal scaling, with 125–200% Windows scaling checks. Clamp restored windows to the visible work area.
 - Sidebar: 196px, fixed, icon plus label for every destination.
-- Top bar: 72px, page context left and global period controls right.
-- Today is the default landing workspace. It surfaces the next reading action, daily rediscovery, and current priorities before deeper analytics.
+- Top bar: page context and global controls wrap to additional rows when needed.
+- Today is the default landing workspace. Its period metrics and weekly recap lead into daily rediscovery, next actions, and deeper analytics.
 - Today exposes one Next up queue; planning and recency must never appear as competing duplicate sections.
 - Ctrl+K opens one centered command palette for pages, books, notes, and sessions; the palette traps the immediate search task and closes with Escape.
 - An active physical-reading session uses a compact persistent dock below the top bar on every page; it must always expose elapsed time, pause/resume, finish, and a route back to the timer.
 - Main page gutter: 26px horizontal, 22px top, 28px bottom.
 - Use a 4/8px rhythm. Editorial sections use 18–24px vertical breathing room and thin full-width dividers.
-- Use scroll viewers for vertical overflow. Fit editorial grids to the viewport at ordinary widths; when high display scaling leaves less than 900 logical pixels for content, expose horizontal scrolling rather than clipping controls.
+- Use scroll viewers for vertical overflow. Main-page metric bands and related sections reflow at narrower widths; tables retain their own scrollbars when their columns cannot fit. Never hide controls without a reachable alternative.
 - Large lists use virtualizing WPF controls; charts aggregate before drawing.
 
 ## Components
@@ -71,7 +73,8 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 - Backup deletion is restricted to app-owned automatic archives and always requires confirmation.
 - Backup history lists only app-owned archives and exposes time, size, app version, record counts, and readability without using color alone.
 - Charts: grayscale, subtle grid lines, exact-value tooltips, explicit empty states, readable units, and a maximum bar width so sparse data never becomes a giant block.
-- Heatmaps: five quantile-derived grayscale levels plus a labeled legend; cells expose exact date/time details.
+- Heatmaps: five quantile-derived grayscale levels plus a labeled legend; cells expose exact date/time details by pointer and keyboard, including an automation description of the focused value.
+- Focusable data charts expose a visible keyboard readout and an automation description for the selected item. Long visible readouts may be ellipsized; the full description remains available to accessibility tools. Preserve explanatory help text as selection changes.
 - Goals: progress uses white/gray only and includes a textual status such as Ahead, On track, Behind, Complete, or Not enough data.
 - Visual vocabulary: matrices for relationships, timeline bands for actual sessions, dots for sparse distributions, segmented bands for composition, dumbbells for two-period comparison, staircases for session accumulation, bullets for target tracking, and lollipops/small glyphs for yearly storytelling.
 - Sparse-selection rules are deterministic: 15 or fewer sessions use individual dots; larger samples use grouped distributions; fewer than four active days withhold scatter interpretation; ranges longer than 45 days aggregate book matrices by week.
@@ -102,7 +105,7 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 
 Overview → Activity → Sessions → Manual log → Books → Notes → Goals → Statistics → Year in Reading → Settings.
 
-Manual log uses a single editorial workflow: current timer first, edition search only while adding a book, then the physical library beside recent sessions. Timer state is stated in words as well as time; page progress is shown only for user-entered physical editions, never inferred from Readest pagination.
+Statistics leads with the period summary and selected-period trend; the independently scoped monthly review follows. Manual log uses a single editorial workflow: current timer first, edition search only while adding a book, then the physical library beside recent sessions. Timer state is stated in words as well as time; page progress is shown only for user-entered physical editions, never inferred from Readest pagination.
 
 The v1.8 reading journal keeps timer truth visible: Finish closes the current active segment immediately, sleep recovery explains why the timer paused, and saved sessions can be corrected later. Historical entry and edit dialogs use persistent labels, inline validation, and an explicit primary Save action. Session notes from physical books share the same Daily/Random discovery surface as Readest notes but remain clearly labeled as Manual notes.
 

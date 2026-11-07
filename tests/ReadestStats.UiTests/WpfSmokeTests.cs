@@ -71,6 +71,11 @@ public sealed class WpfSmokeTests
             {
                 view.DataContext = viewModel;
                 Layout(view);
+                foreach (var chart in Descendants(view).OfType<ReadestStats.Controls.KeyboardChartElement>())
+                {
+                    var peer = System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(chart);
+                    Assert.False(string.IsNullOrWhiteSpace(peer?.GetName()), $"Unnamed chart in {view.GetType().Name}: {chart.GetType().Name}");
+                }
             }
             var manual = new ManualLogView { DataContext = viewModel.Manual };
             Layout(manual);
@@ -143,9 +148,242 @@ public sealed class WpfSmokeTests
             Assert.Equal("30 days", viewModel.SelectedRange);
             Assert.Equal(2, viewModel.Manual.Books.Count);
             Assert.Equal(1800, viewModel.Period!.TotalSeconds);
+            var restoreRecovery = Assert.Single(Directory.GetFiles(Path.Combine(dataRoot, "backups"), "before-restore-*.zip"));
+            var recoveryManifest = new AppDataBackupService(Path.Combine(dataRoot, "settings.json"), Path.Combine(dataRoot, "manual-reading.json")).Inspect(restoreRecovery);
+            Assert.Equal(viewModel.AppVersion, recoveryManifest.AppVersion);
+
+            _stage = "responsive overview and chart access";
+            viewModel.SelectedPage = "Today"; Layout(window, 700, 600);
+            var overview = Descendants(window).OfType<OverviewView>().Single();
+            var weeklyChart = Descendants(overview).OfType<ReadestStats.Controls.BarChart>().First();
+            Assert.True(weeklyChart.ActualWidth <= overview.ActualWidth - 40, $"Weekly chart exceeds narrow viewport: {weeklyChart.ActualWidth} / {overview.ActualWidth}");
+            var refreshButton = Descendants(window).OfType<Button>().Single(button => ReferenceEquals(button.Command, viewModel.RefreshCommand) && button.ToolTip is not null);
+            var refreshRight = refreshButton.TransformToAncestor((Visual)window.Content).Transform(new Point(refreshButton.ActualWidth, 0)).X;
+            Assert.True(refreshRight <= 700, $"Refresh action is outside the narrow window: {refreshRight}");
+            viewModel.SelectedPage = "Statistics"; Layout(window, 700, 600);
+            var statisticsView = Descendants(window).OfType<StatisticsView>().Single();
+            var trendChart = Descendants(statisticsView).OfType<ReadestStats.Controls.LineChart>().First();
+            Assert.True(trendChart.ActualWidth <= statisticsView.ActualWidth - 40, $"Trend chart exceeds narrow viewport: {trendChart.ActualWidth} / {statisticsView.ActualWidth}");
+            var yearGoalRing = Descendants(statisticsView).OfType<ReadestStats.Controls.ProgressRing>().First();
+            var yearGoalTop = yearGoalRing.TransformToAncestor((Visual)window.Content).Transform(new Point(0, 0)).Y;
+            Assert.True(yearGoalTop < 500, $"Year goal is separated from the summary by excess whitespace: {yearGoalTop}");
+            viewModel.SelectedPage = "Activity"; Layout(window, 700, 600);
+            var activityView = Descendants(window).OfType<ActivityView>().Single();
+            var activityChart = Descendants(activityView).OfType<ReadestStats.Controls.LineChart>().First();
+            Assert.True(activityChart.ActualWidth <= activityView.ActualWidth - 40, $"Activity chart exceeds narrow viewport: {activityChart.ActualWidth} / {activityView.ActualWidth}");
+            var chosenDay = viewModel.CalendarDays.First(day => day.IsInMonth && day.Date != viewModel.SelectedDate);
+            viewModel.SelectDayCommand.Execute(chosenDay); Layout(window, 700, 600);
+            var chosenDayButton = Descendants(activityView).OfType<Button>().Single(button => ReferenceEquals(button.CommandParameter, chosenDay));
+            Assert.Contains(Descendants(chosenDayButton).OfType<System.Windows.Shapes.Ellipse>(), marker => marker.Visibility == Visibility.Visible);
+            viewModel.TodayCommand.Execute(null);
+
+            viewModel.SelectedPage = "Books"; viewModel.BookFilter = "All"; Layout(window, 1180, 760);
+            var booksView = Descendants(window).OfType<BooksView>().Single();
+            var detailsScroll = Descendants(booksView).OfType<ScrollViewer>().First(scroll => Descendants(scroll).OfType<Button>().Any(button => ReferenceEquals(button.Command, viewModel.OpenBookInReadestCommand)));
+            Assert.True(detailsScroll.ExtentWidth <= detailsScroll.ViewportWidth + 1, $"Book detail actions require horizontal scrolling: {detailsScroll.ExtentWidth} / {detailsScroll.ViewportWidth}");
+            viewModel.SelectedPage = "Manual log"; Layout(window, 700, 600);
+            var manualView = Descendants(window).OfType<ManualLogView>().Single();
+            var startTimer = Descendants(manualView).OfType<Button>().Single(button => ReferenceEquals(button.Command, viewModel.Manual.StartSessionCommand));
+            var startRight = startTimer.TransformToAncestor((Visual)window.Content).Transform(new Point(startTimer.ActualWidth, 0)).X;
+            Assert.True(startRight <= 700, $"Timer action is outside the narrow window: {startRight}");
+            Layout(window, 900, 600);
+            var elapsedTimer = Descendants(manualView).OfType<TextBlock>().Single(block =>
+                System.Windows.Data.BindingOperations.GetBindingExpression(block, TextBlock.TextProperty)?.ParentBinding.Path.Path == "ElapsedLabel");
+            elapsedTimer.SetCurrentValue(TextBlock.TextProperty, "12:34:56");
+            Layout(window, 900, 600);
+            Assert.Equal("12:34:56", elapsedTimer.Text);
+            var timerText = new FormattedText(elapsedTimer.Text, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface(elapsedTimer.FontFamily, elapsedTimer.FontStyle, elapsedTimer.FontWeight, elapsedTimer.FontStretch),
+                elapsedTimer.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(elapsedTimer).PixelsPerDip);
+            var timerColumn = (FrameworkElement)VisualTreeHelper.GetParent(elapsedTimer);
+            Assert.True(timerColumn.ActualWidth >= timerText.WidthIncludingTrailingWhitespace,
+                $"The elapsed timer is clipped at medium width: {timerColumn.ActualWidth} / {timerText.WidthIncludingTrailingWhitespace}");
+            Layout(window, 1050, 600);
+            Assert.True(timerColumn.ActualWidth >= timerText.WidthIncludingTrailingWhitespace,
+                $"The elapsed timer is clipped near the wide-layout breakpoint: {timerColumn.ActualWidth} / {timerText.WidthIncludingTrailingWhitespace}");
+            System.Windows.Data.BindingOperations.GetBindingExpression(elapsedTimer, TextBlock.TextProperty)?.UpdateTarget();
+            viewModel.SelectedPage = "Notes"; Layout(window, 700, 600);
+            var notesView = Descendants(window).OfType<NotesView>().Single();
+            var randomNoteButton = Descendants(notesView).OfType<Button>().First(button => ReferenceEquals(button.Command, viewModel.RandomNoteCommand));
+            var randomRight = randomNoteButton.TransformToAncestor((Visual)window.Content).Transform(new Point(randomNoteButton.ActualWidth, 0)).X;
+            Assert.True(randomRight <= 700, $"Random-note action is outside the narrow window: {randomRight}");
+            viewModel.SelectedPage = "Goals"; Layout(window, 700, 600);
+            var goalsView = Descendants(window).OfType<GoalsView>().Single();
+            var saveGoals = Descendants(goalsView).OfType<Button>().Single(button => ReferenceEquals(button.Command, viewModel.SaveGoalsCommand));
+            var saveGoalsRight = saveGoals.TransformToAncestor((Visual)window.Content).Transform(new Point(saveGoals.ActualWidth, 0)).X;
+            Assert.True(saveGoalsRight <= 700, $"Save goals is outside the narrow window: {saveGoalsRight}");
+            viewModel.SelectedPage = "Year in Reading"; Layout(window, 700, 600);
+            var yearView = Descendants(window).OfType<YearView>().Single();
+            var nextYear = Descendants(yearView).OfType<Button>().Single(button => ReferenceEquals(button.Command, viewModel.NextYearCommand));
+            var nextYearRight = nextYear.TransformToAncestor((Visual)window.Content).Transform(new Point(nextYear.ActualWidth, 0)).X;
+            Assert.True(nextYearRight <= 700, $"Year navigation is outside the narrow window: {nextYearRight}");
+            viewModel.SelectedPage = "Sessions"; Layout(window, 700, 600);
+            var sessionsView = Descendants(window).OfType<SessionsView>().Single();
+            var sessionMetric = Descendants(sessionsView).OfType<ReadestStats.Controls.StatCard>().First();
+            Assert.True(sessionMetric.ActualWidth >= 120, $"Session metrics are too narrow: {sessionMetric.ActualWidth}");
+            Layout(window, 820, 600);
+            Assert.True(sessionMetric.ActualWidth >= 145, $"Session metrics are too narrow at medium width: {sessionMetric.ActualWidth}");
+            Layout(window, 700, 600);
+            var sessionsTable = Descendants(sessionsView).OfType<DataGrid>().Single();
+            Assert.True(sessionsTable.ActualWidth >= 350 && sessionsTable.ActualHeight >= 80, $"Session table is cramped: {sessionsTable.ActualWidth} × {sessionsTable.ActualHeight}");
+            Assert.True(sessionsTable.ActualHeight <= 160, $"A short session list leaves too much empty space: {sessionsTable.ActualHeight}");
+            Assert.True(sessionsTable.Columns[3].ActualWidth >= 120, $"Book column is unreadably narrow: {sessionsTable.Columns[3].ActualWidth}");
+            Layout(window, 1180, 760);
+            Assert.True(sessionsTable.ActualWidth >= 650, $"Session table is too narrow on desktop: {sessionsTable.ActualWidth}");
+            var originalSessions = viewModel.Sessions.ToArray();
+            var sessionItems = Assert.IsType<RangeObservableCollection<SessionDisplay>>(viewModel.Sessions);
+            sessionItems.ReplaceRange(Enumerable.Repeat(originalSessions[0], 2000));
+            Layout(window, 1180, 760);
+            Assert.True(sessionsTable.ActualHeight <= 320, $"Session table exceeds its height limit: {sessionsTable.ActualHeight}");
+            Assert.InRange(Descendants(sessionsTable).OfType<DataGridRow>().Count(), 1, 99);
+            sessionItems.ReplaceRange(originalSessions);
+            Layout(window, 1180, 760);
+            var sessionTableScroll = Descendants(sessionsTable).OfType<ScrollViewer>().First();
+            Assert.True(sessionTableScroll.ExtentWidth <= sessionTableScroll.ViewportWidth + 1,
+                $"Session columns overflow the desktop table: {sessionTableScroll.ExtentWidth} / {sessionTableScroll.ViewportWidth}");
+            viewModel.SelectedPage = "Books"; Layout(window, 700, 600);
+            var narrowBooks = Descendants(window).OfType<BooksView>().Single();
+            var bookDetails = Descendants(narrowBooks).OfType<ScrollViewer>().First(scroll => Descendants(scroll).OfType<Button>().Any(button => ReferenceEquals(button.Command, viewModel.OpenBookInReadestCommand)));
+            Assert.True(bookDetails.ViewportWidth >= 300, $"Book detail pane is too narrow: {bookDetails.ViewportWidth}");
+            viewModel.SelectedPage = "Settings"; Layout(window, 700, 600);
+            var settingsView = Descendants(window).OfType<SettingsView>().Single();
+            var languagePicker = Descendants(settingsView).OfType<ComboBox>().Single(combo => ReferenceEquals(combo.ItemsSource, viewModel.LanguageOptions));
+            var languageRight = languagePicker.TransformToAncestor((Visual)window.Content).Transform(new Point(languagePicker.ActualWidth, 0)).X;
+            Assert.True(languageRight <= 700, $"Language selector is outside the narrow window: {languageRight}");
+            var metricInvoked = false;
+            var accessibleMetric = new ReadestStats.Controls.StatCard { Label = "Reading time", Value = "1h 30m", Detail = "This week", Command = new RelayCommand(() => metricInvoked = true) };
+            var metricPeer = System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(accessibleMetric);
+            Assert.NotNull(metricPeer);
+            Assert.Equal(System.Windows.Automation.Peers.AutomationControlType.Button, metricPeer.GetAutomationControlType());
+            Assert.Contains("Reading time", metricPeer.GetName());
+            Assert.Contains("1h 30m", metricPeer.GetName());
+            var metricInvoke = Assert.IsAssignableFrom<System.Windows.Automation.Provider.IInvokeProvider>(metricPeer.GetPattern(System.Windows.Automation.Peers.PatternInterface.Invoke));
+            metricInvoke.Invoke();
+            Assert.True(metricInvoked);
+            foreach (var emptyChart in new FrameworkElement[] { new ReadestStats.Controls.BarChart(), new ReadestStats.Controls.LineChart() })
+            {
+                emptyChart.RaiseEvent(new System.Windows.Input.KeyboardFocusChangedEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, 0, null, emptyChart)
+                    { RoutedEvent = System.Windows.Input.Keyboard.GotKeyboardFocusEvent });
+                Layout(emptyChart, 400, 190);
+                new RenderTargetBitmap(400, 190, 96, 96, PixelFormats.Pbgra32).Render(emptyChart);
+                Assert.Contains(VisualTreeHelper.GetDrawing(emptyChart).Children.OfType<GeometryDrawing>(), drawing => drawing.Pen is not null);
+            }
+            var accessibleMatrix = new ReadestStats.Controls.MatrixChart
+            {
+                ItemsSource = new[] { new MatrixCell("Mon", "09", 0, 0, 12, 1, "Monday 09:00, 12 minutes"), new MatrixCell("Mon", "10", 0, 1, 4, 1, "Monday 10:00, 4 minutes") }
+            };
+            System.Windows.Automation.AutomationProperties.SetName(accessibleMatrix, "Reading matrix");
+            System.Windows.Automation.AutomationProperties.SetHelpText(accessibleMatrix, "Use arrow keys to explore");
+            var matrixPeer = System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(accessibleMatrix);
+            Assert.NotNull(matrixPeer);
+            Assert.Equal("Reading matrix", matrixPeer.GetName());
+            var matrixValue = Assert.IsAssignableFrom<System.Windows.Automation.Provider.IValueProvider>(
+                matrixPeer.GetPattern(System.Windows.Automation.Peers.PatternInterface.Value));
+            Assert.True(matrixValue.IsReadOnly);
+            accessibleMatrix.RaiseEvent(new System.Windows.Input.KeyboardFocusChangedEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, 0, null, accessibleMatrix)
+                { RoutedEvent = System.Windows.Input.Keyboard.GotKeyboardFocusEvent });
+            Assert.Contains("Monday 09:00", System.Windows.Automation.AutomationProperties.GetHelpText(accessibleMatrix));
+            Assert.Contains("Monday 09:00", matrixPeer.GetHelpText());
+            Assert.Contains("Monday 09:00", matrixValue.Value);
+            using (var keySource = new System.Windows.Interop.HwndSource(new System.Windows.Interop.HwndSourceParameters("chart-key-test") { Width = 1, Height = 1 }))
+            {
+                var rightKey = new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, keySource, 0, System.Windows.Input.Key.Right)
+                    { RoutedEvent = System.Windows.Input.Keyboard.KeyDownEvent };
+                accessibleMatrix.RaiseEvent(rightKey);
+                Assert.True(rightKey.Handled);
+                Assert.Contains("Monday 10:00", System.Windows.Automation.AutomationProperties.GetHelpText(accessibleMatrix));
+                Assert.Contains("Monday 10:00", matrixValue.Value);
+                Layout(accessibleMatrix, 400, 190);
+                new RenderTargetBitmap(400, 190, 96, 96, PixelFormats.Pbgra32).Render(accessibleMatrix);
+                var readout = Enumerable.Range(0, VisualTreeHelper.GetChildrenCount(accessibleMatrix))
+                    .Select(index => VisualTreeHelper.GetChild(accessibleMatrix, index)).OfType<DrawingVisual>().SingleOrDefault();
+                Assert.NotNull(readout);
+                var visibleText = string.Concat(GlyphRuns(readout.Drawing).Select(drawing => new string(drawing.GlyphRun.Characters.ToArray())));
+                Assert.Contains("Monday 10:00", visibleText);
+                if (Environment.GetEnvironmentVariable("READEST_QA_OUTPUT") is { Length: > 0 } chartOutput)
+                {
+                    Directory.CreateDirectory(chartOutput);
+                    Render(accessibleMatrix, Path.Combine(chartOutput, "keyboard-matrix-readout.png"));
+                }
+                accessibleMatrix.ItemsSource = Array.Empty<MatrixCell>();
+                Assert.Equal("Use arrow keys to explore", System.Windows.Automation.AutomationProperties.GetHelpText(accessibleMatrix));
+                Assert.Null(accessibleMatrix.ToolTip);
+                Assert.Equal("", matrixValue.Value);
+            }
+            var accessibleClock = new ReadestStats.Controls.RadialClockChart { ItemsSource = new[] { new ChartPoint("09:00", 12, "12 minutes", "min") } };
+            accessibleClock.RaiseEvent(new System.Windows.Input.KeyboardFocusChangedEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, 0, null, accessibleClock)
+                { RoutedEvent = System.Windows.Input.Keyboard.GotKeyboardFocusEvent });
+            Assert.Contains("09:00", System.Windows.Automation.AutomationProperties.GetHelpText(accessibleClock));
+            var accessibleStreak = new ReadestStats.Controls.StreakStripChart { ItemsSource = new[] { new ChartPoint("Nov 5", 1, "30 minutes") } };
+            accessibleStreak.RaiseEvent(new System.Windows.Input.KeyboardFocusChangedEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, 0, null, accessibleStreak)
+                { RoutedEvent = System.Windows.Input.Keyboard.GotKeyboardFocusEvent });
+            Assert.Contains("Nov 5", System.Windows.Automation.AutomationProperties.GetHelpText(accessibleStreak));
+            var accessibleHeatmap = new ReadestStats.Controls.HeatmapChart
+            {
+                ItemsSource = [new ChartPoint("2026-01-01", 12, "January 1: 12 minutes", "min"), new ChartPoint("2026-01-02", 4, "January 2: 4 minutes", "min")]
+            };
+            System.Windows.Automation.AutomationProperties.SetHelpText(accessibleHeatmap, "Use arrow keys to explore");
+            var focusEvent = new System.Windows.Input.KeyboardFocusChangedEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, 0, null, accessibleHeatmap)
+                { RoutedEvent = System.Windows.Input.Keyboard.GotKeyboardFocusEvent };
+            accessibleHeatmap.RaiseEvent(focusEvent);
+            Assert.Contains("12 minutes", System.Windows.Automation.AutomationProperties.GetHelpText(accessibleHeatmap));
+            Assert.Contains("Use arrow keys", System.Windows.Automation.AutomationProperties.GetHelpText(accessibleHeatmap));
+            Layout(accessibleHeatmap, 400, 190);
+            new RenderTargetBitmap(400, 190, 96, 96, PixelFormats.Pbgra32).Render(accessibleHeatmap);
+            var heatmapReadout = Enumerable.Range(0, VisualTreeHelper.GetChildrenCount(accessibleHeatmap))
+                .Select(index => VisualTreeHelper.GetChild(accessibleHeatmap, index)).OfType<DrawingVisual>().Single();
+            Assert.Contains("12 minutes", string.Concat(GlyphRuns(heatmapReadout.Drawing).Select(drawing => new string(drawing.GlyphRun.Characters.ToArray()))));
+            typeof(ReadestStats.Controls.HeatmapChart).GetMethod("ActivateAt", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(accessibleHeatmap, [new Point(37, 86)]);
+            Assert.Contains("January 2", System.Windows.Automation.AutomationProperties.GetHelpText(accessibleHeatmap));
+            foreach (var chart in new FrameworkElement[]
+            {
+                new ReadestStats.Controls.BarChart { ItemsSource = new[] { new ChartPoint("Mon", 12, "12 minutes") } },
+                new ReadestStats.Controls.LineChart { ItemsSource = new[] { new ChartPoint("Mon", 12, "12 minutes") } }
+            })
+            {
+                System.Windows.Automation.AutomationProperties.SetHelpText(chart, "Use arrow keys to explore");
+                chart.RaiseEvent(new System.Windows.Input.KeyboardFocusChangedEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, 0, null, chart)
+                    { RoutedEvent = System.Windows.Input.Keyboard.GotKeyboardFocusEvent });
+                Assert.Contains("Use arrow keys", System.Windows.Automation.AutomationProperties.GetHelpText(chart));
+                Assert.Contains("12 minutes", System.Windows.Automation.AutomationProperties.GetHelpText(chart));
+                Layout(chart, 400, 190);
+                new RenderTargetBitmap(400, 190, 96, 96, PixelFormats.Pbgra32).Render(chart);
+                var keyboardVisual = Enumerable.Range(0, VisualTreeHelper.GetChildrenCount(chart))
+                    .Select(index => VisualTreeHelper.GetChild(chart, index)).OfType<DrawingVisual>().SingleOrDefault();
+                Assert.NotNull(keyboardVisual);
+                Assert.Contains("12 minutes", string.Concat(GlyphRuns(keyboardVisual.Drawing).Select(drawing => new string(drawing.GlyphRun.Characters.ToArray()))));
+                var updated = new[] { new ChartPoint("Tue", 4, "4 minutes") };
+                if (chart is ReadestStats.Controls.BarChart bar) bar.ItemsSource = updated;
+                if (chart is ReadestStats.Controls.LineChart line) line.ItemsSource = updated;
+                Assert.Contains("4 minutes", System.Windows.Automation.AutomationProperties.GetHelpText(chart));
+            }
+            accessibleHeatmap.ItemsSource = [new ChartPoint("2026-01-02", 0, "No activity", "min")];
+            accessibleHeatmap.RaiseEvent(new System.Windows.Input.KeyboardFocusChangedEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, 0, null, accessibleHeatmap)
+                { RoutedEvent = System.Windows.Input.Keyboard.GotKeyboardFocusEvent });
+            Assert.Contains("2026-01-02", System.Windows.Automation.AutomationProperties.GetHelpText(accessibleHeatmap));
+
+            Localizer.Instance.SetLanguage("Tiếng Việt");
+            var vietnameseMatrix = new ReadestStats.Controls.MatrixChart
+            {
+                ItemsSource = new[] { new MatrixCell("Mon", "09", 0, 0, 12, 2, "Monday · 09:00–10:00\n12m · 2 sessions") }
+            };
+            vietnameseMatrix.RaiseEvent(new System.Windows.Input.KeyboardFocusChangedEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, 0, null, vietnameseMatrix)
+                { RoutedEvent = System.Windows.Input.Keyboard.GotKeyboardFocusEvent });
+            var localizedDetail = System.Windows.Automation.AutomationProperties.GetHelpText(vietnameseMatrix);
+            Assert.Contains("Thứ Hai", localizedDetail);
+            Assert.Contains("2 phiên", localizedDetail);
+            vietnameseMatrix.ItemsSource = new[] { new MatrixCell("Monday", "Nov 5", 0, 0, 12, 2, "Monday\nNov 5 · 12m · 2 activity events") };
+            localizedDetail = System.Windows.Automation.AutomationProperties.GetHelpText(vietnameseMatrix);
+            Assert.StartsWith("Monday\n", localizedDetail);
+            Assert.Contains("2 sự kiện", localizedDetail);
+            Localizer.Instance.SetLanguage("English");
 
             _stage = "localization";
             viewModel.Language = "Tiếng Việt";
+            viewModel.SelectedPage = "Activity";
+            Assert.Contains("ngày đọc", viewModel.MonthSummary);
+            Assert.Contains("phiên", viewModel.MonthSummary);
             Assert.Equal("Lưu sách", Localizer.Instance.Translate("Save book"));
             Assert.Equal("Trang kết thúc không được vượt quá 574.", Localizer.Instance.Translate("End page cannot exceed 574."));
             Assert.Equal("Ghi chú giữ nguyên", Localizer.Instance.Translate("Ghi chú giữ nguyên"));
@@ -160,9 +398,49 @@ public sealed class WpfSmokeTests
                 viewModel.SelectedPage = "Statistics"; Layout(window); Render(window, Path.Combine(output, "statistics-vi-light.png"));
                 viewModel.SelectedPage = "Today"; Layout(window); Render(window, Path.Combine(output, "today-vi-light.png"));
                 Layout(window, 700, 450); Render(window, Path.Combine(output, "today-vi-scaled.png"));
+                viewModel.SelectedPage = "Statistics"; Layout(window, 700, 450); Render(window, Path.Combine(output, "statistics-vi-scaled.png"));
+                viewModel.SelectedPage = "Activity"; Layout(window, 700, 450); Render(window, Path.Combine(output, "activity-vi-scaled.png"));
                 viewModel.SelectedPage = "Settings"; Layout(window, 700, 450); Render(window, Path.Combine(output, "settings-vi-scaled.png"));
                 viewModel.SelectedPage = "Statistics"; Layout(window);
                 ThemeManager.Apply("Dark"); Layout(window); Render(window, Path.Combine(output, "statistics-vi-dark.png"));
+                viewModel.Language = "English";
+                foreach (var theme in new[] { "Light", "Dark" })
+                {
+                    ThemeManager.Apply(theme);
+                    foreach (var page in viewModel.Pages)
+                    {
+                        viewModel.SelectedPage = page; Layout(window, 1180, 760);
+                        if (page == "Sessions")
+                        {
+                            var table = Descendants(window).OfType<DataGrid>().First(grid => ReferenceEquals(grid.ItemsSource, viewModel.Sessions));
+                            Assert.True(table.Columns.Sum(column => column.ActualWidth) <= table.ActualWidth + 1,
+                                $"Session columns overflow after navigation: {table.Columns.Sum(column => column.ActualWidth)} / {table.ActualWidth}");
+                        }
+                        Render(window, Path.Combine(output, $"screen-{page.Replace(" ", "-").ToLowerInvariant()}-{theme.ToLowerInvariant()}.png"));
+                    }
+                }
+                if (Environment.GetEnvironmentVariable("READEST_QA_COMPACT") == "1")
+                {
+                    ThemeManager.Apply("Light");
+                    foreach (var page in viewModel.Pages)
+                    {
+                        viewModel.SelectedPage = page; Layout(window, 700, 600);
+                        Render(window, Path.Combine(output, $"compact-{page.Replace(" ", "-").ToLowerInvariant()}.png"));
+                    }
+                }
+                ThemeManager.Apply("Light"); viewModel.SelectedPage = "Statistics";
+                foreach (var (width, height) in new[] { (640, 350), (800, 600), (1180, 760), (1366, 768), (1440, 900), (1920, 1080) })
+                {
+                    Layout(window, width, height);
+                    Render(window, Path.Combine(output, $"statistics-{width}x{height}.png"));
+                }
+                if (Environment.GetEnvironmentVariable("READEST_QA_DPI") == "1")
+                {
+                    viewModel.SelectedPage = "Statistics"; Layout(window, 1180, 760);
+                    foreach (var scale in new[] { 1.0, 1.25, 1.5, 2.0 })
+                        RenderAtScale(window, Path.Combine(output, $"statistics-scale-{scale:0.00}.png"), scale);
+                }
+                viewModel.Language = "Tiếng Việt";
             }
             _stage = "virtualization";
             viewModel.Language = "English"; Assert.Equal("Save book", Localizer.Instance.Translate("Save book"));
@@ -183,6 +461,9 @@ public sealed class WpfSmokeTests
             }
             SqliteConnection.ClearAllPools();
             var databaseHash = SHA256.HashData(await File.ReadAllBytesAsync(databasePath));
+            // This section verifies explicit refreshes. Disable the file watcher so a
+            // simultaneous debounced refresh cannot make an awaited refresh return early.
+            viewModel.RefreshMode = "Manual";
             await InvokeAsync(viewModel, "ConnectAsync", databasePath);
             Assert.True(viewModel.IsConnected);
             viewModel.SelectedSource = "All sources"; viewModel.SelectedRange = "30 days";
@@ -757,6 +1038,14 @@ public sealed class WpfSmokeTests
         .Single(candidate => candidate.Name == method && candidate.GetParameters().Length == args.Length)
         .Invoke(target, args)!;
 
+    private static IEnumerable<GlyphRunDrawing> GlyphRuns(Drawing drawing)
+    {
+        if (drawing is GlyphRunDrawing glyph) yield return glyph;
+        if (drawing is DrawingGroup group)
+            foreach (var child in group.Children)
+                foreach (var nested in GlyphRuns(child)) yield return nested;
+    }
+
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {
         if (root is Window window) root = (DependencyObject)window.Content;
@@ -771,6 +1060,14 @@ public sealed class WpfSmokeTests
     {
         if (element is Window window) element = (FrameworkElement)window.Content;
         var bitmap = new RenderTargetBitmap((int)element.ActualWidth, (int)element.ActualHeight, 96, 96, PixelFormats.Pbgra32); bitmap.Render(element);
+        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using var file = File.Create(path); encoder.Save(file);
+    }
+
+    private static void RenderAtScale(FrameworkElement element, string path, double scale)
+    {
+        if (element is Window window) element = (FrameworkElement)window.Content;
+        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(element.ActualWidth * scale), (int)Math.Ceiling(element.ActualHeight * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
+        bitmap.Render(element);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using var file = File.Create(path); encoder.Save(file);
     }
 

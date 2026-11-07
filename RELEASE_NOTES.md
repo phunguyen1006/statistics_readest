@@ -1,3 +1,15 @@
+# Readest Stats v2.6.0
+
+Version 2.6.0 refines reading analytics with a quieter monochrome interface, responsive native layouts, and more accessible chart exploration.
+
+- Today puts period metrics and the weekly recap first; Statistics places the selected-period trend after the reading summary and keeps the monthly review independently scoped.
+- The header and main pages adapt to narrower windows. Book details, manual reading, goals and session lists reflow while large lists remain virtualized.
+- Focused charts show selected values on screen and expose their labels and values through Windows UI Automation. The Activity calendar marks the selected date; matrix labels are spaced to reduce collisions.
+- Activity month summaries follow the selected language. Existing reading, notes, goals, backup, export and theme workflows remain in place, and the Readest database remains read-only.
+- Restore safety backups record the running application version.
+
+---
+
 # Readest Stats v2.5.0
 
 Version 2.5.0 focuses on dependable rediscovery, a recoverable physical-reading workflow and transparent data sharing.

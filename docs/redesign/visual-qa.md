@@ -1,0 +1,15 @@
+# Visual QA and verification
+
+All fixtures used for tests and renders were synthetic. The baseline was commit 60e3dfaebaf29fbd00f0713e252f1d335904bb1e.
+
+The final WPF render run captured the first viewport of all ten main pages in light and dark at 1180 × 760 logical pixels, all ten in light at 700 × 600, Vietnamese views at 700 × 450, Statistics at 640 × 350, 800 × 600, 1180 × 760, 1366 × 768, 1440 × 900 and 1920 × 1080, plus selected note-reader, session-editor, backup-preview and export-option states. Statistics was also rendered to bitmaps at simulated 100%, 125%, 150% and 200% scales. The images are in artifacts/qa-monochrome-redesign-final-20261106/screenshots/.
+
+I visually inspected the first viewport of all ten main pages in both themes; the restore preview and dark focused reader; compact pages; several Statistics sizes; the 125% and 200% simulated renders; and the keyboard matrix readout. Compact Statistics and Sessions were inspected again after removing excess whitespace. RenderTargetBitmap images are not desktop screenshots and simulated bitmap scaling does not change the actual Windows DPI setting.
+
+An isolated native WPF preview was previously launched with synthetic data and its Statistics controls and values were observed through the Windows accessibility tree. The desktop capture returned the foreground browser instead of the preview. The final packaged executable was also started with a temporary, isolated application-data profile and a synthetic Readest database; its log confirmed that the main window appeared, one fixture event loaded and initialization completed. The fixture database hash was unchanged after startup. Real personal data was not used for these checks.
+
+The final Release solution run passed 310 core tests and one WPF smoke test. The WPF test exercises page layout, keyboard value descriptions and visible readouts, localization, navigation, synthetic storage workflows, list virtualization and a synthetic Readest database hash check. A 2,000-row session fixture verifies that the bounded table keeps virtualization, and a desktop layout check verifies that its columns fit after navigation. The explicit-refresh part disables the file watcher to avoid a debounce race; it does not independently validate every watcher scenario. A separate final render run also passed.
+
+Independent review identified missing chart and metric-card automation peers, intermediate-width clipping, stale heatmap selection, empty-chart focus visibility and a Vietnamese matrix-label gap; fixes have regression coverage. A live Windows UI Automation inspection confirmed chart names, values and arrow-key updates. Narrator and Windows Settings did not expose usable windows in this environment, so Narrator speech and real DPI changes remain unverified. Hands-on review of every dialog and lower scroll position also remains outstanding. Narrow tables may require their own horizontal scrollbar.
+
+The earlier preview used equivalent self-contained win-x64 publish settings in a separate QA folder to preserve prior artifacts.

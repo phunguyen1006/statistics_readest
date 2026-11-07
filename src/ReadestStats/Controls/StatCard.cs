@@ -1,4 +1,7 @@
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -21,6 +24,8 @@ public sealed class StatCard : Control
     public ICommand? Command { get => (ICommand?)GetValue(CommandProperty); set => SetValue(CommandProperty, value); }
     public object? CommandParameter { get => GetValue(CommandParameterProperty); set => SetValue(CommandParameterProperty, value); }
     public bool IsInteractive => (bool)GetValue(IsInteractiveProperty);
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new StatCardAutomationPeer(this);
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
@@ -45,5 +50,35 @@ public sealed class StatCard : Control
         var interactive = args.NewValue is ICommand;
         card.SetValue(IsInteractivePropertyKey, interactive);
         card.Focusable = interactive;
+    }
+
+    private sealed class StatCardAutomationPeer(StatCard owner) : FrameworkElementAutomationPeer(owner), IInvokeProvider
+    {
+        protected override string GetClassNameCore() => nameof(StatCard);
+        protected override AutomationControlType GetAutomationControlTypeCore() => ((StatCard)Owner).IsInteractive ? AutomationControlType.Button : AutomationControlType.Text;
+        protected override string GetNameCore()
+        {
+            var card = (StatCard)Owner;
+            var suppliedName = AutomationProperties.GetName(card);
+            return !string.IsNullOrWhiteSpace(suppliedName) ? suppliedName :
+                string.Join(". ", new[] { card.Label, card.Value, card.Detail }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        }
+        protected override string GetHelpTextCore()
+        {
+            var help = base.GetHelpTextCore();
+            return string.IsNullOrWhiteSpace(help) ? ((StatCard)Owner).Help ?? "" : help;
+        }
+        public override object? GetPattern(PatternInterface patternInterface) =>
+            patternInterface == PatternInterface.Invoke && ((StatCard)Owner).IsInteractive ? this : base.GetPattern(patternInterface);
+        public void Invoke()
+        {
+            var card = (StatCard)Owner;
+            card.Dispatcher.Invoke(() =>
+            {
+                if (!card.IsEnabled || !card.IsInteractive || card.Command?.CanExecute(card.CommandParameter) != true)
+                    throw new ElementNotEnabledException();
+                card.Command.Execute(card.CommandParameter);
+            });
+        }
     }
 }

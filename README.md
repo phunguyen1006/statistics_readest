@@ -1,10 +1,10 @@
-# Readest Stats 2.5.0
+# Readest Stats 2.6.0
 
-![Version](https://img.shields.io/badge/version-2.5.0-black)
+![Version](https://img.shields.io/badge/version-2.6.0-black)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-555555)](https://github.com/phunguyen1006/statistics_readest/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-Readest Stats is an independent native Windows desktop companion for digital and physical reading. Version 2.5.0 adds dependable no-repeat note rediscovery, recoverable physical-session drafts and optional focus targets, a searchable full journal, backup restore previews, privacy-controlled exports, and a source-aware monthly review—all without modifying Readest.
+Readest Stats is an independent native Windows desktop companion for digital and physical reading. Version 2.6.0 refines its monochrome reading analytics, adapts the main screens to narrower windows, and improves keyboard and assistive-technology access to chart values—all without modifying Readest.
 
 The Statistics reading story combines a keyboard-accessible 365-day heatmap, a 30-day streak strip, a 24-hour reading clock, weekday rhythm, line-based selected-period and 12-month journeys, cumulative reading, direct period comparison, goal progress, session distribution, ranked reading-time bars, and personal records. Every chart is computed from observed event duration and local timestamps; unsupported genre, rating, word-count, and reading-speed dimensions are not guessed.
 
@@ -13,6 +13,13 @@ Other features include one-click opening of a selected local book in Readest, a 
 Manual books, timer segments, page ranges, session notes, and completed sessions are saved transactionally in `%LOCALAPPDATA%\\ReadestStats\\readest-stats.db`. A human-readable `manual-reading.json` recovery mirror and complete ZIP backups are retained. Existing v1.x JSON data migrates automatically on first launch. If a manual interval overlaps an imported Readest interval, the Readest interval wins in the combined view so reading time is not counted twice.
 
 The Notes tab combines highlights and annotations from Readest's per-book config.json files with notes written after physical-book sessions. Random and same-book actions use the same eligibility-aware shuffle engine: excluded, hidden and snoozed notes stay out, and a pool is exhausted before a new cycle. The selected pool, current note, pending cycle and bounded history survive restart; Back/history navigation does not mark a note newly seen. Personal curation is stored separately in `%LOCALAPPDATA%\\ReadestStats\\settings.json`.
+
+## New in 2.6.0
+
+- **Clearer reading story:** Today leads with period metrics and a weekly recap; Statistics brings the selected-period trend closer to the summary while the monthly review retains its own month selection.
+- **Adaptive native layout:** the header and main sections reflow at smaller window sizes. Book details and session tables remain usable with bounded scrolling and virtualized lists.
+- **Accessible charts:** focused visualizations provide a visible selected-value readout and expose their values to Windows UI Automation. The calendar marks the selected day, and matrix labels avoid crowding.
+- **Localized summaries:** the Activity month summary follows the selected language. Existing light, dark, and system themes and reading workflows remain available.
 
 ## New in 2.5.0
 
@@ -26,6 +33,12 @@ The Notes tab combines highlights and annotations from Readest's per-book config
 - **Storage clarity:** Settings separates Readest refresh/last failed attempt, authoritative SQLite saves, recovery-mirror warnings/retry and verified automatic-backup status. Offline refresh keeps the last good data.
 
 ## Screenshots
+
+### v2.6.0 — monochrome analytics
+
+| Statistics — dark mode | Statistics — compact light mode |
+| --- | --- |
+| ![Statistics in dark mode](docs/screenshots/statistics-v2.6-dark.png) | ![Statistics in a narrow window](docs/screenshots/statistics-v2.6-compact.png) |
 
 ### v2.5.0 — monthly review, physical journal and focused notes
 
@@ -84,6 +97,8 @@ artifacts\v2.4.0\ReadestStats-v2.4.0.exe
 artifacts\v2.4.0\ReadestStats-v2.4.0-win-x64.zip
 artifacts\v2.5.0\ReadestStats-v2.5.0.exe
 artifacts\v2.5.0\ReadestStats-v2.5.0-win-x64.zip
+artifacts\v2.6.0\ReadestStats-v2.6.0.exe
+artifacts\v2.6.0\ReadestStats-v2.6.0-win-x64.zip
 ```
 
 ## Data safety

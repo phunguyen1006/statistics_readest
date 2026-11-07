@@ -12,8 +12,32 @@ public sealed class PageWidthConverter : IValueConverter
 {
     // Keep editorial grids fluid at normal sizes; scroll rather than clip at high DPI.
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        Math.Max(900, (value is double width && double.IsFinite(width) ? width : 0) - 52);
+        Math.Max(parameter as string == "Responsive" ? 320 : 900, (value is double width && double.IsFinite(width) ? width : 0) - 52);
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+public sealed class AdaptiveColumnsConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var width = value is double actual && double.IsFinite(actual) ? Math.Max(0, actual) : 0;
+        var kind = parameter as string;
+        if (kind is "Four" or "Five" or "Six")
+        {
+            var desired = kind switch { "Four" => 4, "Five" => 5, _ => 6 };
+            return Math.Clamp((int)(Math.Max(0, width - 52) / 160), 1, desired);
+        }
+        return width < 620 ? kind == "Metrics" ? 2 : 1 : kind == "Two" ? 2 : 3;
+    }
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+public sealed class SameDateConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture) =>
+        values.Length >= 2 && values[0] is DateOnly first && values[1] is DateOnly second && first == second;
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) =>
+        targetTypes.Select(_ => Binding.DoNothing).ToArray();
 }
 
 public sealed class DurationConverter : IValueConverter

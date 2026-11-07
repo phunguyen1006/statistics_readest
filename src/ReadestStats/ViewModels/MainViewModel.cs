@@ -1068,7 +1068,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var monthStart = new DateOnly(Month.Year, Month.Month, 1); var gridStart = monthStart.AddDays(-((_settings.WeekStartsMonday ? (int)monthStart.DayOfWeek + 6 : (int)monthStart.DayOfWeek) % 7)); Replace(WeekdayHeaders, _settings.WeekStartsMonday ? new[] { "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN" } : new[] { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" }); var daily = _allDaily.ToDictionary(d => d.Date); var max = daily.Where(x => x.Key.Year == Month.Year && x.Key.Month == Month.Month).Select(x => x.Value.Seconds).DefaultIfEmpty().Max(); Replace(CalendarDays, Enumerable.Range(0, 42).Select(i => { var date = gridStart.AddDays(i); var d = daily.GetValueOrDefault(date); var value = d?.Seconds ?? 0; var level = value <= 0 || max <= 0 ? "None" : (value / max) switch { < .25 => "Low", < .5 => "Medium", < .75 => "High", _ => "Peak" }; return new CalendarDayItem(date, date.Month == Month.Month, value, d?.Sessions ?? 0, d?.Books ?? 0, level, value <= 0 ? "" : Formatters.Duration(value)); })); Replace(ActivityMonthTrend, Enumerable.Range(0, DateTime.DaysInMonth(Month.Year, Month.Month)).Select(index => { var date = monthStart.AddDays(index); var stat = daily.GetValueOrDefault(date); return new ChartPoint(date.Day.ToString(), (stat?.Seconds ?? 0) / 60d, stat is null ? $"{date:MMM d} · No activity" : $"{date:MMM d} · {Formatters.Duration(stat.Seconds)}", "min"); })); if (SelectedDate.Month != Month.Month || SelectedDate.Year != Month.Year) SelectedDate = monthStart; BuildSelectedDay(); Raise(nameof(MonthSummary));
     }
 
-    public string MonthSummary { get { var items = CalendarDays.Where(d => d.IsInMonth && d.Seconds > 0).ToArray(); return items.Length == 0 ? "No reading activity this month." : $"{Formatters.Duration(items.Sum(d => d.Seconds))} · {Formatters.Count(items.Length, "active day")} · {Formatters.Count(items.Sum(d => d.Sessions), "session")} · {Formatters.Count(_events.Where(e => { var d = _statistics.ToLocal(e.Start); return d.Year == Month.Year && d.Month == Month.Month; }).Select(e => e.BookId).Distinct().Count(), "book active", "books active")}"; } }
+    public string MonthSummary
+    {
+        get
+        {
+            var items = CalendarDays.Where(day => day.IsInMonth && day.Seconds > 0).ToArray();
+            var localizer = Localization.Localizer.Instance;
+            if (items.Length == 0) return localizer.Translate("No reading activity this month.");
+            var books = _events.Where(item => { var date = _statistics.ToLocal(item.Start); return date.Year == Month.Year && date.Month == Month.Month; }).Select(item => item.BookId).Distinct().Count();
+            return $"{Formatters.Duration(items.Sum(day => day.Seconds))} · {localizer.Translate(Formatters.Count(items.Length, "active day"))} · {localizer.Translate(Formatters.Count(items.Sum(day => day.Sessions), "session"))} · {localizer.Translate(Formatters.Count(books, "book active", "books active"))}";
+        }
+    }
     private void BuildSelectedDay()
     {
         var events = ReadingEventWindow.Clip(_events, _ranges.ToUtc(SelectedDate), _ranges.ToUtc(SelectedDate.AddDays(1))); var sessions = _statistics.BuildSessions(events, TimeSpan.FromMinutes(SessionGapMinutes)).ToArray(); var rows = SessionRows(sessions).ToArray(); var titles = _bookModels.ToDictionary(b => b.Id, b => b.Title); var books = events.GroupBy(e => e.BookId).Select(g => new ChartPoint(titles.GetValueOrDefault(g.Key, "Unknown book"), g.Sum(e => e.DurationSeconds), Formatters.Duration(g.Sum(e => e.DurationSeconds)))).OrderByDescending(x => x.Value).ToArray(); SelectedDay = new(SelectedDate, events.Sum(e => e.DurationSeconds), sessions.Length, events.Select(e => e.BookId).Distinct().Count(), rows.FirstOrDefault()?.Start, rows.LastOrDefault()?.End, rows, books); Replace(DaySessions, rows); Replace(DayBooks, books); Replace(DayTimeline, _infographics.DayTimeline(_events, _bookModels, SelectedDate, SessionGapMinutes)); BuildDayAudit();
@@ -2244,7 +2254,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await Manual.SuspendForRestoreAsync();
         await DrainSettingsWritesAsync();
         await _store.WaitForWritesAsync();
-        _backup.Restore(path);
+        _backup.Restore(path, AppVersion);
         _repository = null; _notesRepository = null; Diagnostics = null;
         _readestEvents = []; _readestBookModels = []; _readestNotes = []; LastSync = null;
         _settings = await _store.LoadAsync(); GoalEngine.Migrate(_settings);

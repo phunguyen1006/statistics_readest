@@ -8,7 +8,7 @@ using ReadestStats.Core;
 
 namespace ReadestStats.Controls;
 
-public sealed class BarChart : FrameworkElement
+public sealed class BarChart : KeyboardChartElement
 {
     public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(BarChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
     public static readonly DependencyProperty MaxBarWidthProperty = DependencyProperty.Register(nameof(MaxBarWidth), typeof(double), typeof(BarChart), new FrameworkPropertyMetadata(18d, FrameworkPropertyMetadataOptions.AffectsRender));
@@ -16,9 +16,19 @@ public sealed class BarChart : FrameworkElement
     public double MaxBarWidth { get => (double)GetValue(MaxBarWidthProperty); set => SetValue(MaxBarWidthProperty, value); }
     private readonly List<(Rect Rect, ChartPoint Item)> _hits = [];
     private int _selectedIndex;
+    private string? _helpBeforeFocus;
+    private bool _keyboardActive;
     public BarChart() => Focusable = true;
-    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not BarChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
-    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
+    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not BarChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; chart.RefreshKeyboardSelection(); }
+    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) { RefreshKeyboardSelection(); InvalidateVisual(); }
+    private void RefreshKeyboardSelection()
+    {
+        if (!_keyboardActive) return;
+        var items = ItemsSource?.ToArray() ?? [];
+        if (items.Length == 0) { ToolTip = null; HideKeyboardReadout(); SetCurrentValue(AutomationProperties.HelpTextProperty, _helpBeforeFocus ?? ""); return; }
+        _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1);
+        Announce(items[_selectedIndex]);
+    }
 
     protected override void OnRender(DrawingContext dc)
     {
@@ -42,16 +52,16 @@ public sealed class BarChart : FrameworkElement
         }
     }
     protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(x => x.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : $"{hit.Item.Label}\n{hit.Item.Detail ?? Compact(hit.Item.Value)}"; }
-    protected override void OnKeyDown(KeyEventArgs e) { var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var old = _selectedIndex; _selectedIndex = e.Key switch { Key.Left => Math.Max(0, _selectedIndex - 1), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 1), Key.Home => 0, Key.End => items.Length - 1, _ => _selectedIndex }; if (old == _selectedIndex) return; Announce(items[_selectedIndex]); InvalidateVisual(); e.Handled = true; }
-    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) { _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); Announce(items[_selectedIndex]); } InvalidateVisual(); }
-    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); InvalidateVisual(); }
-    private void Announce(ChartPoint item) { var text = $"{item.Label}. {item.Detail ?? FormatValue(item.Value, item.Unit)}"; ToolTip = text; AutomationProperties.SetHelpText(this, text); }
+    protected override void OnKeyDown(KeyEventArgs e) { var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); var old = _selectedIndex; _selectedIndex = e.Key switch { Key.Left => Math.Max(0, _selectedIndex - 1), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 1), Key.Home => 0, Key.End => items.Length - 1, _ => _selectedIndex }; if (old == _selectedIndex) return; Announce(items[_selectedIndex]); InvalidateVisual(); e.Handled = true; }
+    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); _helpBeforeFocus = AutomationProperties.GetHelpText(this); _keyboardActive = true; var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) { _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); Announce(items[_selectedIndex]); } InvalidateVisual(); }
+    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); SetCurrentValue(AutomationProperties.HelpTextProperty, _helpBeforeFocus ?? ""); _helpBeforeFocus = null; _keyboardActive = false; HideKeyboardReadout(); InvalidateVisual(); }
+    private void Announce(ChartPoint item) { var text = $"{item.Label}. {item.Detail ?? FormatValue(item.Value, item.Unit)}"; ToolTip = text; ShowKeyboardReadout(text); SetCurrentValue(AutomationProperties.HelpTextProperty, string.IsNullOrWhiteSpace(_helpBeforeFocus) ? text : $"{_helpBeforeFocus}\n{text}"); }
     private static void DrawText(DrawingContext dc, string text, Point point, double size, Brush brush, double dpi) => dc.DrawText(new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size, brush, dpi), point);
     private static string Compact(double value) => value >= 1000 ? $"{value / 1000:0.#}k" : value >= 100 ? $"{value:0}" : $"{value:0.#}";
     private static string FormatValue(double value, string? unit) => $"{Compact(value)}{(string.IsNullOrWhiteSpace(unit) ? "" : " " + unit)}";
 }
 
-public sealed class HeatmapChart : FrameworkElement
+public sealed class HeatmapChart : KeyboardChartElement
 {
     public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(HeatmapChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
     public static readonly DependencyProperty ItemClickCommandProperty = DependencyProperty.Register(nameof(ItemClickCommand), typeof(ICommand), typeof(HeatmapChart));
@@ -59,13 +69,23 @@ public sealed class HeatmapChart : FrameworkElement
     public ICommand? ItemClickCommand { get => (ICommand?)GetValue(ItemClickCommandProperty); set => SetValue(ItemClickCommandProperty, value); }
     private readonly List<(Rect Rect, ChartPoint Item)> _hits = [];
     private int _selectedIndex;
+    private string? _helpBeforeFocus;
+    private bool _keyboardActive;
     public HeatmapChart() => Focusable = true;
-    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not HeatmapChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
-    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
+    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not HeatmapChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; chart.RefreshKeyboardSelection(); }
+    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) { RefreshKeyboardSelection(); InvalidateVisual(); }
+    private void RefreshKeyboardSelection()
+    {
+        if (!_keyboardActive) return;
+        var items = ItemsSource?.ToArray() ?? [];
+        if (items.Length == 0) { ToolTip = null; HideKeyboardReadout(); SetCurrentValue(AutomationProperties.HelpTextProperty, _helpBeforeFocus ?? ""); return; }
+        _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1);
+        Announce(items[_selectedIndex]);
+    }
 
     protected override void OnRender(DrawingContext dc)
     {
-        _hits.Clear(); var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var positive = items.Where(x => x.Value > 0).Select(x => x.Value).Order().ToArray(); var levels = Enumerable.Range(0, 5).Select(i => (Brush)FindResource($"Heatmap{i}")).ToArray(); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip; var muted = (Brush)FindResource("TextMuted"); var first = DateOnly.TryParse(items[0].Label, out var parsed) ? parsed : new DateOnly(2026, 1, 5); var shift = ((int)first.DayOfWeek + 6) % 7; var columns = (int)Math.Ceiling((shift + items.Length) / 7d); var left = 31d; var top = 20d; var gap = 3d; var cell = Math.Clamp((ActualWidth - left - 10 - gap * columns) / Math.Max(1, columns), 6, 13);
+        base.OnRender(dc); _hits.Clear(); var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var positive = items.Where(x => x.Value > 0).Select(x => x.Value).Order().ToArray(); var levels = Enumerable.Range(0, 5).Select(i => (Brush)FindResource($"Heatmap{i}")).ToArray(); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip; var muted = (Brush)FindResource("TextMuted"); var first = DateOnly.TryParse(items[0].Label, out var parsed) ? parsed : new DateOnly(2026, 1, 5); var shift = ((int)first.DayOfWeek + 6) % 7; var columns = (int)Math.Ceiling((shift + items.Length) / 7d); var left = 31d; var top = 20d; var gap = ActualWidth < 600 ? 2d : 3d; var cell = Math.Clamp((ActualWidth - left - 10 - gap * columns) / Math.Max(1, columns), 2, 13);
         DrawText(dc, Localization.Localizer.Instance.Translate("Mon"), new(0, top + 0 * (cell + gap) - 1), 9, muted, dpi); DrawText(dc, Localization.Localizer.Instance.Translate("Wed"), new(0, top + 2 * (cell + gap) - 1), 9, muted, dpi); DrawText(dc, Localization.Localizer.Instance.Translate("Fri"), new(0, top + 4 * (cell + gap) - 1), 9, muted, dpi);
         string? lastMonth = null;
         for (var i = 0; i < items.Length; i++)
@@ -75,22 +95,35 @@ public sealed class HeatmapChart : FrameworkElement
         }
         var legendY = top + 7 * (cell + gap) + 5; DrawText(dc, Localization.Localizer.Instance.Translate("Less"), new(left, legendY), 9, muted, dpi); var legendX = left + 27; for (var i = 0; i < levels.Length; i++) dc.DrawRoundedRectangle(levels[i], null, new(legendX + i * 14, legendY, 10, 10), 2, 2); DrawText(dc, Localization.Localizer.Instance.Translate("More"), new(legendX + 73, legendY), 9, muted, dpi);
     }
-    protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(x => x.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : hit.Item.Detail ?? $"{hit.Item.Label}\n{hit.Item.Value:0.#} min"; Cursor = hit.Item is null ? Cursors.Arrow : Cursors.Hand; }
-    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e) { var hit = _hits.Select((value, index) => (value, index)).FirstOrDefault(x => x.value.Rect.Contains(e.GetPosition(this))); if (hit.value.Item is null) return; _selectedIndex = hit.index; Focus(); InvalidateVisual(); if (ItemClickCommand?.CanExecute(hit.value.Item) == true) ItemClickCommand.Execute(hit.value.Item); }
+    protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(x => x.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : Describe(hit.Item); Cursor = hit.Item is null ? Cursors.Arrow : Cursors.Hand; }
+    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e) => ActivateAt(e.GetPosition(this));
+    private void ActivateAt(Point position)
+    {
+        var hit = _hits.Select((value, index) => (value, index)).FirstOrDefault(x => x.value.Rect.Contains(position));
+        if (hit.value.Item is null) return;
+        var alreadyFocused = _keyboardActive;
+        _selectedIndex = hit.index;
+        Focus();
+        if (alreadyFocused) Announce(hit.value.Item);
+        InvalidateVisual();
+        if (ItemClickCommand?.CanExecute(hit.value.Item) == true) ItemClickCommand.Execute(hit.value.Item);
+    }
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var previous = _selectedIndex;
+        var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); var previous = _selectedIndex;
         _selectedIndex = e.Key switch { Key.Left => Math.Max(0, _selectedIndex - 7), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 7), Key.Up => Math.Max(0, _selectedIndex - 1), Key.Down => Math.Min(items.Length - 1, _selectedIndex + 1), _ => _selectedIndex };
         if (e.Key is Key.Enter or Key.Space) { var item = items[Math.Clamp(_selectedIndex, 0, items.Length - 1)]; if (ItemClickCommand?.CanExecute(item) == true) ItemClickCommand.Execute(item); e.Handled = true; }
-        else if (_selectedIndex != previous) { ToolTip = items[_selectedIndex].Detail; InvalidateVisual(); e.Handled = true; }
+        else if (_selectedIndex != previous) { Announce(items[_selectedIndex]); InvalidateVisual(); e.Handled = true; }
     }
-    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); InvalidateVisual(); }
-    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); InvalidateVisual(); }
+    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); _helpBeforeFocus = AutomationProperties.GetHelpText(this); _keyboardActive = true; var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) { _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); Announce(items[_selectedIndex]); } InvalidateVisual(); }
+    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); SetCurrentValue(AutomationProperties.HelpTextProperty, _helpBeforeFocus ?? ""); _helpBeforeFocus = null; _keyboardActive = false; HideKeyboardReadout(); InvalidateVisual(); }
+    private static string Describe(ChartPoint item) => $"{item.Label}\n{item.Detail ?? $"{item.Value:0.#} {item.Unit}"}";
+    private void Announce(ChartPoint item) { var text = Describe(item); ToolTip = text; ShowKeyboardReadout(text); SetCurrentValue(AutomationProperties.HelpTextProperty, string.IsNullOrWhiteSpace(_helpBeforeFocus) ? text : $"{_helpBeforeFocus}\n{text}"); }
     private static int Bucket(double value, double[] positive) { if (value <= 0 || positive.Length == 0) return 0; var rank = Array.BinarySearch(positive, value); if (rank < 0) rank = ~rank; var percentile = (rank + 1d) / positive.Length; return percentile switch { <= .25 => 1, <= .5 => 2, <= .75 => 3, _ => 4 }; }
     private static void DrawText(DrawingContext dc, string text, Point point, double size, Brush brush, double dpi) => dc.DrawText(new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size, brush, dpi), point);
 }
 
-public sealed class LineChart : FrameworkElement
+public sealed class LineChart : KeyboardChartElement
 {
     public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(LineChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
     public static readonly DependencyProperty ComparisonItemsSourceProperty = DependencyProperty.Register(nameof(ComparisonItemsSource), typeof(IEnumerable<ChartPoint>), typeof(LineChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
@@ -98,9 +131,19 @@ public sealed class LineChart : FrameworkElement
     public IEnumerable<ChartPoint>? ComparisonItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ComparisonItemsSourceProperty); set => SetValue(ComparisonItemsSourceProperty, value); }
     private readonly List<(Rect Rect, ChartPoint Item)> _hits = [];
     private int _selectedIndex;
+    private string? _helpBeforeFocus;
+    private bool _keyboardActive;
     public LineChart() => Focusable = true;
-    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not LineChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
-    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
+    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not LineChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; chart.RefreshKeyboardSelection(); }
+    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) { RefreshKeyboardSelection(); InvalidateVisual(); }
+    private void RefreshKeyboardSelection()
+    {
+        if (!_keyboardActive) return;
+        var items = ItemsSource?.ToArray() ?? [];
+        if (items.Length == 0) { ToolTip = null; HideKeyboardReadout(); SetCurrentValue(AutomationProperties.HelpTextProperty, _helpBeforeFocus ?? ""); return; }
+        _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1);
+        Announce(items[_selectedIndex]);
+    }
 
     protected override void OnRender(DrawingContext dc)
     {
@@ -134,32 +177,28 @@ public sealed class LineChart : FrameworkElement
     }
 
     protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : Describe(hit.Item, _hits.IndexOf(hit)); }
-    protected override void OnKeyDown(KeyEventArgs e) { var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; var old = _selectedIndex; _selectedIndex = e.Key switch { Key.Left => Math.Max(0, _selectedIndex - 1), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 1), Key.Home => 0, Key.End => items.Length - 1, _ => _selectedIndex }; if (old == _selectedIndex) return; Announce(items[_selectedIndex]); InvalidateVisual(); e.Handled = true; }
-    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) { _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); Announce(items[_selectedIndex]); } InvalidateVisual(); }
-    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); InvalidateVisual(); }
+    protected override void OnKeyDown(KeyEventArgs e) { var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return; _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); var old = _selectedIndex; _selectedIndex = e.Key switch { Key.Left => Math.Max(0, _selectedIndex - 1), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 1), Key.Home => 0, Key.End => items.Length - 1, _ => _selectedIndex }; if (old == _selectedIndex) return; Announce(items[_selectedIndex]); InvalidateVisual(); e.Handled = true; }
+    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnGotKeyboardFocus(e); _helpBeforeFocus = AutomationProperties.GetHelpText(this); _keyboardActive = true; var items = ItemsSource?.ToArray() ?? []; if (items.Length > 0) { _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1); Announce(items[_selectedIndex]); } InvalidateVisual(); }
+    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e) { base.OnLostKeyboardFocus(e); SetCurrentValue(AutomationProperties.HelpTextProperty, _helpBeforeFocus ?? ""); _helpBeforeFocus = null; _keyboardActive = false; HideKeyboardReadout(); InvalidateVisual(); }
     private string Describe(ChartPoint item, int index)
     {
         var text = $"{item.Label}: {item.Detail ?? FormatValue(item.Value, item.Unit)}";
         var baseline = ComparisonItemsSource?.ElementAtOrDefault(index);
         return baseline is null ? text : text + "\n" + Localization.Localizer.Instance.Translate("Comparison") + $" · {baseline.Label}: {baseline.Detail ?? FormatValue(baseline.Value, baseline.Unit)}";
     }
-    private void Announce(ChartPoint item) { var text = Describe(item, _selectedIndex); ToolTip = text; AutomationProperties.SetHelpText(this, text); }
+    private void Announce(ChartPoint item) { var text = Describe(item, _selectedIndex); ToolTip = text; ShowKeyboardReadout(text); SetCurrentValue(AutomationProperties.HelpTextProperty, string.IsNullOrWhiteSpace(_helpBeforeFocus) ? text : $"{_helpBeforeFocus}\n{text}"); }
     private static void DrawText(DrawingContext dc, string text, Point point, double size, Brush brush, double dpi) => dc.DrawText(new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size, brush, dpi), point);
     private static string Compact(double value) => value >= 1000 ? $"{value / 1000:0.#}k" : value >= 100 ? $"{value:0}" : $"{value:0.#}";
     private static string FormatValue(double value, string? unit) => $"{Compact(value)}{(string.IsNullOrWhiteSpace(unit) ? "" : " " + unit)}";
 }
 
-public sealed class RadialClockChart : FrameworkElement
+public sealed class RadialClockChart : InfographicElement
 {
-    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(RadialClockChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
-    public IEnumerable<ChartPoint>? ItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
     private readonly List<(Point Center, ChartPoint Item)> _hits = [];
-    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not RadialClockChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
-    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
 
     protected override void OnRender(DrawingContext dc)
     {
-        base.OnRender(dc); _hits.Clear(); var items = ItemsSource?.Take(24).ToArray() ?? [];
+        base.OnRender(dc); _hits.Clear(); var items = Items<ChartPoint>().Take(24).ToArray();
         var muted = (Brush)FindResource("TextMuted"); var grid = (Brush)FindResource("ChartGrid"); var primary = (Brush)FindResource("Primary"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var center = new Point(ActualWidth / 2, ActualHeight / 2); var outer = Math.Max(20, Math.Min(ActualWidth, ActualHeight) / 2 - 24); var inner = outer * .56;
         dc.DrawEllipse(null, new Pen(grid, 1), center, inner, inner); dc.DrawEllipse(null, new Pen(grid, 1), center, outer, outer);
@@ -169,7 +208,7 @@ public sealed class RadialClockChart : FrameworkElement
         {
             var angle = (i * 15 - 90) * Math.PI / 180; var normalized = max <= 0 ? 0 : items[i].Value / max; var endRadius = inner + (outer - inner) * (.18 + .82 * normalized);
             var start = new Point(center.X + Math.Cos(angle) * inner, center.Y + Math.Sin(angle) * inner); var end = new Point(center.X + Math.Cos(angle) * endRadius, center.Y + Math.Sin(angle) * endRadius);
-            var brush = primary.Clone(); brush.Opacity = .22 + .78 * normalized; brush.Freeze(); dc.DrawLine(new Pen(brush, 5) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, start, end); _hits.Add((end, items[i]));
+            var brush = primary.Clone(); brush.Opacity = .22 + .78 * normalized; brush.Freeze(); dc.DrawLine(new Pen(brush, 5) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, start, end); if (IsKeyboardFocused && i == SelectedIndex) dc.DrawEllipse(null, new Pen((Brush)FindResource("Focus"), 2), end, 6, 6); _hits.Add((end, items[i]));
         }
         DrawCentered(dc, Localization.Localizer.Instance.Translate("24H"), new(center.X, center.Y - 7), 17, primary, dpi); DrawCentered(dc, Localization.Localizer.Instance.Translate("READING"), new(center.X, center.Y + 12), 9, muted, dpi);
         foreach (var (label, hour) in new[] { ("00", 0), ("06", 6), ("12", 12), ("18", 18) }) { var angle = (hour * 15 - 90) * Math.PI / 180; DrawCentered(dc, label, new(center.X + Math.Cos(angle) * (outer + 13), center.Y + Math.Sin(angle) * (outer + 13)), 9, muted, dpi); }
@@ -183,20 +222,16 @@ public sealed class RadialClockChart : FrameworkElement
     private static void DrawCentered(DrawingContext dc, string text, Point center, double size, Brush brush, double dpi) { var formatted = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size, brush, dpi); dc.DrawText(formatted, new(center.X - formatted.Width / 2, center.Y - formatted.Height / 2)); }
 }
 
-public sealed class StreakStripChart : FrameworkElement
+public sealed class StreakStripChart : InfographicElement
 {
-    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(IEnumerable<ChartPoint>), typeof(StreakStripChart), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, SourceChanged));
-    public IEnumerable<ChartPoint>? ItemsSource { get => (IEnumerable<ChartPoint>?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
     private readonly List<(Rect Rect, ChartPoint Item)> _hits = [];
-    private static void SourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) { if (d is not StreakStripChart chart) return; if (e.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged; if (e.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged; }
-    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
 
     protected override void OnRender(DrawingContext dc)
     {
-        base.OnRender(dc); _hits.Clear(); var items = ItemsSource?.ToArray() ?? []; if (items.Length == 0) return;
+        base.OnRender(dc); _hits.Clear(); var items = Items<ChartPoint>(); if (items.Length == 0) return;
         var primary = (Brush)FindResource("Primary"); var border = (Brush)FindResource("BorderStrong"); var muted = (Brush)FindResource("TextMuted"); var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var gap = 4d; var width = Math.Clamp((ActualWidth - gap * (items.Length - 1)) / items.Length, 5, 16); var total = width * items.Length + gap * (items.Length - 1); var left = Math.Max(0, (ActualWidth - total) / 2);
-        for (var i = 0; i < items.Length; i++) { var rect = new Rect(left + i * (width + gap), 8, width, width); dc.DrawRoundedRectangle(items[i].Value > 0 ? primary : null, new Pen(border, 1), rect, 2, 2); _hits.Add((rect, items[i])); }
+        for (var i = 0; i < items.Length; i++) { var rect = new Rect(left + i * (width + gap), 8, width, width); dc.DrawRoundedRectangle(items[i].Value > 0 ? primary : null, new Pen(IsKeyboardFocused && i == SelectedIndex ? (Brush)FindResource("Focus") : border, IsKeyboardFocused && i == SelectedIndex ? 2 : 1), rect, 2, 2); _hits.Add((rect, items[i])); }
         DrawText(dc, Localization.Localizer.Instance.Translate("30 days ago"), new(left, Math.Min(ActualHeight - 15, 31)), 9, muted, dpi); var today = new FormattedText(Localization.Localizer.Instance.Translate("Today"), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9, muted, dpi); dc.DrawText(today, new(left + total - today.Width, Math.Min(ActualHeight - 15, 31)));
     }
     protected override void OnMouseMove(MouseEventArgs e) { var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this))); ToolTip = hit.Item is null ? null : hit.Item.Detail; }

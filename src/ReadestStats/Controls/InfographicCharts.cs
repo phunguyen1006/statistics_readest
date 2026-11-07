@@ -2,13 +2,14 @@ using System.Collections;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Input;
 using System.Windows.Media;
 using ReadestStats.Core;
 
 namespace ReadestStats.Controls;
 
-public abstract class InfographicElement : FrameworkElement
+public abstract class InfographicElement : KeyboardChartElement
 {
     public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
         nameof(ItemsSource), typeof(IEnumerable), typeof(InfographicElement),
@@ -16,17 +17,102 @@ public abstract class InfographicElement : FrameworkElement
 
     public IEnumerable? ItemsSource { get => (IEnumerable?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
 
-    protected InfographicElement() => Focusable = false;
+    private int _selectedIndex;
+    private string? _helpBeforeFocus;
+    private bool _keyboardActive;
+    protected int SelectedIndex => _selectedIndex;
+    protected InfographicElement() => Focusable = true;
     protected T[] Items<T>() => ItemsSource?.Cast<T>().ToArray() ?? [];
+
+    protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
+    {
+        base.OnGotKeyboardFocus(e);
+        _helpBeforeFocus = AutomationProperties.GetHelpText(this);
+        _keyboardActive = true;
+        AnnounceSelection(); InvalidateVisual();
+    }
+
+    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e)
+    {
+        base.OnLostKeyboardFocus(e);
+        SetCurrentValue(AutomationProperties.HelpTextProperty, _helpBeforeFocus ?? "");
+        _helpBeforeFocus = null; _keyboardActive = false; HideKeyboardReadout(); InvalidateVisual();
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        var items = ItemsSource?.Cast<object>().ToArray() ?? [];
+        if (items.Length == 0 || e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End)) return;
+        _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1);
+        var step = items[0] is MatrixCell ? items.Cast<MatrixCell>().Max(cell => cell.Column) + 1 : 1;
+        _selectedIndex = e.Key switch
+        {
+            Key.Left => Math.Max(0, _selectedIndex - 1), Key.Right => Math.Min(items.Length - 1, _selectedIndex + 1),
+            Key.Up => Math.Max(0, _selectedIndex - step), Key.Down => Math.Min(items.Length - 1, _selectedIndex + step),
+            Key.Home => 0, Key.End => items.Length - 1, _ => _selectedIndex
+        };
+        AnnounceSelection(); InvalidateVisual(); e.Handled = true;
+    }
+
+    private void AnnounceSelection()
+    {
+        var items = ItemsSource?.Cast<object>().ToArray() ?? [];
+        if (items.Length == 0)
+        {
+            HideKeyboardReadout();
+            ToolTip = null;
+            SetCurrentValue(AutomationProperties.HelpTextProperty, _helpBeforeFocus ?? "");
+            return;
+        }
+        _selectedIndex = Math.Clamp(_selectedIndex, 0, items.Length - 1);
+        var description = items[_selectedIndex] switch
+        {
+            MatrixCell value => MatrixDetail(value), TimelineSpan value => value.Detail, DotDatum value => value.Detail,
+            CompositionPart value => value.Detail, PaceDatum value => value.Detail, PlanAdherenceDay value => value.Detail,
+            DumbbellDatum value => $"{value.Label}: {value.PreviousLabel} → {value.CurrentLabel}",
+            ChartPoint value => $"{value.Label}: {value.Detail ?? $"{value.Value:0.#} {value.Unit}"}",
+            _ => items[_selectedIndex].ToString() ?? ""
+        };
+        ShowKeyboardReadout(description);
+        ToolTip = description;
+        SetCurrentValue(AutomationProperties.HelpTextProperty,
+            string.IsNullOrWhiteSpace(_helpBeforeFocus) ? description : $"{_helpBeforeFocus}\n{description}");
+    }
 
     private static void SourceChanged(DependencyObject source, DependencyPropertyChangedEventArgs args)
     {
         if (source is not InfographicElement chart) return;
         if (args.OldValue is INotifyCollectionChanged oldItems) oldItems.CollectionChanged -= chart.CollectionChanged;
         if (args.NewValue is INotifyCollectionChanged newItems) newItems.CollectionChanged += chart.CollectionChanged;
+        if (chart._keyboardActive) chart.AnnounceSelection();
     }
 
-    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs args) => InvalidateVisual();
+    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs args)
+    {
+        if (_keyboardActive) AnnounceSelection();
+        InvalidateVisual();
+    }
+
+    protected static string MatrixDetail(MatrixCell cell)
+    {
+        var localizer = Localization.Localizer.Instance;
+        if (!localizer.IsVietnamese) return cell.Detail;
+        var lines = cell.Detail.Split('\n');
+        if (lines.Length < 2) return cell.Detail;
+        foreach (var day in new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" })
+        {
+            if (cell.RowLabel == day[..3] && lines[0].StartsWith(day + " · ", StringComparison.Ordinal))
+            {
+                lines[0] = localizer.Translate(day) + lines[0][day.Length..];
+                break;
+            }
+        }
+        for (var i = 1; i < lines.Length; i++)
+            lines[i] = string.Join(" · ", lines[i].Split(" · ").Select(part =>
+                System.Text.RegularExpressions.Regex.IsMatch(part, @"^\d+ (?:sessions?|activity events?)$") ? localizer.Translate(part) : part));
+        return string.Join("\n", lines);
+    }
 }
 
 public sealed class MatrixChart : InfographicElement
@@ -45,23 +131,31 @@ public sealed class MatrixChart : InfographicElement
         var positive = items.Where(item => item.Value > 0).Select(item => item.Value).Order().ToArray();
         foreach (var row in items.GroupBy(item => item.Row).OrderBy(group => group.Key))
             Viz.Text(dc, Viz.Trim(row.First().RowLabel, 17), new(0, top + row.Key * (cellHeight + gap) + 1), 9, muted, dpi);
-        var labelStep = columns >= 24 ? Math.Max(1, columns / 8) : Math.Max(1, columns / 6);
+        var maxLabelWidth = items.Select(item => item.ColumnLabel).Distinct().Select(label => Viz.Format(label, 9, muted, dpi).Width).DefaultIfEmpty(0).Max();
+        var labelStep = Math.Max(columns >= 24 ? Math.Max(1, columns / 8) : Math.Max(1, columns / 6),
+            (int)Math.Ceiling((maxLabelWidth + 8) / Math.Max(1, cellWidth + gap)));
+        var lastLabelRight = double.NegativeInfinity;
         foreach (var item in items.OrderBy(item => item.Row).ThenBy(item => item.Column))
         {
             var rect = new Rect(left + item.Column * (cellWidth + gap), top + item.Row * (cellHeight + gap), cellWidth, cellHeight);
             var level = Viz.Bucket(item.Value, positive); var fill = (Brush)FindResource($"Heatmap{level}");
-            dc.DrawRoundedRectangle(fill, level == 0 ? new Pen((Brush)FindResource("ChartGrid"), .7) : null, rect, 1.5, 1.5);
+            var selected = IsKeyboardFocused && Equals(item, items[Math.Clamp(SelectedIndex, 0, items.Length - 1)]);
+            dc.DrawRoundedRectangle(fill, selected ? new Pen((Brush)FindResource("Focus"), 2) : level == 0 ? new Pen((Brush)FindResource("ChartGrid"), .7) : null, rect, 1.5, 1.5);
             if (item.Count > 1 && cellWidth >= 8) dc.DrawEllipse(level >= 3 ? (Brush)FindResource("HeatmapText4") : (Brush)FindResource("TextMuted"), null, new(rect.Right - 2.5, rect.Top + 2.5), 1.2, 1.2);
             _hits.Add((rect, item));
             if (item.Row == rows - 1 && (item.Column == 0 || item.Column == columns - 1 || item.Column % labelStep == 0))
-                Viz.Text(dc, item.ColumnLabel, new(rect.Left, top + rows * (cellHeight + gap) + 3), 8, muted, dpi);
+            {
+                var label = Viz.Format(item.ColumnLabel, 9, muted, dpi);
+                var x = Math.Clamp(rect.Left, 0, Math.Max(0, ActualWidth - label.Width));
+                if (x >= lastLabelRight + 5) { dc.DrawText(label, new(x, top + rows * (cellHeight + gap) + 3)); lastLabelRight = x + label.Width; }
+            }
         }
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
         var hit = _hits.FirstOrDefault(item => item.Rect.Contains(e.GetPosition(this)));
-        ToolTip = hit.Cell is null ? null : hit.Cell.Detail; Cursor = hit.Cell is null ? Cursors.Arrow : Cursors.Hand;
+        ToolTip = hit.Cell is null ? null : MatrixDetail(hit.Cell); Cursor = hit.Cell is null ? Cursors.Arrow : Cursors.Hand;
     }
 }
 
