@@ -71,16 +71,16 @@ public partial class MainWindow : Window
         {
             page = vm.SelectedPage switch
             {
-                "Activity" => new ActivityView { DataContext = vm.ActivityPage },
-                "Sessions" => new SessionsView { DataContext = vm.SessionsPage },
+                "Activity" => new ActivityView { DataContext = vm },
+                "Sessions" => new SessionsView { DataContext = vm },
                 "Manual log" => new ManualLogView { DataContext = vm.Manual },
-                "Books" => new BooksView { DataContext = vm.BooksPage },
-                "Notes" => new NotesView { DataContext = vm.NotesPage },
-                "Goals" => new GoalsView { DataContext = vm.GoalsPage },
-                "Statistics" => new StatisticsView { DataContext = vm.StatisticsPage },
-                "Year in Reading" => new YearView { DataContext = vm.YearPage },
-                "Settings" => new SettingsView { DataContext = vm.SettingsPage },
-                _ => new OverviewView { DataContext = vm.Overview }
+                "Books" => new BooksView { DataContext = vm },
+                "Notes" => new NotesView { DataContext = vm },
+                "Goals" => new GoalsView { DataContext = vm },
+                "Statistics" => new StatisticsView { DataContext = vm },
+                "Year in Reading" => new YearView { DataContext = vm },
+                "Settings" => new SettingsView { DataContext = vm },
+                _ => new OverviewView { DataContext = vm }
             };
             _pages.Add(vm.SelectedPage, page);
         }

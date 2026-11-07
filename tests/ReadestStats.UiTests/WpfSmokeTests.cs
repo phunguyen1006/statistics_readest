@@ -155,8 +155,17 @@ public sealed class WpfSmokeTests
             _stage = "responsive overview and chart access";
             viewModel.SelectedPage = "Today"; Layout(window, 700, 600);
             var overview = Descendants(window).OfType<OverviewView>().Single();
+            var recapHeading = Descendants(overview).OfType<TextBlock>().Single(block =>
+                System.Windows.Data.BindingOperations.GetBindingExpression(block, TextBlock.TextProperty)?.ParentBinding.Path.Path == "WeeklyRecapHeading");
+            Assert.Equal(viewModel.WeeklyRecapHeading, recapHeading.Text);
             var weeklyChart = Descendants(overview).OfType<ReadestStats.Controls.BarChart>().First();
             Assert.True(weeklyChart.ActualWidth <= overview.ActualWidth - 40, $"Weekly chart exceeds narrow viewport: {weeklyChart.ActualWidth} / {overview.ActualWidth}");
+            var storyAction = Descendants(overview).OfType<Button>().FirstOrDefault(button =>
+                ReferenceEquals(button.Command, viewModel.NavigateCommand) && Equals(button.CommandParameter, "Activity"));
+            Assert.NotNull(storyAction);
+            Assert.True(storyAction.IsEnabled);
+            var storyActionRight = storyAction.TransformToAncestor((Visual)window.Content).Transform(new Point(storyAction.ActualWidth, 0)).X;
+            Assert.True(storyActionRight <= 700, $"Reading story action is outside the narrow window: {storyActionRight}");
             var refreshButton = Descendants(window).OfType<Button>().Single(button => ReferenceEquals(button.Command, viewModel.RefreshCommand) && button.ToolTip is not null);
             var refreshRight = refreshButton.TransformToAncestor((Visual)window.Content).Transform(new Point(refreshButton.ActualWidth, 0)).X;
             Assert.True(refreshRight <= 700, $"Refresh action is outside the narrow window: {refreshRight}");
@@ -171,6 +180,18 @@ public sealed class WpfSmokeTests
             var activityView = Descendants(window).OfType<ActivityView>().Single();
             var activityChart = Descendants(activityView).OfType<ReadestStats.Controls.LineChart>().First();
             Assert.True(activityChart.ActualWidth <= activityView.ActualWidth - 40, $"Activity chart exceeds narrow viewport: {activityChart.ActualWidth} / {activityView.ActualWidth}");
+            Layout(window, 900, 600);
+            var calendarDay = viewModel.CalendarDays.First(day => day.IsInMonth);
+            var calendarButton = Descendants(activityView).OfType<Button>().Single(button => ReferenceEquals(button.CommandParameter, calendarDay));
+            var durationLabel = Descendants(calendarButton).OfType<TextBlock>().Single(block =>
+                System.Windows.Data.BindingOperations.GetBinding(block, TextBlock.TextProperty)?.Path.Path == "DurationLabel");
+            var longDuration = new FormattedText("1h 59m", System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface(durationLabel.FontFamily, durationLabel.FontStyle, durationLabel.FontWeight, durationLabel.FontStretch),
+                durationLabel.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(durationLabel).PixelsPerDip);
+            var calendarTextWidth = calendarButton.ActualWidth - calendarButton.Padding.Left - calendarButton.Padding.Right - 2;
+            Assert.True(calendarTextWidth >= longDuration.WidthIncludingTrailingWhitespace,
+                $"Calendar cells clip an ordinary reading duration at medium width: {calendarTextWidth} / {longDuration.WidthIncludingTrailingWhitespace}");
+            Layout(window, 700, 600);
             var chosenDay = viewModel.CalendarDays.First(day => day.IsInMonth && day.Date != viewModel.SelectedDate);
             viewModel.SelectDayCommand.Execute(chosenDay); Layout(window, 700, 600);
             var chosenDayButton = Descendants(activityView).OfType<Button>().Single(button => ReferenceEquals(button.CommandParameter, chosenDay));
@@ -179,6 +200,15 @@ public sealed class WpfSmokeTests
 
             viewModel.SelectedPage = "Books"; viewModel.BookFilter = "All"; Layout(window, 1180, 760);
             var booksView = Descendants(window).OfType<BooksView>().Single();
+            var bookList = Descendants(booksView).OfType<ListBox>().Single(list =>
+                System.Windows.Data.BindingOperations.GetBinding(list, ItemsControl.ItemsSourceProperty)?.Path.Path == "Books");
+            var chosenBook = Assert.IsType<BookRow>(bookList.Items[0]);
+            bookList.SetCurrentValue(System.Windows.Controls.Primitives.Selector.SelectedItemProperty, null);
+            bookList.SetCurrentValue(System.Windows.Controls.Primitives.Selector.SelectedItemProperty, chosenBook);
+            Assert.Same(chosenBook, viewModel.SelectedBook);
+            var startBookSession = Descendants(booksView).OfType<Button>().Single(button => ReferenceEquals(button.Command, viewModel.StartSelectedManualSessionCommand));
+            Assert.Equal(Visibility.Visible, startBookSession.Visibility);
+            Assert.True(startBookSession.MinHeight >= 34, "The book action must use the accessible application button size.");
             var detailsScroll = Descendants(booksView).OfType<ScrollViewer>().First(scroll => Descendants(scroll).OfType<Button>().Any(button => ReferenceEquals(button.Command, viewModel.OpenBookInReadestCommand)));
             Assert.True(detailsScroll.ExtentWidth <= detailsScroll.ViewportWidth + 1, $"Book detail actions require horizontal scrolling: {detailsScroll.ExtentWidth} / {detailsScroll.ViewportWidth}");
             viewModel.SelectedPage = "Manual log"; Layout(window, 700, 600);
@@ -204,6 +234,12 @@ public sealed class WpfSmokeTests
             System.Windows.Data.BindingOperations.GetBindingExpression(elapsedTimer, TextBlock.TextProperty)?.UpdateTarget();
             viewModel.SelectedPage = "Notes"; Layout(window, 700, 600);
             var notesView = Descendants(window).OfType<NotesView>().Single();
+            var noteList = Descendants(notesView).OfType<ListBox>().Single(list =>
+                System.Windows.Data.BindingOperations.GetBinding(list, ItemsControl.ItemsSourceProperty)?.Path.Path == "Notes");
+            var chosenNote = Assert.IsType<NoteRow>(noteList.Items[0]);
+            viewModel.SelectedNote = null;
+            noteList.SetCurrentValue(System.Windows.Controls.Primitives.Selector.SelectedItemProperty, chosenNote);
+            Assert.Same(chosenNote, viewModel.SelectedNote);
             var randomNoteButton = Descendants(notesView).OfType<Button>().First(button => ReferenceEquals(button.Command, viewModel.RandomNoteCommand));
             var randomRight = randomNoteButton.TransformToAncestor((Visual)window.Content).Transform(new Point(randomNoteButton.ActualWidth, 0)).X;
             Assert.True(randomRight <= 700, $"Random-note action is outside the narrow window: {randomRight}");
@@ -388,6 +424,16 @@ public sealed class WpfSmokeTests
             Assert.Equal("Trang kết thúc không được vượt quá 574.", Localizer.Instance.Translate("End page cannot exceed 574."));
             Assert.Equal("Ghi chú giữ nguyên", Localizer.Instance.Translate("Ghi chú giữ nguyên"));
             Assert.Equal("Bitter Harvest", viewModel.Manual.Books[0].Title);
+            viewModel.SelectedPage = "Today"; Layout(window, 1050, 760);
+            var averageCard = Descendants(window).OfType<ReadestStats.Controls.StatCard>().Single(card => Equals(card.CommandParameter, "Statistics"));
+            var averageLabel = Descendants(averageCard).OfType<TextBlock>().Single(block => block.Text == averageCard.Label);
+            var localizedLabel = new FormattedText(averageLabel.Text, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface(averageLabel.FontFamily, averageLabel.FontStyle, averageLabel.FontWeight, averageLabel.FontStretch),
+                averageLabel.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(averageLabel).PixelsPerDip)
+            { MaxTextWidth = averageLabel.ActualWidth };
+            // FormattedText and TextBlock round their line heights differently; compare within that tolerance.
+            Assert.True(averageLabel.ActualHeight >= localizedLabel.Height * 0.85,
+                $"The localized metric label is clipped at the five-column breakpoint: {averageLabel.ActualWidth} × {averageLabel.ActualHeight}, expected height {localizedLabel.Height}, wrapping {averageLabel.TextWrapping}.");
             foreach (var page in viewModel.Pages) { viewModel.SelectedPage = page; Layout(window); }
             Assert.Equal("Cài đặt", viewModel.PageTitle);
             viewModel.SelectedPage = "Manual log"; Layout(window);

@@ -1,4 +1,4 @@
-# Readest Stats 2.6 — Design System
+# Readest Stats — Design System
 
 This file is the implementation reference for every screen. It supersedes the former blue dashboard theme and the historical `readest-stats-notes-library/MASTER.md`.
 
@@ -30,12 +30,14 @@ This file is the implementation reference for every screen. It supersedes the fo
 
 Light theme uses `#F4F4F4` background, `#FFFFFF` surface, `#111111` primary text, `#333333` secondary text, `#5F5F5F` muted text, and `#D4D4D4` borders. `ThemeManager` and dynamic resources define the complete runtime palettes.
 
+The navigation rail intentionally remains ink-dark (`#171717`) in every theme. Its labels use `#F5F5F5`, supporting text uses `#BDBDBD`, and the selected row reverses to a pale surface with dark text. The Today story surface uses `Primary` and `OnPrimary` so it reverses with the current theme.
+
 Status is never communicated by color alone. Use words and restrained arrows/check marks only in textual status values.
 
 ## Typography
 
-- Use installed Windows fonts only: Segoe UI Variable with Segoe UI fallback for interface text; Cascadia Mono or Consolas for file paths and tabular technical values.
-- Scale: 11 metadata, 12 labels, 13 body, 15 navigation, 18 section values, 20 page title, and 28–42 primary KPI.
+- Use installed Windows fonts only: Segoe UI Variable with Segoe UI fallback for interface text; Georgia with Segoe UI fallback for editorial headings; Cascadia Mono or Consolas for file paths and tabular technical values.
+- Scale: 11 metadata, 12 labels, 13 body, 15 navigation, 18 section values, 25 page title, and 28–48 primary KPI.
 - Use semibold for hierarchy; avoid excessive uppercase except short eyebrow labels.
 - Use tabular figures in data tables where practical.
 
@@ -44,7 +46,7 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 - Window minimum: 640×350 logical pixels; primary QA targets remain 1366×768 and 1440×900 at normal scaling, with 125–200% Windows scaling checks. Clamp restored windows to the visible work area.
 - Sidebar: 196px, fixed, icon plus label for every destination.
 - Top bar: page context and global controls wrap to additional rows when needed.
-- Today is the default landing workspace. Its period metrics and weekly recap lead into daily rediscovery, next actions, and deeper analytics.
+- Today is the default landing workspace. A high-contrast reading-time story and weekly recap lead into period metrics, daily rediscovery, next actions, and deeper analytics.
 - Today exposes one Next up queue; planning and recency must never appear as competing duplicate sections.
 - Ctrl+K opens one centered command palette for pages, books, notes, and sessions; the palette traps the immediate search task and closes with Escape.
 - An active physical-reading session uses a compact persistent dock below the top bar on every page; it must always expose elapsed time, pause/resume, finish, and a route back to the timer.
@@ -55,13 +57,13 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 
 ## Components
 
-- Content sections sit directly on `AppBackground`; use typography, whitespace, and 1px separators instead of enclosing cards. Reserve raised surfaces for menus, dialogs, inputs, and interactive affordances.
+- Most content sections sit directly on `AppBackground`. Use a small number of raised surfaces to group primary, interactive work areas such as the weekly recap, calendar, selected book and trend chart; avoid enclosing every paragraph or table in a separate card.
 - Buttons: minimum 34px height, 8px radius, visible hover/pressed/focus states without moving layout.
 - Icon-only buttons must have a tooltip and `AutomationProperties.Name`.
 - Inputs: persistent labels, 1px border, 34px minimum height, white focus outline.
-- Navigation: 16px outline vector icons with consistent 1.6 stroke; active row uses white text and a surface fill.
+- Navigation: 16px outline vector icons with consistent 1.6 stroke; the active row uses dark text on a pale fill and all rows retain visible keyboard focus.
 - App identity: a black rounded-square icon with a white open-book mark; use the same mark in the executable, title bar, taskbar, and sidebar header.
-- KPI bands: short uppercase label, prominent value, single supporting line, and vertical dividers rather than boxed tiles.
+- KPI bands: short label, prominent value, one supporting line, and a strong top rule on each metric surface.
 - Data tables: sortable/filterable where the view exposes controls; alternating rows and restrained separators.
 - Book lifecycle UI distinguishes an edition from a reading cycle. Re-reads append cycles and never overwrite earlier completion history.
 - Reading-plan controls expose start, target, selected reading weekdays, and paused state together; status text must explain the computed pace.
@@ -105,7 +107,7 @@ Status is never communicated by color alone. Use words and restrained arrows/che
 
 Overview → Activity → Sessions → Manual log → Books → Notes → Goals → Statistics → Year in Reading → Settings.
 
-Statistics leads with the period summary and selected-period trend; the independently scoped monthly review follows. Manual log uses a single editorial workflow: current timer first, edition search only while adding a book, then the physical library beside recent sessions. Timer state is stated in words as well as time; page progress is shown only for user-entered physical editions, never inferred from Readest pagination.
+Statistics leads with the period summary and selected-period trend; the independently scoped monthly review follows. Activity prioritizes the month calendar and selected-day details, followed by the month trend. Books prioritizes the selectable library and selected edition, followed by the attention charts. Manual log uses a single editorial workflow: current timer first, edition search only while adding a book, then the physical library beside recent sessions. Timer state is stated in words as well as time; page progress is shown only for user-entered physical editions, never inferred from Readest pagination.
 
 The v1.8 reading journal keeps timer truth visible: Finish closes the current active segment immediately, sleep recovery explains why the timer paused, and saved sessions can be corrected later. Historical entry and edit dialogs use persistent labels, inline validation, and an explicit primary Save action. Session notes from physical books share the same Daily/Random discovery surface as Readest notes but remain clearly labeled as Manual notes.
 
